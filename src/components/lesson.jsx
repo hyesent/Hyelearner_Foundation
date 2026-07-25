@@ -496,152 +496,241 @@ result = result.replace(/Point\s/g, ' . Point ')
   result = result.replace(/—/g, ' ... ')
   result = result.replace(/–/g, ' ... ')
   result = result.replace(/ - /g, ' ... ')
-    // ============================================================
+
+  // ============================================================
 // ENGLISH LANGUAGE SUPPORT (Intonation, Stress, Phonetics)
-// Add this entire block before the final cleanup section
 // ============================================================
 
-// ===== Intonation & Stress Marks =====
+// ===== INTONATION & STRESS MARKS =====
 result = result.replace(/↗/g, 'rising intonation')
 result = result.replace(/↘/g, 'falling intonation')
 result = result.replace(/↗︎/g, 'rising intonation')
 result = result.replace(/↘︎/g, 'falling intonation')
 result = result.replace(/↑/g, 'rise')
 result = result.replace(/↓/g, 'fall')
-result = result.replace(/ˈ/g, 'primary stress ')
-result = result.replace(/ˌ/g, 'secondary stress ')
-result = result.replace(/ˈ([a-zA-Z])/g, 'primary stress on $1')
-result = result.replace(/ˌ([a-zA-Z])/g, 'secondary stress on $1')
+result = result.replace(/ˈ/g, '')
+result = result.replace(/ˌ/g, '')
+result = result.replace(/ˈ([a-zA-Z])/g, '$1')
+result = result.replace(/ˌ([a-zA-Z])/g, '$1')
 result = result.replace(/\bSTRESS\b/g, 'stress')
 result = result.replace(/\bstressed\b/g, 'stressed')
 result = result.replace(/\bunstressed\b/g, 'unstressed')
 result = result.replace(/\bemphasized\b/g, 'emphasized')
-result = result.replace(/●/g, 'stressed syllable')
-result = result.replace(/○/g, 'unstressed syllable')
+result = result.replace(/●/g, 'syllable')
+result = result.replace(/○/g, 'syllable')
 result = result.replace(/•/g, 'syllable')
 
-// ===== IPA Vowels =====
+// ===== SAFETY NET: IPA symbols without slashes =====
+const ipaRawReplacements = {
+  // Vowels
+  'ɪ': 'ih',
+  'iː': 'ee',
+  'e': 'eh',
+  'æ': 'a',
+  'ɑː': 'ah',
+  'ɒ': 'o',
+  'ɔː': 'aw',
+  'ʊ': 'uh',
+  'uː': 'oo',
+  'ʌ': 'uh',
+  'ɜː': 'er',
+  'ə': 'uh',
+  'eɪ': 'ay',
+  'aɪ': 'eye',
+  'ɔɪ': 'oy',
+  'aʊ': 'ow',
+  'əʊ': 'oh',
+  'ɪə': 'ear',
+  'eə': 'air',
+  'ʊə': 'ure',
+  // Consonants
+  'p': 'p',
+  'b': 'b',
+  't': 't',
+  'd': 'd',
+  'k': 'k',
+  'g': 'g',
+  'f': 'f',
+  'v': 'v',
+  'θ': 'th',
+  'ð': 'th',
+  's': 's',
+  'z': 'z',
+  'ʃ': 'sh',
+  'ʒ': 'zh',
+  'h': 'h',
+  'tʃ': 'ch',
+  'dʒ': 'j',
+  'm': 'm',
+  'n': 'n',
+  'ŋ': 'ng',
+  'l': 'l',
+  'r': 'r',
+  'w': 'w',
+  'j': 'y',
+}
+Object.entries(ipaRawReplacements).forEach(([symbol, word]) => {
+  // Only replace if it's a standalone symbol (not part of a larger word)
+  result = result.replace(new RegExp(`\\b${symbol}\\b`, 'g'), word)
+})
+
+// ===== IPA VOWELS — COMPLETE SET =====
 const ipaVowels = {
-  '/iː/': 'long e',
-  '/ɪ/': 'short i',
-  '/e/': 'e',
-  '/æ/': 'a',
-  '/ɑː/': 'long a',
-  '/ɒ/': 'short o',
-  '/ɔː/': 'long o',
-  '/ʊ/': 'short u',
-  '/uː/': 'long u',
-  '/ʌ/': 'short u',
-  '/ɜː/': 'er',
-  '/ə/': 'schwa',
-  '/eɪ/': 'long a',
-  '/aɪ/': 'long i',
-  '/ɔɪ/': 'oy',
-  '/aʊ/': 'ow',
-  '/əʊ/': 'long o',
-  '/ɪə/': 'ear',
-  '/eə/': 'air',
-  '/ʊə/': 'ure',
+  // ===== MONOPHTHONGS (Pure Vowels) =====
+  // Front vowels
+  '/iː/': 'ee',      // "see", "tea", "green" (close front unrounded)
+  '/ɪ/': 'ih',       // "bit", "sit", "ship" (near-close near-front unrounded)
+  '/e/': 'eh',       // "bed", "set", "ten" (close-mid front unrounded)
+  '/æ/': 'a',        // "cat", "hat", "man" (near-open front unrounded)
+  
+  // Central vowels
+  '/ɜː/': 'er',      // "bird", "turn", "learn" (open-mid central unrounded)
+  '/ə/': 'uh',       // "about", "banana", "sofa" (schwa - mid central unrounded)
+  '/ʌ/': 'uh',       // "cup", "sun", "up" (open-mid back unrounded)
+  
+  // Back vowels
+  '/ɑː/': 'ah',      // "car", "far", "father" (open back unrounded)
+  '/ɒ/': 'o',        // "hot", "dog", "pot" (open back rounded)
+  '/ɔː/': 'aw',      // "saw", "door", "four" (open-mid back rounded)
+  '/ʊ/': 'uh',       // "book", "foot", "good" (near-close near-back rounded)
+  '/uː/': 'oo',      // "too", "food", "blue" (close back rounded)
+  
+  // ===== DIPHTHONGS (Gliding Vowels) =====
+  // Closing diphthongs (ending with /ɪ/ or /ʊ/)
+  '/eɪ/': 'ay',      // "face", "day", "say" (ɛɪ̯)
+  '/aɪ/': 'eye',     // "price", "my", "high" (aɪ̯)
+  '/ɔɪ/': 'oy',      // "choice", "boy", "toy" (ɔɪ̯)
+  '/əʊ/': 'oh',      // "goat", "home", "show" (əʊ̯) - British
+  '/oʊ/': 'oh',      // "goat", "home", "show" (oʊ̯) - American
+  '/aʊ/': 'ow',      // "mouth", "now", "how" (aʊ̯)
+  
+  // Centering diphthongs (ending with /ə/)
+  '/ɪə/': 'ear',     // "near", "here", "idea" (ɪə̯)
+  '/eə/': 'air',     // "square", "there", "where" (eə̯)
+  '/ʊə/': 'ure',     // "cure", "tour", "poor" (ʊə̯)
+  
+  // ===== TRIPHTHONGS (Rare) =====
+  '/aɪə/': 'eye-uh', // "fire", "hire" (aɪə̯)
+  '/aʊə/': 'ow-uh',  // "power", "hour" (aʊə̯)
+  '/eɪə/': 'ay-uh',  // "layer", "player" (eɪə̯)
 }
 Object.entries(ipaVowels).forEach(([symbol, word]) => {
-  result = result.replace(new RegExp(symbol.replace('/', '\\/'), 'g'), word)
+  const escaped = symbol.replace('/', '\\/')
+  result = result.replace(new RegExp(escaped, 'g'), word)
+  result = result.replace(new RegExp(`\\s${escaped}\\s`, 'g'), ` ${word} `)
+  result = result.replace(new RegExp(`${escaped}\\s`, 'g'), `${word} `)
+  result = result.replace(new RegExp(`\\s${escaped}`, 'g'), ` ${word}`)
 })
 
-// ===== IPA Consonants =====
+// ===== IPA CONSONANTS — COMPLETE SET =====
 const ipaConsonants = {
-  '/p/': 'p',
-  '/b/': 'b',
-  '/t/': 't',
-  '/d/': 'd',
-  '/k/': 'k',
-  '/g/': 'g',
-  '/f/': 'f',
-  '/v/': 'v',
-  '/θ/': 'th',
-  '/ð/': 'th',
-  '/s/': 's',
-  '/z/': 'z',
-  '/ʃ/': 'sh',
-  '/ʒ/': 'zh',
-  '/h/': 'h',
-  '/tʃ/': 'ch',
-  '/dʒ/': 'j',
-  '/m/': 'm',
-  '/n/': 'n',
-  '/ŋ/': 'ng',
-  '/l/': 'l',
-  '/r/': 'r',
-  '/w/': 'w',
-  '/j/': 'y',
+  // ===== PLOSIVES (Stops) =====
+  // Voiceless plosives
+  '/p/': 'p',        // "pen", "pet", "top"
+  '/t/': 't',        // "ten", "tea", "hot"
+  '/k/': 'k',        // "cat", "can", "back"
+  // Voiced plosives
+  '/b/': 'b',        // "bed", "big", "rub"
+  '/d/': 'd',        // "dog", "did", "red"
+  '/g/': 'g',        // "go", "get", "big"
+  
+  // ===== NASALS =====
+  '/m/': 'm',        // "man", "me", "come"
+  '/n/': 'n',        // "no", "ten", "run"
+  '/ŋ/': 'ng',       // "sing", "long", "thing"
+  
+  // ===== FRICATIVES =====
+  // Voiceless fricatives
+  '/f/': 'f',        // "fan", "fine", "off"
+  '/θ/': 'th',       // "think", "thank", "bath"
+  '/s/': 's',        // "sun", "see", "bus"
+  '/ʃ/': 'sh',       // "she", "shop", "fish"
+  '/h/': 'h',        // "hat", "how", "high"
+  // Voiced fricatives
+  '/v/': 'v',        // "van", "very", "love"
+  '/ð/': 'th',       // "this", "that", "them"
+  '/z/': 'z',        // "zoo", "zero", "has"
+  '/ʒ/': 'zh',       // "measure", "vision", "pleasure"
+  
+  // ===== AFFRICATES =====
+  '/tʃ/': 'ch',      // "chat", "check", "catch"
+  '/dʒ/': 'j',       // "jump", "job", "edge"
+  
+  // ===== APPROXIMANTS =====
+  '/l/': 'l',        // "look", "late", "call" (lateral approximant)
+  '/r/': 'r',        // "run", "red", "car" (rhotic approximant)
+  '/w/': 'w',        // "we", "will", "what" (labio-velar approximant)
+  '/j/': 'y',        // "yes", "you", "yellow" (palatal approximant)
+  
+  // ===== OTHER CONSONANT VARIANTS =====
+  // These are sometimes used in English
+  '/x/': 'kh',       // Scottish "loch" (voiceless velar fricative)
+  '/hw/': 'wh',      // "what", "when" (voiceless labio-velar approximant)
+  '/ɫ/': 'l',        // "call", "milk" (dark l)
+  '/ɹ/': 'r',        // "red", "car" (alveolar approximant)
 }
 Object.entries(ipaConsonants).forEach(([symbol, word]) => {
-  result = result.replace(new RegExp(symbol.replace('/', '\\/'), 'g'), word)
+  const escaped = symbol.replace('/', '\\/')
+  result = result.replace(new RegExp(escaped, 'g'), word)
+  result = result.replace(new RegExp(`\\s${escaped}\\s`, 'g'), ` ${word} `)
+  result = result.replace(new RegExp(`${escaped}\\s`, 'g'), `${word} `)
+  result = result.replace(new RegExp(`\\s${escaped}`, 'g'), ` ${word}`)
 })
 
-// ===== Square-bracket phonetics =====
+// ===== SQUARE-BRACKET PHONETICS =====
 result = result.replace(/\[([^\]]+)\]/g, (match, content) => {
   let cleaned = content.replace(/[ˈˌ]/g, '')
-  cleaned = cleaned.replace(/əʊ/g, 'oh')
-  cleaned = cleaned.replace(/ɑː/g, 'ah')
-  cleaned = cleaned.replace(/ɪ/g, 'ih')
-  cleaned = cleaned.replace(/ʊ/g, 'uh')
-  cleaned = cleaned.replace(/æ/g, 'a')
-  cleaned = cleaned.replace(/ɜː/g, 'er')
-  cleaned = cleaned.replace(/eɪ/g, 'ay')
-  cleaned = cleaned.replace(/aɪ/g, 'eye')
-  cleaned = cleaned.replace(/ɔɪ/g, 'oy')
-  cleaned = cleaned.replace(/aʊ/g, 'ow')
-  cleaned = cleaned.replace(/ɪə/g, 'ear')
-  cleaned = cleaned.replace(/eə/g, 'air')
-  cleaned = cleaned.replace(/ʊə/g, 'ure')
-  cleaned = cleaned.replace(/ʌ/g, 'uh')
-  cleaned = cleaned.replace(/ɔː/g, 'aw')
-  cleaned = cleaned.replace(/ɒ/g, 'o')
-  cleaned = cleaned.replace(/ə/g, 'uh')
-  cleaned = cleaned.replace(/θ/g, 'th')
-  cleaned = cleaned.replace(/ð/g, 'th')
-  cleaned = cleaned.replace(/ʃ/g, 'sh')
-  cleaned = cleaned.replace(/ʒ/g, 'zh')
-  cleaned = cleaned.replace(/tʃ/g, 'ch')
-  cleaned = cleaned.replace(/dʒ/g, 'j')
-  cleaned = cleaned.replace(/ŋ/g, 'ng')
-  return `pronounced as ${cleaned}`
+  const replacements = {
+    // Vowels
+    'iː': 'ee', 'ɪ': 'ih', 'e': 'eh', 'æ': 'a',
+    'ɑː': 'ah', 'ɒ': 'o', 'ɔː': 'aw', 'ʊ': 'uh',
+    'uː': 'oo', 'ʌ': 'uh', 'ɜː': 'er', 'ə': 'uh',
+    'eɪ': 'ay', 'aɪ': 'eye', 'ɔɪ': 'oy',
+    'aʊ': 'ow', 'əʊ': 'oh', 'oʊ': 'oh',
+    'ɪə': 'ear', 'eə': 'air', 'ʊə': 'ure',
+    'aɪə': 'eye-uh', 'aʊə': 'ow-uh', 'eɪə': 'ay-uh',
+    // Consonants
+    'p': 'p', 'b': 'b', 't': 't', 'd': 'd',
+    'k': 'k', 'g': 'g', 'f': 'f', 'v': 'v',
+    'θ': 'th', 'ð': 'th', 's': 's', 'z': 'z',
+    'ʃ': 'sh', 'ʒ': 'zh', 'h': 'h', 'tʃ': 'ch',
+    'dʒ': 'j', 'm': 'm', 'n': 'n', 'ŋ': 'ng',
+    'l': 'l', 'r': 'r', 'w': 'w', 'j': 'y',
+    'x': 'kh', 'hw': 'wh', 'ɫ': 'l', 'ɹ': 'r',
+  }
+  Object.entries(replacements).forEach(([symbol, word]) => {
+    cleaned = cleaned.replace(new RegExp(symbol, 'g'), word)
+  })
+  return ` ${cleaned} `
 })
 
-// ===== Slash phonetics =====
+// ===== SLASH PHONETICS =====
 result = result.replace(/\/([^\/]+)\//g, (match, content) => {
   let cleaned = content.replace(/[ˈˌ]/g, '')
-  cleaned = cleaned.replace(/əʊ/g, 'oh')
-  cleaned = cleaned.replace(/ɑː/g, 'ah')
-  cleaned = cleaned.replace(/ɪ/g, 'ih')
-  cleaned = cleaned.replace(/ʊ/g, 'uh')
-  cleaned = cleaned.replace(/æ/g, 'a')
-  cleaned = cleaned.replace(/ɜː/g, 'er')
-  cleaned = cleaned.replace(/eɪ/g, 'ay')
-  cleaned = cleaned.replace(/aɪ/g, 'eye')
-  cleaned = cleaned.replace(/ɔɪ/g, 'oy')
-  cleaned = cleaned.replace(/aʊ/g, 'ow')
-  cleaned = cleaned.replace(/ɪə/g, 'ear')
-  cleaned = cleaned.replace(/eə/g, 'air')
-  cleaned = cleaned.replace(/ʊə/g, 'ure')
-  cleaned = cleaned.replace(/ʌ/g, 'uh')
-  cleaned = cleaned.replace(/ɔː/g, 'aw')
-  cleaned = cleaned.replace(/ɒ/g, 'o')
-  cleaned = cleaned.replace(/ə/g, 'uh')
-  cleaned = cleaned.replace(/θ/g, 'th')
-  cleaned = cleaned.replace(/ð/g, 'th')
-  cleaned = cleaned.replace(/ʃ/g, 'sh')
-  cleaned = cleaned.replace(/ʒ/g, 'zh')
-  cleaned = cleaned.replace(/tʃ/g, 'ch')
-  cleaned = cleaned.replace(/dʒ/g, 'j')
-  cleaned = cleaned.replace(/ŋ/g, 'ng')
-  return `pronounced as ${cleaned}`
+  const replacements = {
+    // Vowels
+    'iː': 'ee', 'ɪ': 'ih', 'e': 'eh', 'æ': 'a',
+    'ɑː': 'ah', 'ɒ': 'o', 'ɔː': 'aw', 'ʊ': 'uh',
+    'uː': 'oo', 'ʌ': 'uh', 'ɜː': 'er', 'ə': 'uh',
+    'eɪ': 'ay', 'aɪ': 'eye', 'ɔɪ': 'oy',
+    'aʊ': 'ow', 'əʊ': 'oh', 'oʊ': 'oh',
+    'ɪə': 'ear', 'eə': 'air', 'ʊə': 'ure',
+    'aɪə': 'eye-uh', 'aʊə': 'ow-uh', 'eɪə': 'ay-uh',
+    // Consonants
+    'p': 'p', 'b': 'b', 't': 't', 'd': 'd',
+    'k': 'k', 'g': 'g', 'f': 'f', 'v': 'v',
+    'θ': 'th', 'ð': 'th', 's': 's', 'z': 'z',
+    'ʃ': 'sh', 'ʒ': 'zh', 'h': 'h', 'tʃ': 'ch',
+    'dʒ': 'j', 'm': 'm', 'n': 'n', 'ŋ': 'ng',
+    'l': 'l', 'r': 'r', 'w': 'w', 'j': 'y',
+    'x': 'kh', 'hw': 'wh', 'ɫ': 'l', 'ɹ': 'r',
+  }
+  Object.entries(replacements).forEach(([symbol, word]) => {
+    cleaned = cleaned.replace(new RegExp(symbol, 'g'), word)
+  })
+  return ` ${cleaned} `
 })
-
-// ===== Phonetics terminology helpers =====
-// These terms are read correctly by TTS, but we ensure they're cleanly formatted
-// Words like 'vowel', 'consonant', 'phoneme', 'syllable', etc. are already good.
-// Intonation and stress terms are already handled above.
+  
   // ============================================================
   // CLEANUP
   // ============================================================

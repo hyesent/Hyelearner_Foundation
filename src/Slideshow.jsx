@@ -1097,3 +1097,4 @@ export function Slideshow({ onComplete }) {
     </div>
   )
 }
+export default slideshow

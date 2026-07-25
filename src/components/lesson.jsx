@@ -496,7 +496,152 @@ result = result.replace(/Point\s/g, ' . Point ')
   result = result.replace(/—/g, ' ... ')
   result = result.replace(/–/g, ' ... ')
   result = result.replace(/ - /g, ' ... ')
+    // ============================================================
+// ENGLISH LANGUAGE SUPPORT (Intonation, Stress, Phonetics)
+// Add this entire block before the final cleanup section
+// ============================================================
 
+// ===== Intonation & Stress Marks =====
+result = result.replace(/↗/g, 'rising intonation')
+result = result.replace(/↘/g, 'falling intonation')
+result = result.replace(/↗︎/g, 'rising intonation')
+result = result.replace(/↘︎/g, 'falling intonation')
+result = result.replace(/↑/g, 'rise')
+result = result.replace(/↓/g, 'fall')
+result = result.replace(/ˈ/g, 'primary stress ')
+result = result.replace(/ˌ/g, 'secondary stress ')
+result = result.replace(/ˈ([a-zA-Z])/g, 'primary stress on $1')
+result = result.replace(/ˌ([a-zA-Z])/g, 'secondary stress on $1')
+result = result.replace(/\bSTRESS\b/g, 'stress')
+result = result.replace(/\bstressed\b/g, 'stressed')
+result = result.replace(/\bunstressed\b/g, 'unstressed')
+result = result.replace(/\bemphasized\b/g, 'emphasized')
+result = result.replace(/●/g, 'stressed syllable')
+result = result.replace(/○/g, 'unstressed syllable')
+result = result.replace(/•/g, 'syllable')
+
+// ===== IPA Vowels =====
+const ipaVowels = {
+  '/iː/': 'long e',
+  '/ɪ/': 'short i',
+  '/e/': 'e',
+  '/æ/': 'a',
+  '/ɑː/': 'long a',
+  '/ɒ/': 'short o',
+  '/ɔː/': 'long o',
+  '/ʊ/': 'short u',
+  '/uː/': 'long u',
+  '/ʌ/': 'short u',
+  '/ɜː/': 'er',
+  '/ə/': 'schwa',
+  '/eɪ/': 'long a',
+  '/aɪ/': 'long i',
+  '/ɔɪ/': 'oy',
+  '/aʊ/': 'ow',
+  '/əʊ/': 'long o',
+  '/ɪə/': 'ear',
+  '/eə/': 'air',
+  '/ʊə/': 'ure',
+}
+Object.entries(ipaVowels).forEach(([symbol, word]) => {
+  result = result.replace(new RegExp(symbol.replace('/', '\\/'), 'g'), word)
+})
+
+// ===== IPA Consonants =====
+const ipaConsonants = {
+  '/p/': 'p',
+  '/b/': 'b',
+  '/t/': 't',
+  '/d/': 'd',
+  '/k/': 'k',
+  '/g/': 'g',
+  '/f/': 'f',
+  '/v/': 'v',
+  '/θ/': 'th',
+  '/ð/': 'th',
+  '/s/': 's',
+  '/z/': 'z',
+  '/ʃ/': 'sh',
+  '/ʒ/': 'zh',
+  '/h/': 'h',
+  '/tʃ/': 'ch',
+  '/dʒ/': 'j',
+  '/m/': 'm',
+  '/n/': 'n',
+  '/ŋ/': 'ng',
+  '/l/': 'l',
+  '/r/': 'r',
+  '/w/': 'w',
+  '/j/': 'y',
+}
+Object.entries(ipaConsonants).forEach(([symbol, word]) => {
+  result = result.replace(new RegExp(symbol.replace('/', '\\/'), 'g'), word)
+})
+
+// ===== Square-bracket phonetics =====
+result = result.replace(/\[([^\]]+)\]/g, (match, content) => {
+  let cleaned = content.replace(/[ˈˌ]/g, '')
+  cleaned = cleaned.replace(/əʊ/g, 'oh')
+  cleaned = cleaned.replace(/ɑː/g, 'ah')
+  cleaned = cleaned.replace(/ɪ/g, 'ih')
+  cleaned = cleaned.replace(/ʊ/g, 'uh')
+  cleaned = cleaned.replace(/æ/g, 'a')
+  cleaned = cleaned.replace(/ɜː/g, 'er')
+  cleaned = cleaned.replace(/eɪ/g, 'ay')
+  cleaned = cleaned.replace(/aɪ/g, 'eye')
+  cleaned = cleaned.replace(/ɔɪ/g, 'oy')
+  cleaned = cleaned.replace(/aʊ/g, 'ow')
+  cleaned = cleaned.replace(/ɪə/g, 'ear')
+  cleaned = cleaned.replace(/eə/g, 'air')
+  cleaned = cleaned.replace(/ʊə/g, 'ure')
+  cleaned = cleaned.replace(/ʌ/g, 'uh')
+  cleaned = cleaned.replace(/ɔː/g, 'aw')
+  cleaned = cleaned.replace(/ɒ/g, 'o')
+  cleaned = cleaned.replace(/ə/g, 'uh')
+  cleaned = cleaned.replace(/θ/g, 'th')
+  cleaned = cleaned.replace(/ð/g, 'th')
+  cleaned = cleaned.replace(/ʃ/g, 'sh')
+  cleaned = cleaned.replace(/ʒ/g, 'zh')
+  cleaned = cleaned.replace(/tʃ/g, 'ch')
+  cleaned = cleaned.replace(/dʒ/g, 'j')
+  cleaned = cleaned.replace(/ŋ/g, 'ng')
+  return `pronounced as ${cleaned}`
+})
+
+// ===== Slash phonetics =====
+result = result.replace(/\/([^\/]+)\//g, (match, content) => {
+  let cleaned = content.replace(/[ˈˌ]/g, '')
+  cleaned = cleaned.replace(/əʊ/g, 'oh')
+  cleaned = cleaned.replace(/ɑː/g, 'ah')
+  cleaned = cleaned.replace(/ɪ/g, 'ih')
+  cleaned = cleaned.replace(/ʊ/g, 'uh')
+  cleaned = cleaned.replace(/æ/g, 'a')
+  cleaned = cleaned.replace(/ɜː/g, 'er')
+  cleaned = cleaned.replace(/eɪ/g, 'ay')
+  cleaned = cleaned.replace(/aɪ/g, 'eye')
+  cleaned = cleaned.replace(/ɔɪ/g, 'oy')
+  cleaned = cleaned.replace(/aʊ/g, 'ow')
+  cleaned = cleaned.replace(/ɪə/g, 'ear')
+  cleaned = cleaned.replace(/eə/g, 'air')
+  cleaned = cleaned.replace(/ʊə/g, 'ure')
+  cleaned = cleaned.replace(/ʌ/g, 'uh')
+  cleaned = cleaned.replace(/ɔː/g, 'aw')
+  cleaned = cleaned.replace(/ɒ/g, 'o')
+  cleaned = cleaned.replace(/ə/g, 'uh')
+  cleaned = cleaned.replace(/θ/g, 'th')
+  cleaned = cleaned.replace(/ð/g, 'th')
+  cleaned = cleaned.replace(/ʃ/g, 'sh')
+  cleaned = cleaned.replace(/ʒ/g, 'zh')
+  cleaned = cleaned.replace(/tʃ/g, 'ch')
+  cleaned = cleaned.replace(/dʒ/g, 'j')
+  cleaned = cleaned.replace(/ŋ/g, 'ng')
+  return `pronounced as ${cleaned}`
+})
+
+// ===== Phonetics terminology helpers =====
+// These terms are read correctly by TTS, but we ensure they're cleanly formatted
+// Words like 'vowel', 'consonant', 'phoneme', 'syllable', etc. are already good.
+// Intonation and stress terms are already handled above.
   // ============================================================
   // CLEANUP
   // ============================================================

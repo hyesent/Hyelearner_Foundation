@@ -1,0 +1,1537 @@
+export default [
+  // ============================================
+  // EASY (20 questions) - IDs: agr_ssl_001 to 020
+  // ============================================
+
+  {
+    id: "agr_ssl_001",
+    type: "multiple_choice",
+    question: "Soil is best defined as:",
+    options: [
+      "Solid rock beneath the earth's surface",
+      "The loose, weathered material on the earth's surface capable of supporting plant life",
+      "Pure sand and clay",
+      "Only organic matter"
+    ],
+    answer: "The loose, weathered material on the earth's surface capable of supporting plant life",
+    explanation: "Soil is a dynamic natural body composed of mineral particles, organic matter, water, and air that supports plant growth.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_002",
+    type: "multiple_choice",
+    question: "The process of soil formation is called:",
+    options: ["Erosion", "Pedogenesis", "Leaching", "Sedimentation"],
+    answer: "Pedogenesis",
+    explanation: "Pedogenesis involves weathering of parent material and accumulation of organic matter over time.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_003",
+    type: "multiple_choice",
+    question: "The smallest mineral particles in soil belong to which fraction?",
+    options: ["Sand", "Silt", "Clay", "Gravel"],
+    answer: "Clay",
+    explanation: "Clay particles are less than 0.002 mm in diameter and have high surface area and nutrient-holding capacity.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_004",
+    type: "multiple_choice",
+    question: "The ideal soil for agriculture, containing sand, silt, and clay in balanced proportions, is called:",
+    options: ["Clay soil", "Sandy soil", "Loam", "Peat"],
+    answer: "Loam",
+    explanation: "Loam has good drainage, aeration, and nutrient retention, making it ideal for most crops.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_005",
+    type: "multiple_choice",
+    question: "The organic component of soil formed from decomposed plant and animal matter is:",
+    options: ["Minerals", "Humus", "Water", "Air"],
+    answer: "Humus",
+    explanation: "Humus improves soil structure, water-holding capacity, and nutrient supply.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_006",
+    type: "multiple_choice",
+    question: "The arrangement of soil particles into aggregates is called:",
+    options: ["Soil texture", "Soil structure", "Soil profile", "Soil color"],
+    answer: "Soil structure",
+    explanation: "Soil structure affects aeration, drainage, and root penetration. Common types include granular, blocky, and platy.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_007",
+    type: "multiple_choice",
+    question: "Soil texture refers to:",
+    options: [
+      "The arrangement of soil particles",
+      "The relative proportions of sand, silt, and clay",
+      "The organic matter content",
+      "The soil depth"
+    ],
+    answer: "The relative proportions of sand, silt, and clay",
+    explanation: "Texture determines water-holding capacity, aeration, and nutrient retention.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_008",
+    type: "multiple_choice",
+    question: "The vertical section of soil showing its different layers is called:",
+    options: ["Soil horizon", "Soil profile", "Soil texture", "Soil structure"],
+    answer: "Soil profile",
+    explanation: "A soil profile consists of horizons (O, A, B, C, R) that differ in color, texture, and composition.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_009",
+    type: "multiple_choice",
+    question: "The topmost layer of a soil profile, rich in organic matter, is the:",
+    options: ["B horizon", "C horizon", "A horizon (topsoil)", "R horizon"],
+    answer: "A horizon (topsoil)",
+    explanation: "The A horizon is the zone of maximum biological activity and organic matter accumulation.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_010",
+    type: "multiple_choice",
+    question: "The parent material from which soil develops is the:",
+    options: ["A horizon", "B horizon", "C horizon", "O horizon"],
+    answer: "C horizon",
+    explanation: "The C horizon consists of partially weathered bedrock or unconsolidated material.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_011",
+    type: "multiple_choice",
+    question: "Water that drains freely through the soil by gravity is:",
+    options: ["Capillary water", "Hygroscopic water", "Gravitational water", "Available water"],
+    answer: "Gravitational water",
+    explanation: "Gravitational water moves downward and is not available to plants for long.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_012",
+    type: "multiple_choice",
+    question: "The water held in the small pores of soil and available to plants is:",
+    options: ["Gravitational water", "Capillary water", "Hygroscopic water", "Runoff"],
+    answer: "Capillary water",
+    explanation: "Capillary water is held against gravity and is the main source of moisture for plants.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_013",
+    type: "multiple_choice",
+    question: "The removal of the top fertile soil by wind or water is:",
+    options: ["Leaching", "Soil erosion", "Weathering", "Sedimentation"],
+    answer: "Soil erosion",
+    explanation: "Erosion degrades soil quality and reduces agricultural productivity.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_014",
+    type: "multiple_choice",
+    question: "The practice of planting crops along the contours of a slope to reduce erosion is:",
+    options: ["Terracing", "Contour farming", "Strip cropping", "Mulching"],
+    answer: "Contour farming",
+    explanation: "Contour ridges slow runoff and increase water infiltration.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_015",
+    type: "multiple_choice",
+    question: "The pH of a neutral soil is:",
+    options: ["5", "7", "9", "14"],
+    answer: "7",
+    explanation: "pH 7 is neutral; values below 7 are acidic, above 7 are alkaline.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_016",
+    type: "multiple_choice",
+    question: "Which of the following is a primary macronutrient in soil?",
+    options: ["Iron", "Zinc", "Nitrogen", "Copper"],
+    answer: "Nitrogen",
+    explanation: "Nitrogen (N), phosphorus (P), and potassium (K) are primary macronutrients required in large amounts.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_017",
+    type: "multiple_choice",
+    question: "The process by which nutrients are washed downward through the soil profile is:",
+    options: ["Erosion", "Leaching", "Evaporation", "Transpiration"],
+    answer: "Leaching",
+    explanation: "Leaching moves soluble nutrients, especially nitrates, beyond the root zone.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_018",
+    type: "multiple_choice",
+    question: "The type of soil with the largest particle size is:",
+    options: ["Clay", "Silt", "Sand", "Loam"],
+    answer: "Sand",
+    explanation: "Sand particles range from 0.05 to 2.0 mm; they feel gritty and drain quickly.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_019",
+    type: "multiple_choice",
+    question: "The dark color of fertile topsoil is mainly due to:",
+    options: ["Iron oxides", "Humus (organic matter)", "Clay minerals", "Calcium carbonate"],
+    answer: "Humus (organic matter)",
+    explanation: "Humus gives topsoil its dark brown or black color and indicates high fertility.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_020",
+    type: "multiple_choice",
+    question: "The term 'soil tilth' refers to:",
+    options: [
+      "Soil color",
+      "The physical condition of soil in relation to plant growth",
+      "Soil depth",
+      "Soil temperature"
+    ],
+    answer: "The physical condition of soil in relation to plant growth",
+    explanation: "Good tilth means the soil is easily tilled, has good structure, and supports seed germination and root growth.",
+    difficulty: "easy",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+
+  // ============================================
+  // MEDIUM (40 questions) - IDs: agr_ssl_021 to 060
+  // ============================================
+
+  {
+    id: "agr_ssl_021",
+    type: "multiple_choice",
+    question: "The three main types of soil colloids are:",
+    options: [
+      "Sand, silt, and clay",
+      "Clay minerals, iron/aluminum oxides, and humus",
+      "Gravel, sand, and silt",
+      "Organic matter, water, and air"
+    ],
+    answer: "Clay minerals, iron/aluminum oxides, and humus",
+    explanation: "Soil colloids are tiny particles with high surface area that hold nutrients and water.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_022",
+    type: "multiple_choice",
+    question: "The cation exchange capacity (CEC) of soil is a measure of:",
+    options: [
+      "Soil acidity",
+      "Soil's ability to hold and exchange positively charged nutrients",
+      "Water-holding capacity",
+      "Soil texture"
+    ],
+    answer: "Soil's ability to hold and exchange positively charged nutrients",
+    explanation: "Higher CEC means greater nutrient retention. Clay and organic matter increase CEC.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_023",
+    type: "multiple_choice",
+    question: "The process by which ammonium (NH₄⁺) is converted to nitrate (NO₃⁻) by soil bacteria is:",
+    options: ["Ammonification", "Nitrification", "Denitrification", "Nitrogen fixation"],
+    answer: "Nitrification",
+    explanation: "Nitrosomonas oxidizes NH₄⁺ to NO₂⁻; Nitrobacter oxidizes NO₂⁻ to NO₃⁻.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_024",
+    type: "multiple_choice",
+    question: "The conversion of organic nitrogen to ammonium by decomposers is:",
+    options: ["Nitrification", "Ammonification", "Denitrification", "Fixation"],
+    answer: "Ammonification",
+    explanation: "Bacteria and fungi break down proteins and release ammonium ions.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_025",
+    type: "multiple_choice",
+    question: "The loss of nitrogen from soil to the atmosphere by conversion of nitrate to N₂ gas is:",
+    options: ["Ammonification", "Nitrification", "Denitrification", "Volatilization"],
+    answer: "Denitrification",
+    explanation: "Anaerobic bacteria (e.g., Pseudomonas) reduce nitrate to nitrogen gas, especially in waterlogged soils.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_026",
+    type: "multiple_choice",
+    question: "The soil pH range that is optimal for most crops is:",
+    options: ["4.0-5.0", "6.0-7.5", "8.0-9.0", "10.0-11.0"],
+    answer: "6.0-7.5",
+    explanation: "In this range, most nutrients are readily available and microbial activity is optimal.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_027",
+    type: "multiple_choice",
+    question: "The material applied to acidic soils to raise pH is:",
+    options: ["Gypsum", "Lime (calcium carbonate)", "Sulfur", "Urea"],
+    answer: "Lime (calcium carbonate)",
+    explanation: "Lime neutralizes acidity by replacing H⁺ and Al³⁺ with Ca²⁺.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_028",
+    type: "multiple_choice",
+    question: "The type of soil water that is held so tightly to soil particles that plants cannot use it is:",
+    options: ["Capillary water", "Gravitational water", "Hygroscopic water", "Free water"],
+    answer: "Hygroscopic water",
+    explanation: "Hygroscopic water is bound by strong adhesive forces and is unavailable to plants.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_029",
+    type: "multiple_choice",
+    question: "The soil moisture content at which plants wilt and fail to recover is called:",
+    options: ["Field capacity", "Saturation point", "Permanent wilting point", "Available water"],
+    answer: "Permanent wilting point",
+    explanation: "At this point, water is held too tightly for plant roots to extract it.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_030",
+    type: "multiple_choice",
+    question: "The soil moisture content after excess water has drained away by gravity is:",
+    options: ["Saturation", "Field capacity", "Wilting point", "Hygroscopic coefficient"],
+    answer: "Field capacity",
+    explanation: "At field capacity, macropores are filled with air and micropores with water; it's the maximum water available to plants.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_031",
+    type: "multiple_choice",
+    question: "The bulk density of soil is the:",
+    options: [
+      "Weight of soil solids per unit volume of soil including pore spaces",
+      "Weight of only solid particles",
+      "Density of soil water",
+      "Density of organic matter"
+    ],
+    answer: "Weight of soil solids per unit volume of soil including pore spaces",
+    explanation: "High bulk density indicates compaction; ideal for plant growth is around 1.0-1.4 g/cm³.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_032",
+    type: "multiple_choice",
+    question: "The practice of alternating strips of crops and fallow or grass to reduce erosion is:",
+    options: ["Contour farming", "Strip cropping", "Terracing", "Mulching"],
+    answer: "Strip cropping",
+    explanation: "Strips of dense vegetation slow runoff and trap sediment.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_033",
+    type: "multiple_choice",
+    question: "The type of erosion that removes a uniform thin layer of topsoil is:",
+    options: ["Gully erosion", "Rill erosion", "Sheet erosion", "Splash erosion"],
+    answer: "Sheet erosion",
+    explanation: "Sheet erosion is the removal of soil in thin layers by flowing water; it often goes unnoticed until subsoil is exposed.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_034",
+    type: "multiple_choice",
+    question: "The soil conservation method that involves building level platforms on steep slopes is:",
+    options: ["Contour farming", "Strip cropping", "Terracing", "Mulching"],
+    answer: "Terracing",
+    explanation: "Terraces reduce slope length and slow runoff, allowing water to infiltrate.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_035",
+    type: "multiple_choice",
+    question: "The microorganisms that convert atmospheric nitrogen into ammonia in symbiotic association with legumes are:",
+    options: ["Nitrobacter", "Rhizobium", "Pseudomonas", "Bacillus"],
+    answer: "Rhizobium",
+    explanation: "Rhizobium bacteria form nodules on legume roots and fix nitrogen.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_036",
+    type: "multiple_choice",
+    question: "The free-living, non-symbiotic nitrogen-fixing bacteria include:",
+    options: ["Rhizobium", "Azotobacter", "Frankia", "Bradyrhizobium"],
+    answer: "Azotobacter",
+    explanation: "Azotobacter and Clostridium are free-living nitrogen fixers in soil.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_037",
+    type: "multiple_choice",
+    question: "The phosphorus in soil is most available to plants at pH:",
+    options: ["Below 4", "4-5", "6-7", "Above 8"],
+    answer: "6-7",
+    explanation: "At very low or high pH, phosphorus forms insoluble compounds with iron, aluminum, or calcium.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_038",
+    type: "multiple_choice",
+    question: "The process of adding organic materials to the soil surface to conserve moisture and suppress weeds is:",
+    options: ["Composting", "Mulching", "Green manuring", "Liming"],
+    answer: "Mulching",
+    explanation: "Mulch can be organic (straw, leaves) or inorganic (plastic).",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_039",
+    type: "multiple_choice",
+    question: "The term 'soil fertility' refers to:",
+    options: [
+      "The physical condition of soil",
+      "The ability of soil to supply essential nutrients to plants",
+      "The soil's water-holding capacity",
+      "The soil's depth"
+    ],
+    answer: "The ability of soil to supply essential nutrients to plants",
+    explanation: "Fertility involves the presence of macro and micronutrients in available forms.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_040",
+    type: "multiple_choice",
+    question: "The process of soil compaction:",
+    options: [
+      "Increases porosity and aeration",
+      "Reduces pore space, restricting root growth and water movement",
+      "Improves drainage",
+      "Has no effect on plants"
+    ],
+    answer: "Reduces pore space, restricting root growth and water movement",
+    explanation: "Compaction is caused by heavy machinery or livestock trampling, especially on wet soils.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_041",
+    type: "multiple_choice",
+    question: "The soil colloid with the highest cation exchange capacity is:",
+    options: ["Sand", "Silt", "Clay", "Humus"],
+    answer: "Humus",
+    explanation: "Humus has a CEC of 150-300 meq/100g, far higher than clay minerals (10-150 meq/100g).",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_042",
+    type: "multiple_choice",
+    question: "The decomposition of organic matter in soil is carried out by:",
+    options: ["Plants", "Soil microorganisms (bacteria, fungi)", "Earthworms only", "Nematodes only"],
+    answer: "Soil microorganisms (bacteria, fungi)",
+    explanation: "Microbes break down complex organic materials into simpler compounds and humus.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_043",
+    type: "multiple_choice",
+    question: "The primary role of earthworms in soil is:",
+    options: [
+      "Spreading plant diseases",
+      "Improving soil structure and nutrient cycling through burrowing and casting",
+      "Consuming plant roots",
+      "Fixing nitrogen"
+    ],
+    answer: "Improving soil structure and nutrient cycling through burrowing and casting",
+    explanation: "Earthworm casts are rich in nutrients and their burrows improve aeration and drainage.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_044",
+    type: "multiple_choice",
+    question: "The term 'green manure' refers to:",
+    options: [
+      "Animal manure",
+      "A crop grown and incorporated into the soil to improve fertility",
+      "Chemical fertilizer",
+      "Composted kitchen waste"
+    ],
+    answer: "A crop grown and incorporated into the soil to improve fertility",
+    explanation: "Leguminous green manures (e.g., cowpea, sunn hemp) add nitrogen and organic matter.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_045",
+    type: "multiple_choice",
+    question: "The measure of acidity or alkalinity of soil is:",
+    options: ["Salinity", "pH", "CEC", "Organic matter"],
+    answer: "pH",
+    explanation: "Soil pH affects nutrient availability and microbial activity.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_046",
+    type: "multiple_choice",
+    question: "The process by which bare soil is covered with vegetation or crop residue to prevent erosion is:",
+    options: ["Tillage", "Fallow", "Cover cropping", "Burning"],
+    answer: "Cover cropping",
+    explanation: "Cover crops protect the soil from raindrop impact and reduce runoff.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_047",
+    type: "multiple_choice",
+    question: "The salt-affected soil with high sodium content that disperses clay and reduces permeability is:",
+    options: ["Saline soil", "Sodic soil", "Acid sulfate soil", "Peat soil"],
+    answer: "Sodic soil",
+    explanation: "Sodic soils have excess exchangeable sodium (ESP > 15) and often have high pH.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_048",
+    type: "multiple_choice",
+    question: "The type of soil formed from volcanic ash, common in some regions, is:",
+    options: ["Vertisol", "Andisol", "Aridisol", "Spodosol"],
+    answer: "Andisol",
+    explanation: "Andisols are young, fertile soils formed from volcanic ejecta; they have high phosphorus fixation.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_049",
+    type: "multiple_choice",
+    question: "The main function of potassium in plants is:",
+    options: [
+      "Chlorophyll synthesis",
+      "Enzyme activation, water regulation, and disease resistance",
+      "Nitrogen fixation",
+      "Cell wall formation"
+    ],
+    answer: "Enzyme activation, water regulation, and disease resistance",
+    explanation: "Potassium regulates stomata opening, improves drought tolerance, and strengthens stalks.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_050",
+    type: "multiple_choice",
+    question: "The term 'mycorrhiza' refers to:",
+    options: [
+      "A disease of roots",
+      "A symbiotic association between fungi and plant roots",
+      "A type of earthworm",
+      "A chemical fertilizer"
+    ],
+    answer: "A symbiotic association between fungi and plant roots",
+    explanation: "Mycorrhizal fungi extend the root system, increasing water and nutrient absorption, especially phosphorus.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_051",
+    type: "multiple_choice",
+    question: "The process of mixing crop residues into the soil to decompose is:",
+    options: ["Burning", "Incorporation", "Mulching", "Baling"],
+    answer: "Incorporation",
+    explanation: "Incorporating residues adds organic matter but must be done properly to avoid nitrogen immobilization.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_052",
+    type: "multiple_choice",
+    question: "The phenomenon where excess salts accumulate in soil due to irrigation in arid areas is:",
+    options: ["Alkalinization", "Salinization", "Acidification", "Leaching"],
+    answer: "Salinization",
+    explanation: "Evaporation leaves salts behind; poor drainage exacerbates the problem.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_053",
+    type: "multiple_choice",
+    question: "The practice of leaving land uncultivated for a period to restore fertility is:",
+    options: ["Crop rotation", "Bush fallowing", "Intercropping", "Monocropping"],
+    answer: "Bush fallowing",
+    explanation: "Fallow periods allow natural vegetation to rebuild organic matter and soil structure.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_054",
+    type: "multiple_choice",
+    question: "The 'A horizon' in a soil profile is also known as:",
+    options: ["Subsoil", "Topsoil", "Parent material", "Bedrock"],
+    answer: "Topsoil",
+    explanation: "It is the zone of eluviation (washing out) and maximum organic matter accumulation.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_055",
+    type: "multiple_choice",
+    question: "The 'B horizon' is characterized by:",
+    options: [
+      "High organic matter",
+      "Accumulation of clay, iron, and other materials leached from above (illuviation)",
+      "Loose, undeveloped material",
+      "Solid bedrock"
+    ],
+    answer: "Accumulation of clay, iron, and other materials leached from above (illuviation)",
+    explanation: "It is called the subsoil or zone of accumulation.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_056",
+    type: "multiple_choice",
+    question: "The ideal soil composition by volume for plant growth is approximately:",
+    options: [
+      "50% solids, 25% water, 25% air",
+      "45% mineral, 5% organic, 25% water, 25% air",
+      "10% mineral, 80% organic, 5% water, 5% air",
+      "30% mineral, 30% organic, 20% water, 20% air"
+    ],
+    answer: "45% mineral, 5% organic, 25% water, 25% air",
+    explanation: "This typical loam composition provides anchorage, nutrients, moisture, and oxygen.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_057",
+    type: "multiple_choice",
+    question: "The soil component that has the greatest influence on cation exchange capacity is:",
+    options: ["Sand", "Silt", "Clay and organic matter", "Gravel"],
+    answer: "Clay and organic matter",
+    explanation: "Clay and humus have negatively charged sites that attract and hold cations.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_058",
+    type: "multiple_choice",
+    question: "The term 'soil aeration' refers to:",
+    options: [
+      "The soil's water content",
+      "The exchange of gases (O₂ and CO₂) between soil and atmosphere",
+      "Soil temperature",
+      "Soil color"
+    ],
+    answer: "The exchange of gases (O₂ and CO₂) between soil and atmosphere",
+    explanation: "Good aeration is essential for root respiration and microbial activity.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_059",
+    type: "multiple_choice",
+    question: "The instrument used to measure soil pH is:",
+    options: ["Thermometer", "pH meter", "Barometer", "Hygrometer"],
+    answer: "pH meter",
+    explanation: "A pH meter or indicator dyes are used to determine soil acidity or alkalinity.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_060",
+    type: "multiple_choice",
+    question: "The method of determining soil texture by feel is called:",
+    options: ["Hydrometer method", "Feel method", "Sieve analysis", "Pipette method"],
+    answer: "Feel method",
+    explanation: "Farmers can estimate texture by rubbing moist soil between fingers; sand feels gritty, silt smooth, clay sticky.",
+    difficulty: "medium",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+
+  // ============================================
+  // HARD (40 questions) - IDs: agr_ssl_061 to 100
+  // ============================================
+
+  {
+    id: "agr_ssl_061",
+    type: "multiple_choice",
+    question: "The ratio of carbon to nitrogen (C:N) in soil organic matter influences:",
+    options: [
+      "Soil color only",
+      "The rate of decomposition and nitrogen mineralization or immobilization",
+      "Soil texture",
+      "Cation exchange capacity"
+    ],
+    answer: "The rate of decomposition and nitrogen mineralization or immobilization",
+    explanation: "A C:N ratio above 25-30 leads to nitrogen immobilization by microbes; below 20 favors net mineralization.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_062",
+    type: "multiple_choice",
+    question: "The phosphorus fixation problem in highly weathered tropical soils (e.g., Oxisols) is primarily due to:",
+    options: [
+      "Low pH and high iron/aluminum oxides",
+      "High organic matter",
+      "Excess calcium",
+      "Low clay content"
+    ],
+    answer: "Low pH and high iron/aluminum oxides",
+    explanation: "Phosphorus forms insoluble complexes with Fe and Al oxides, making it unavailable to plants.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_063",
+    type: "multiple_choice",
+    question: "The electrical conductivity (EC) of a soil saturation extract is used to measure:",
+    options: ["Soil pH", "Soil salinity", "Organic matter", "Cation exchange capacity"],
+    answer: "Soil salinity",
+    explanation: "EC values above 4 dS/m indicate saline soil, which can reduce plant growth.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_064",
+    type: "multiple_choice",
+    question: "The term 'exchangeable sodium percentage' (ESP) is used to classify:",
+    options: ["Saline soils", "Sodic soils", "Acid soils", "Peat soils"],
+    answer: "Sodic soils",
+    explanation: "ESP > 15 indicates sodic conditions, leading to clay dispersion and poor soil structure.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_065",
+    type: "multiple_choice",
+    question: "The reclamation of sodic soils typically involves:",
+    options: [
+      "Adding lime",
+      "Adding gypsum (calcium sulfate) to replace sodium with calcium, followed by leaching",
+      "Adding sulfur",
+      "Flooding alone"
+    ],
+    answer: "Adding gypsum (calcium sulfate) to replace sodium with calcium, followed by leaching",
+    explanation: "Gypsum provides Ca²⁺ which displaces Na⁺ on exchange sites; the displaced sodium is then leached out.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_066",
+    type: "multiple_choice",
+    question: "The process by which clay particles move downward and accumulate in the B horizon is called:",
+    options: ["Leaching", "Eluviation", "Illuviation", "Podzolization"],
+    answer: "Illuviation",
+    explanation: "Illuviation is the deposition of material leached from upper horizons (eluviation) in the subsoil.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_067",
+    type: "multiple_choice",
+    question: "The soil order that is characterized by high shrink-swell clay and deep cracks when dry is:",
+    options: ["Andisol", "Vertisol", "Ultisol", "Mollisol"],
+    answer: "Vertisol",
+    explanation: "Vertisols are rich in smectite clays; they form wide cracks during dry seasons, making tillage difficult.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_068",
+    type: "multiple_choice",
+    question: "The nitrogen cycle process where bacteria convert nitrate to nitrous oxide or nitrogen gas under anaerobic conditions is:",
+    options: ["Nitrification", "Ammonification", "Denitrification", "Immobilization"],
+    answer: "Denitrification",
+    explanation: "This causes loss of nitrogen from soil to atmosphere, often in waterlogged or compacted soils.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_069",
+    type: "multiple_choice",
+    question: "The term 'rhizosphere' refers to:",
+    options: [
+      "The root itself",
+      "The soil region immediately surrounding and influenced by plant roots",
+      "The entire soil profile",
+      "The soil atmosphere"
+    ],
+    answer: "The soil region immediately surrounding and influenced by plant roots",
+    explanation: "The rhizosphere has high microbial activity and nutrient cycling due to root exudates.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_070",
+    type: "multiple_choice",
+    question: "The primary mechanism by which potassium is held in soil is:",
+    options: [
+      "Leaching",
+      "Fixation in clay mineral interlayers (e.g., illite) and cation exchange",
+      "Volatilization",
+      "Denitrification"
+    ],
+    answer: "Fixation in clay mineral interlayers (e.g., illite) and cation exchange",
+    explanation: "Potassium is held on exchange sites and can be 'fixed' between clay layers, becoming slowly available.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_071",
+    type: "multiple_choice",
+    question: "The term 'allelopathy' in soil refers to:",
+    options: [
+      "Beneficial interaction between plants and soil microbes",
+      "The release of chemical compounds by plants that inhibit the growth of other plants",
+      "The breakdown of organic matter",
+      "Symbiotic nitrogen fixation"
+    ],
+    answer: "The release of chemical compounds by plants that inhibit the growth of other plants",
+    explanation: "Certain crops (e.g., sunflower) and weeds release allelochemicals that can suppress neighboring vegetation.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_072",
+    type: "multiple_choice",
+    question: "The 'universal soil loss equation' (USLE) estimates soil erosion based on:",
+    options: [
+      "Rainfall erosivity, soil erodibility, slope length/gradient, cover management, and erosion control practices",
+      "Only rainfall amount",
+      "Only soil texture",
+      "Land area only"
+    ],
+    answer: "Rainfall erosivity, soil erodibility, slope length/gradient, cover management, and erosion control practices",
+    explanation: "A = R × K × LS × C × P; each factor quantifies a different aspect affecting erosion.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_073",
+    type: "multiple_choice",
+    question: "The process of 'podzolization' typically occurs in:",
+    options: [
+      "Arid regions",
+      "Cool, humid regions under coniferous forests",
+      "Tropical rainforests",
+      "Grasslands"
+    ],
+    answer: "Cool, humid regions under coniferous forests",
+    explanation: "Podzolization involves leaching of organic acids and aluminum/iron from the surface to subsoil, forming distinct horizons.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_074",
+    type: "multiple_choice",
+    question: "The term 'isomorphous substitution' in clay minerals refers to:",
+    options: [
+      "Replacement of plants in a crop rotation",
+      "Replacement of one ion by another of similar size in the crystal lattice, creating permanent charge",
+      "Substitution of fertilizer types",
+      "Physical mixing of soil"
+    ],
+    answer: "Replacement of one ion by another of similar size in the crystal lattice, creating permanent charge",
+    explanation: "For example, Al³⁺ replacing Si⁴⁺ in tetrahedral sheets gives clay its negative charge.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_075",
+    type: "multiple_choice",
+    question: "The difference between 'field capacity' and 'permanent wilting point' is known as:",
+    options: ["Saturation", "Available water capacity", "Hygroscopic water", "Gravitational water"],
+    answer: "Available water capacity",
+    explanation: "This is the water that plants can actually use; it varies with soil texture.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_076",
+    type: "multiple_choice",
+    question: "The process of 'laterization' in tropical soils results in:",
+    options: [
+      "Accumulation of organic matter",
+      "High fertility due to nutrient retention",
+      "Formation of hard, iron-rich layers (plinthite) and nutrient-poor soils",
+      "High calcium content"
+    ],
+    answer: "Formation of hard, iron-rich layers (plinthite) and nutrient-poor soils",
+    explanation: "Intense weathering and leaching remove silica and bases, leaving iron and aluminum oxides.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_077",
+    type: "multiple_choice",
+    question: "The use of 'soil amendments' like biochar can improve soil by:",
+    options: [
+      "Increasing water-holding capacity, cation exchange capacity, and carbon sequestration",
+      "Only adding nitrogen",
+      "Making soil more acidic",
+      "Killing earthworms"
+    ],
+    answer: "Increasing water-holding capacity, cation exchange capacity, and carbon sequestration",
+    explanation: "Biochar is a stable form of charcoal that benefits soil properties for long periods.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_078",
+    type: "multiple_choice",
+    question: "The soil bacteria that oxidize ammonia to nitrite belong to the genus:",
+    options: ["Nitrobacter", "Nitrosomonas", "Rhizobium", "Azotobacter"],
+    answer: "Nitrosomonas",
+    explanation: "Nitrosomonas carries out the first step of nitrification; Nitrobacter oxidizes nitrite to nitrate.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_079",
+    type: "multiple_choice",
+    question: "The term 'aquic conditions' in soil taxonomy refers to:",
+    options: [
+      "Well-drained soils",
+      "Soils that are saturated with water for prolonged periods, leading to reducing conditions",
+      "Soils with high organic matter",
+      "Soils with permafrost"
+    ],
+    answer: "Soils that are saturated with water for prolonged periods, leading to reducing conditions",
+    explanation: "Such soils (e.g., wetland soils) often have gleyed (gray) colors due to reduced iron.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_080",
+    type: "multiple_choice",
+    question: "The 'soil erodibility factor' (K factor) in USLE is primarily determined by:",
+    options: ["Rainfall intensity", "Soil texture, structure, and organic matter content", "Slope length", "Crop type"],
+    answer: "Soil texture, structure, and organic matter content",
+    explanation: "Soils high in silt and low in organic matter are most erodible.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_081",
+    type: "multiple_choice",
+    question: "The practice of 'liming' an acid soil results in:",
+    options: [
+      "Lowering pH",
+      "Raising pH, reducing aluminum toxicity, and increasing availability of phosphorus and molybdenum",
+      "Increased sodium content",
+      "Removal of organic matter"
+    ],
+    answer: "Raising pH, reducing aluminum toxicity, and increasing availability of phosphorus and molybdenum",
+    explanation: "Lime neutralizes H⁺ and precipitates toxic Al³⁺, improving root growth.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_082",
+    type: "multiple_choice",
+    question: "The term 'soil organic matter' (SOM) consists of:",
+    options: [
+      "Only living organisms",
+      "Fresh residues, decomposing organic matter, and stable humus",
+      "Only humus",
+      "Only mineral particles"
+    ],
+    answer: "Fresh residues, decomposing organic matter, and stable humus",
+    explanation: "SOM is a continuum from fresh litter to highly decomposed humic substances.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_083",
+    type: "multiple_choice",
+    question: "The term 'nitrogen immobilization' occurs when:",
+    options: [
+      "Soil microbes use available nitrogen to decompose high C:N ratio residues, temporarily making it unavailable to plants",
+      "Nitrogen is leached",
+      "Nitrogen is fixed",
+      "Plants absorb excess nitrogen"
+    ],
+    answer: "Soil microbes use available nitrogen to decompose high C:N ratio residues, temporarily making it unavailable to plants",
+    explanation: "Adding straw or sawdust can cause nitrogen deficiency in crops until the residues are broken down.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_084",
+    type: "multiple_choice",
+    question: "The 'permanent charge' of 2:1 clay minerals (e.g., montmorillonite) originates from:",
+    options: [
+      "Broken edges only",
+      "pH-dependent charge",
+      "Isomorphous substitution in the crystal lattice",
+      "Organic matter"
+    ],
+    answer: "Isomorphous substitution in the crystal lattice",
+    explanation: "It is a permanent negative charge that is independent of pH.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_085",
+    type: "multiple_choice",
+    question: "The 'textural triangle' is used to:",
+    options: [
+      "Determine soil color",
+      "Classify soil based on percentages of sand, silt, and clay",
+      "Measure soil depth",
+      "Calculate fertilizer rates"
+    ],
+    answer: "Classify soil based on percentages of sand, silt, and clay",
+    explanation: "It divides soil into 12 textural classes, such as sandy loam, clay loam, etc.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_086",
+    type: "multiple_choice",
+    question: "The process of 'peat formation' occurs in:",
+    options: [
+      "Arid regions",
+      "Waterlogged, anaerobic conditions where organic matter accumulates faster than it decomposes",
+      "Sandy deserts",
+      "Tropical savannas"
+    ],
+    answer: "Waterlogged, anaerobic conditions where organic matter accumulates faster than it decomposes",
+    explanation: "Histosols (organic soils) form in wetlands where low oxygen slows decomposition.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_087",
+    type: "multiple_choice",
+    question: "The term 'soil structure' refers to:",
+    options: [
+      "The proportion of sand, silt, and clay",
+      "The arrangement of soil particles into aggregates or peds",
+      "The organic matter content",
+      "The soil pH"
+    ],
+    answer: "The arrangement of soil particles into aggregates or peds",
+    explanation: "Granular, blocky, prismatic, and platy are common structural types.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_088",
+    type: "multiple_choice",
+    question: "The practice of 'contour bunding' is used to:",
+    options: [
+      "Increase slope length",
+      "Reduce runoff and soil erosion on slopes",
+      "Improve soil fertility directly",
+      "Increase soil acidity"
+    ],
+    answer: "Reduce runoff and soil erosion on slopes",
+    explanation: "Bunds (ridges) constructed along the contour slow water flow and increase infiltration.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_089",
+    type: "multiple_choice",
+    question: "The 'hygroscopic coefficient' of soil is:",
+    options: [
+      "The water held at field capacity",
+      "The water held so tightly by soil particles that it forms a thin film and is unavailable to plants",
+      "The water that drains freely",
+      "The total pore space"
+    ],
+    answer: "The water held so tightly by soil particles that it forms a thin film and is unavailable to plants",
+    explanation: "It is determined by the relative humidity of the air and soil; plants cannot extract this water.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_090",
+    type: "multiple_choice",
+    question: "The term 'soil conservation' refers to:",
+    options: [
+      "Increasing soil erosion",
+      "A set of management practices to prevent soil degradation and maintain productivity",
+      "Only terracing",
+      "Only organic farming"
+    ],
+    answer: "A set of management practices to prevent soil degradation and maintain productivity",
+    explanation: "It includes agronomic, mechanical, and vegetative measures to protect soil.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_091",
+    type: "multiple_choice",
+    question: "The 'oxidation-reduction potential' (redox) in soil is important because:",
+    options: [
+      "It determines soil color only",
+      "It influences nutrient availability and the form of elements (e.g., Fe, Mn, N)",
+      "It measures soil temperature",
+      "It measures soil water content"
+    ],
+    answer: "It influences nutrient availability and the form of elements (e.g., Fe, Mn, N)",
+    explanation: "Low redox (reducing conditions) can cause denitrification and toxicity of reduced metals.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_092",
+    type: "multiple_choice",
+    question: "The term 'fallow' means:",
+    options: [
+      "Growing crops continuously",
+      "Leaving land uncropped for a period to restore fertility and moisture",
+      "Applying fertilizer",
+      "Irrigating"
+    ],
+    answer: "Leaving land uncropped for a period to restore fertility and moisture",
+    explanation: "Summer fallow conserves moisture in dryland farming; bush fallow restores organic matter.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_093",
+    type: "multiple_choice",
+    question: "The 'cation exchange capacity' of a soil is expressed in:",
+    options: ["Percent", "meq/100g (or cmol(+)/kg)", "g/cm³", "mg/L"],
+    answer: "meq/100g (or cmol(+)/kg)",
+    explanation: "CEC quantifies the total negative charge available to hold exchangeable cations.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_094",
+    type: "multiple_choice",
+    question: "The 'base saturation percentage' is:",
+    options: [
+      "The proportion of water in soil",
+      "The percentage of CEC occupied by basic cations (Ca²⁺, Mg²⁺, K⁺, Na⁺)",
+      "The percentage of organic matter",
+      "The percentage of clay"
+    ],
+    answer: "The percentage of CEC occupied by basic cations (Ca²⁺, Mg²⁺, K⁺, Na⁺)",
+    explanation: "High base saturation indicates fertile, neutral to alkaline soil; low base saturation indicates acidic, leached soil.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_095",
+    type: "multiple_choice",
+    question: "The microorganisms responsible for converting nitrite to nitrate are:",
+    options: ["Nitrosomonas", "Nitrobacter", "Rhizobium", "Azotobacter"],
+    answer: "Nitrobacter",
+    explanation: "Nitrobacter completes the nitrification process, making nitrogen available as nitrate for plant uptake.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_096",
+    type: "multiple_choice",
+    question: "The term 'soil taxonomy' classifies soils based on:",
+    options: [
+      "Only color",
+      "Diagnostic horizons and measurable properties",
+      "Only texture",
+      "Only fertility"
+    ],
+    answer: "Diagnostic horizons and measurable properties",
+    explanation: "USDA Soil Taxonomy uses epipedons and subsurface diagnostic horizons to classify soils into orders, suborders, etc.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_097",
+    type: "multiple_choice",
+    question: "The 'wilting coefficient' of a soil is highest for:",
+    options: ["Sandy soil", "Loamy soil", "Clay soil", "Peat soil"],
+    answer: "Clay soil",
+    explanation: "Clay holds more hygroscopic water, so plants wilt at a higher moisture content compared to sandy soils.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_098",
+    type: "multiple_choice",
+    question: "The 'soil buffering capacity' refers to:",
+    options: [
+      "The ability of soil to resist changes in temperature",
+      "The ability of soil to resist changes in pH",
+      "The ability of soil to hold water",
+      "The ability of soil to drain"
+    ],
+    answer: "The ability of soil to resist changes in pH",
+    explanation: "Soils with high clay and organic matter content have higher buffering capacity.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_099",
+    type: "multiple_choice",
+    question: "The 'gravitational potential' of soil water is:",
+    options: [
+      "The energy due to dissolved salts",
+      "The energy due to the pull of gravity",
+      "The energy due to surface tension",
+      "The energy due to pressure"
+    ],
+    answer: "The energy due to the pull of gravity",
+    explanation: "Water moves from higher to lower gravitational potential, which is why water drains downward.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  },
+  {
+    id: "agr_ssl_100",
+    type: "multiple_choice",
+    question: "The practice of 'conservation tillage' aims to:",
+    options: [
+      "Completely invert the soil",
+      "Leave crop residue on the soil surface to reduce erosion and conserve moisture",
+      "Burn all residues",
+      "Increase soil compaction"
+    ],
+    answer: "Leave crop residue on the soil surface to reduce erosion and conserve moisture",
+    explanation: "No-till, minimum-till, and mulch-till are forms of conservation tillage.",
+    difficulty: "hard",
+    topic: "Soil Science",
+    subject: "Agricultural Science",
+    platform: "hyelearner",
+    year: 2026
+  }
+];
+

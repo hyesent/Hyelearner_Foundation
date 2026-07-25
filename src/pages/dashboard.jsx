@@ -1,6 +1,7 @@
 // ============================================================
-// HYELEARNER: DASHBOARD — CLEAN VERSION
-// Uses global CSS classes, inline styles only for dynamic values
+// HYELEARNER: FOUNDATION — DASHBOARD (POLISHED)
+// Premium EdTech Design with Lucide Icons
+// Now pulls real data from storage + Free tier restrictions + SOCIAL + FEEDBACK + ADMIN
 // Built by Hyesent.dev
 // ============================================================
 
@@ -52,9 +53,9 @@ import {
   UserPlus,
   Shield,
   Globe,
-  MessageSquare,
+  MessageSquare,  
   Database,
-  FunctionSquare
+  FunctionSquare        
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -73,8 +74,19 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [subscription, setSubscription] = useState(null)
 
+  // ---- Mobile detection (inline, no external hook) ----
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  // -------------------------------------------------------
+
+  // Check if hardcoded account
   const isHardcoded = user?.email === 'hyesent@example.com' || user?.id === 'user_hyesent'
 
+  // Load subscription status
   useEffect(() => {
     const loadSubscription = async () => {
       try {
@@ -94,6 +106,7 @@ export default function Dashboard() {
 
   const loadStats = () => {
     setLoading(true)
+    
     try {
       const gamification = storage.getGamification()
       const sessions = storage.getSessions()
@@ -101,7 +114,7 @@ export default function Dashboard() {
       let correct = 0
       let wrong = 0
       let completedSessions = 0
-
+      
       sessions.forEach(session => {
         if (session.status === 'completed') {
           completedSessions++
@@ -110,18 +123,18 @@ export default function Dashboard() {
           wrong += session.wrongAnswers || session.wrong || 0
         }
       })
-
+      
       const accuracy = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0
-
+      
       setStats({
         xp: gamification.xp || 0,
         level: gamification.level || 1,
         streak: gamification.streak || 0,
-        accuracy,
+        accuracy: accuracy,
         sessions: completedSessions,
-        totalQuestions,
-        correct,
-        wrong,
+        totalQuestions: totalQuestions,
+        correct: correct,
+        wrong: wrong,
       })
     } catch (error) {
       console.error('Failed to load stats:', error)
@@ -130,9 +143,12 @@ export default function Dashboard() {
     }
   }
 
+  // Refresh stats every 30 seconds
   useEffect(() => {
     if (!loading) {
-      const interval = setInterval(loadStats, 30000)
+      const interval = setInterval(() => {
+        loadStats()
+      }, 30000)
       return () => clearInterval(interval)
     }
   }, [loading])
@@ -177,14 +193,19 @@ export default function Dashboard() {
     { id: 'feedback', icon: MessageSquare, title: 'Feedback & Contributions', desc: 'Help improve Hyelearner', color: 'var(--color-primary)' },
   ]
 
+  // ✅ FREE users only see: practice, settings, profile (profile is via avatar), revision-planner, social (limited)
   const FREE_FEATURES = ['practice', 'settings', 'revision-planner', 'social', 'feedback']
+
   const isFreeUser = !subscription?.isActive
 
   let features = allFeatures.filter(feature => {
-    if (isFreeUser) return FREE_FEATURES.includes(feature.id)
+    if (isFreeUser) {
+      return FREE_FEATURES.includes(feature.id)
+    }
     return true
   })
 
+  // ✅ Add Admin panel (only for hardcoded account)
   if (isHardcoded) {
     features.push({
       id: 'admin',
@@ -196,73 +217,94 @@ export default function Dashboard() {
   }
 
   const statsConfig = [
-    {
-      key: 'xp',
-      icon: Zap,
-      label: 'Total XP',
-      value: stats.xp.toLocaleString(),
-      sub: `Level ${stats.level}`,
+    { 
+      key: 'xp', 
+      icon: Zap, 
+      label: 'Total XP', 
+      value: stats.xp.toLocaleString(), 
+      sub: `Level ${stats.level}`, 
       color: 'var(--color-primary)',
       bg: 'var(--color-primary-light)'
     },
-    {
-      key: 'streak',
-      icon: Flame,
-      label: 'Streak',
-      value: stats.streak,
-      sub: stats.streak === 0 ? 'Start today' : 'Keep going!',
+    { 
+      key: 'streak', 
+      icon: Flame, 
+      label: 'Streak', 
+      value: stats.streak, 
+      sub: stats.streak === 0 ? 'Start today' : 'Keep going!', 
       color: 'var(--color-warning)',
       bg: 'var(--color-warning-light)'
     },
-    {
-      key: 'sessions',
-      icon: PenTool,
-      label: 'Sessions',
-      value: stats.sessions,
-      sub: stats.sessions === 0 ? 'Start your first' : 'Great progress!',
+    { 
+      key: 'sessions', 
+      icon: PenTool, 
+      label: 'Sessions', 
+      value: stats.sessions, 
+      sub: stats.sessions === 0 ? 'Start your first' : 'Great progress!', 
       color: 'var(--color-success)',
       bg: 'var(--color-success-light)'
     },
-    {
-      key: 'accuracy',
-      icon: Target,
-      label: 'Accuracy',
-      value: `${stats.accuracy}%`,
-      sub: stats.accuracy === 0 ? 'Start practicing' : stats.accuracy >= 70 ? 'Excellent' : stats.accuracy >= 40 ? 'Getting there' : 'Needs work',
+    { 
+      key: 'accuracy', 
+      icon: Target, 
+      label: 'Accuracy', 
+      value: `${stats.accuracy}%`, 
+      sub: stats.accuracy === 0 ? 'Start practicing' : stats.accuracy >= 70 ? 'Excellent' : stats.accuracy >= 40 ? 'Getting there' : 'Needs work', 
       color: stats.accuracy >= 70 ? 'var(--color-success)' : stats.accuracy >= 40 ? 'var(--color-warning)' : 'var(--color-danger)',
       bg: stats.accuracy >= 70 ? 'var(--color-success-light)' : stats.accuracy >= 40 ? 'var(--color-warning-light)' : 'var(--color-danger-light)'
     },
   ]
 
-  if (loading) return <LoadingScreen />
+  if (loading) {
+    return <LoadingScreen />
+  }
+
+  // ---------- Layout helpers ----------
+  const gridCols = isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr'
+  const cardPadding = isMobile ? 'var(--space-3)' : 'var(--space-4)'
+  const featurePadding = isMobile ? 'var(--space-3)' : 'var(--space-5)'
+  const gap = isMobile ? 'var(--space-3)' : 'var(--space-4)'
+  const statFontSize = isMobile ? 'var(--font-size-xl)' : 'var(--font-size-3xl)'
+  const iconSize = isMobile ? 16 : 20
+  const featureIconSize = isMobile ? 18 : 24
+  const avatarSize = isMobile ? 36 : 44
+  const userIconSize = isMobile ? 18 : 22
+  const headingSize = isMobile ? 'h3' : 'h2'
+  const marginBottom = isMobile ? 'var(--space-4)' : 'var(--space-8)'
 
   return (
-    <div className="section" style={{ background: 'var(--color-background)', padding: 'var(--space-4) var(--space-6)', minHeight: '100vh' }}>
-      <div className="container" style={{ maxWidth: '80rem' }}>
-        {/* HEADER */}
-        <div className="flex-between" style={{ marginBottom: 'var(--space-8)' }}>
+    <div style={{ background: 'var(--color-background)', padding: 'var(--space-4) var(--space-6)', minHeight: '100vh' }}>
+      <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
+
+        {/* ===== HEADER — responsive sizes ===== */}
+        <div className="flex-between" style={{ marginBottom: isMobile ? 'var(--space-4)' : 'var(--space-8)' }}>
           <div>
-            <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
-              <h1 className="h2" style={{ margin: 0 }}>
-                Welcome back, {user?.firstName || user?.username || 'Learner'}!
+            <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+              <h1 className={headingSize} style={{ margin: 0 }}>
+                {isMobile
+                  ? `👋 ${user?.firstName || user?.username || 'Learner'}`
+                  : `Welcome back, ${user?.firstName || user?.username || 'Learner'}!`
+                }
               </h1>
-              <Sparkles style={{ width: 20, height: 20, color: 'var(--color-primary)' }} />
+              {!isMobile && <Sparkles style={{ width: 20, height: 20, color: 'var(--color-primary)' }} />}
             </div>
-            <p className="text-muted text-sm" style={{ marginTop: 2 }}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </p>
+            {!isMobile && (
+              <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)', marginTop: '2px' }}>
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </p>
+            )}
             {isFreeUser && (
-              <div className="flex" style={{ gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <div className="flex" style={{ gap: 'var(--space-2)', marginTop: isMobile ? 'var(--space-1)' : 'var(--space-2)' }}>
                 <span className="badge badge-muted" style={{ fontSize: 'var(--font-size-xs)' }}>
                   <Lock style={{ width: 12, height: 12, display: 'inline' }} /> Free Plan
                 </span>
-                <button
-                  onClick={() => navigate('/settings')}
+                <button 
+                  onClick={() => navigate('/settings')} 
                   className="btn btn-primary"
                   style={{ fontSize: 'var(--font-size-xs)', padding: 'var(--space-1) var(--space-3)' }}
                 >
@@ -276,61 +318,69 @@ export default function Dashboard() {
               </span>
             )}
           </div>
-          <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
+          <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
             <button
               onClick={loadStats}
               className="btn btn-ghost"
               style={{ padding: 'var(--space-1) var(--space-2)' }}
               title="Refresh stats"
             >
-              <RefreshCw style={{ width: 16, height: 16 }} />
+              <RefreshCw style={{ width: isMobile ? 14 : 16, height: isMobile ? 14 : 16 }} />
             </button>
             <button
               onClick={() => navigate('/profile')}
               className="flex-center"
               style={{
-                width: 44,
-                height: 44,
+                width: avatarSize,
+                height: avatarSize,
                 borderRadius: '50%',
                 background: 'var(--color-primary-light)',
                 color: 'var(--color-primary)',
-                fontWeight: 700,
-                fontSize: 'var(--font-size-lg)',
+                fontWeight: '700',
+                fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-lg)',
                 transition: 'background var(--transition)',
                 border: 'none',
                 cursor: 'pointer'
               }}
             >
-              <User size={22} />
+              <User size={userIconSize} />
             </button>
           </div>
         </div>
 
-        {/* STATS CARDS */}
-        <div className="grid-4" style={{ marginBottom: 'var(--space-8)' }}>
+        {/* ===== STATS CARDS — 4 cols desktop, 2 cols mobile ===== */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: gridCols, 
+          gap: gap,
+          marginBottom: marginBottom
+        }}>
           {statsConfig.map((stat) => {
             const Icon = stat.icon
             return (
-              <div key={stat.key} className="stat-card" style={{ padding: 'var(--space-4)' }}>
+              <div key={stat.key} className="stat-card" style={{ padding: cardPadding }}>
                 <div className="flex-between" style={{ alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 700, color: stat.color, margin: 0, lineHeight: 1.2 }}>
+                    <div style={{ fontSize: statFontSize, fontWeight: '700', color: stat.color, margin: 0, lineHeight: 1.2 }}>
                       {stat.value}
                     </div>
-                    <div className="text-muted text-sm" style={{ marginTop: 2 }}>{stat.label}</div>
-                    <div className="text-xs" style={{ color: 'var(--color-text-muted)', marginTop: 2 }}>{stat.sub}</div>
+                    <div className="text-muted" style={{ fontSize: isMobile ? 'var(--font-size-xs)' : 'var(--font-size-sm)', marginTop: '2px' }}>
+                      {stat.label}
+                    </div>
+                    {!isMobile && (
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                        {stat.sub}
+                      </div>
+                    )}
                   </div>
-                  <div
-                    className="flex-center"
-                    style={{
-                      padding: 'var(--space-2)',
-                      borderRadius: 'var(--radius-xl)',
-                      background: stat.bg,
-                      width: 40,
-                      height: 40,
-                    }}
-                  >
-                    <Icon style={{ width: 20, height: 20, color: stat.color }} />
+                  <div className="flex-center" style={{ 
+                    padding: 'var(--space-2)', 
+                    borderRadius: 'var(--radius-xl)', 
+                    background: stat.bg,
+                    width: isMobile ? 32 : 40,
+                    height: isMobile ? 32 : 40
+                  }}>
+                    <Icon style={{ width: iconSize, height: iconSize, color: stat.color }} />
                   </div>
                 </div>
               </div>
@@ -338,8 +388,13 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* FEATURE GRID */}
-        <div className="grid-4" style={{ marginBottom: 'var(--space-8)', gap: 'var(--space-4)' }}>
+        {/* ===== FEATURE GRID — 4 cols desktop, 2 cols mobile ===== */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: gridCols, 
+          gap: gap,
+          marginBottom: marginBottom
+        }}>
           {features.map((feature) => {
             const Icon = feature.icon
             const bgColor = getColorClass(feature.color)
@@ -348,34 +403,31 @@ export default function Dashboard() {
                 key={feature.id}
                 onClick={() => navigate(`/${feature.id}`)}
                 className="feature-card"
-                style={{
+                style={{ 
                   border: '1px solid var(--color-border)',
                   transition: 'all var(--transition)',
                   cursor: 'pointer',
                   background: 'var(--color-surface)',
-                  padding: 'var(--space-5)',
-                  borderRadius: 'var(--radius-2xl)',
+                  padding: featurePadding,
+                  borderRadius: isMobile ? 'var(--radius-xl)' : 'var(--radius-2xl)',
                   textAlign: 'center'
                 }}
               >
-                <div
-                  className="flex-center"
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 'var(--radius-xl)',
-                    margin: '0 auto var(--space-3)',
-                    background: bgColor,
-                    color: feature.color,
-                    transition: 'background var(--transition)'
-                  }}
-                >
-                  <Icon style={{ width: 24, height: 24 }} strokeWidth={1.5} />
+                <div className="flex-center" style={{ 
+                  width: isMobile ? 40 : 48, 
+                  height: isMobile ? 40 : 48, 
+                  borderRadius: 'var(--radius-lg)', 
+                  margin: '0 auto var(--space-2)',
+                  background: bgColor,
+                  color: feature.color,
+                  transition: 'background var(--transition)'
+                }}>
+                  <Icon style={{ width: featureIconSize, height: featureIconSize }} strokeWidth={1.5} />
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', color: 'var(--color-text)' }}>
+                <div style={{ fontWeight: '600', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)', color: 'var(--color-text)' }}>
                   {feature.title}
                 </div>
-                <div className="text-sm text-muted" style={{ marginTop: 'var(--space-1)' }}>
+                <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
                   {feature.desc}
                 </div>
               </button>
@@ -383,8 +435,9 @@ export default function Dashboard() {
           })}
         </div>
 
+        {/* ===== FOOTER ===== */}
         <Footer />
       </div>
     </div>
   )
-        }
+  }

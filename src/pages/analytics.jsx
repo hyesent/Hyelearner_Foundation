@@ -19,7 +19,11 @@ import {
   Calendar,
   Download,
   RefreshCw,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  BookOpen
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 
@@ -35,7 +39,7 @@ export function AnalyticsPage() {
     correct: 0,
     wrong: 0,
     accuracy: 0,
-    studyTime: 0, // minutes
+    studyTime: 0,
     xp: 0,
     level: 1,
     streak: 0,
@@ -55,30 +59,26 @@ export function AnalyticsPage() {
     setLoading(true)
 
     try {
-      // Get data from storage
       const sessions = storage.getSessions()
       const mastery = storage.getMastery()
       const mistakes = storage.getMistakes()
       const gamification = storage.getGamification()
       const results = storage.getResults()
 
-      // Calculate stats
       let totalQuestions = 0, correct = 0, wrong = 0, studyTime = 0
       const dailyMap = {}
       const weeklyMap = {}
       const subjectMap = {}
       const sessionDates = []
 
-      // Process sessions
       const completedSessions = sessions.filter(s => s.status === 'completed')
       
       completedSessions.forEach(s => {
         totalQuestions += s.totalQuestions || s.total || 0
         correct += s.correctAnswers || s.correct || 0
         wrong += s.wrongAnswers || s.wrong || 0
-        studyTime += (s.timeTaken || 0) / 60 // convert to minutes
+        studyTime += (s.timeTaken || 0) / 60
 
-        // Track dates for activity
         const date = s.completedAt ? new Date(s.completedAt).toISOString().split('T')[0] : 
                      s.createdAt ? new Date(s.createdAt).toISOString().split('T')[0] : null
         if (date) {
@@ -86,7 +86,6 @@ export function AnalyticsPage() {
           if (!sessionDates.includes(date)) sessionDates.push(date)
         }
 
-        // Subject progress
         if (s.subject) {
           if (!subjectMap[s.subject]) {
             subjectMap[s.subject] = { total: 0, correct: 0 }
@@ -96,20 +95,17 @@ export function AnalyticsPage() {
         }
       })
 
-      // Also process results if sessions don't have data
       if (results && results.length > 0) {
         results.forEach(r => {
           if (!subjectMap[r.subject]) {
             subjectMap[r.subject] = { total: 0, correct: 0 }
           }
-          // Only add if not already counted via sessions
         })
       }
 
       const totalSessions = completedSessions.length
       const accuracy = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0
 
-      // Daily activity array (last 7 days)
       const today = new Date()
       const last7Days = []
       for (let i = 6; i >= 0; i--) {
@@ -124,7 +120,6 @@ export function AnalyticsPage() {
         count: dailyMap[date] || 0
       }))
 
-      // Weekly activity (last 4 weeks)
       const weeklyLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
       const weeklyActivity = weeklyLabels.map((label, index) => {
         const weekStart = new Date(today)
@@ -143,7 +138,6 @@ export function AnalyticsPage() {
         return { label, count }
       })
 
-      // Subject progress
       const subjectProgress = Object.entries(subjectMap).map(([subject, data]) => ({
         subject,
         accuracy: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
@@ -151,7 +145,6 @@ export function AnalyticsPage() {
         correct: data.correct,
       }))
 
-      // Mastery stats
       const masteryValues = Object.values(mastery).map(m => m.accuracy || 0)
       const topicsMastered = masteryValues.filter(v => v >= 80).length
       const weakTopics = masteryValues.filter(v => v > 0 && v < 50).length
@@ -180,7 +173,6 @@ export function AnalyticsPage() {
     }
   }
 
-  // Auto-refresh every 30 seconds
   useEffect(() => {
     if (!loading) {
       const interval = setInterval(() => {
@@ -197,7 +189,6 @@ export function AnalyticsPage() {
     return `${hours}h ${mins}m`
   }
 
-  // PDF EXPORT
   const handleExportPDF = async () => {
     setExporting(true)
     try {
@@ -207,7 +198,6 @@ export function AnalyticsPage() {
       const margin = 20
       let y = margin
 
-      // Helper to add page if needed
       const checkPageBreak = (neededSpace) => {
         if (y + neededSpace > pageHeight - margin) {
           doc.addPage()
@@ -215,13 +205,11 @@ export function AnalyticsPage() {
         }
       }
 
-      // Title
       doc.setFontSize(20)
       doc.setTextColor(79, 70, 229)
       doc.text('Hyelearner — Analytics Report', pageWidth / 2, y, { align: 'center' })
       y += 12
 
-      // Subtitle
       doc.setFontSize(10)
       doc.setTextColor(100, 100, 100)
       const dateStr = new Date().toISOString().slice(0, 10)
@@ -234,7 +222,6 @@ export function AnalyticsPage() {
       doc.line(margin, y, pageWidth - margin, y)
       y += 10
 
-      // Stats Summary
       doc.setFontSize(12)
       doc.setTextColor(0, 0, 0)
 
@@ -263,7 +250,6 @@ export function AnalyticsPage() {
       doc.line(margin, y, pageWidth - margin, y)
       y += 10
 
-      // Questions Stats
       checkPageBreak(30)
       doc.setFontSize(12)
       doc.setTextColor(0, 0, 0)
@@ -281,7 +267,6 @@ export function AnalyticsPage() {
       doc.text(`Wrong: ${stats.wrong}`, margin + 2, y)
       y += 10
 
-      // Subject Progress
       if (stats.subjectProgress.length > 0) {
         checkPageBreak(30)
         doc.setFontSize(12)
@@ -295,7 +280,6 @@ export function AnalyticsPage() {
           doc.setTextColor(50, 50, 50)
           doc.text(`${sub.subject}: ${sub.accuracy}% (${sub.total} Qs)`, margin, y)
           y += 5
-          // Progress bar
           const barWidth = pageWidth - 2 * margin
           const barHeight = 3
           doc.setDrawColor(200, 200, 200)
@@ -308,7 +292,6 @@ export function AnalyticsPage() {
         y += 4
       }
 
-      // Mastery Stats
       checkPageBreak(30)
       doc.setFontSize(12)
       doc.setTextColor(0, 0, 0)
@@ -325,7 +308,6 @@ export function AnalyticsPage() {
       doc.text(`Mistakes: ${stats.mistakes}`, margin + 2, y)
       y += 10
 
-      // Activity Summary
       if (stats.dailyActivity.some(d => d.count > 0)) {
         checkPageBreak(30)
         doc.setFontSize(12)
@@ -351,7 +333,6 @@ export function AnalyticsPage() {
         y += maxBarHeight + 18
       }
 
-      // Footer
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
       doc.text('© Hyelearner — hyesent.dev', pageWidth / 2, pageHeight - 10, { align: 'center' })
@@ -376,7 +357,6 @@ export function AnalyticsPage() {
   return (
     <div ref={reportRef} style={{ background: 'var(--color-background)', padding: 'var(--space-6)', minHeight: '100vh' }}>
       <div style={{ maxWidth: '56rem', margin: '0 auto' }}>
-        {/* Header */}
         <div className="card flex-between" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="flex" style={{ gap: 'var(--space-3)' }}>
             <div className="flex-center" style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-xl)', background: 'var(--color-primary-light)' }}>
@@ -397,7 +377,6 @@ export function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid-4" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="stat-card text-center">
             <div className="h2" style={{ color: 'var(--color-primary)' }}>{stats.totalSessions}</div>
@@ -419,32 +398,42 @@ export function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Detail Stats */}
         <div className="grid-3" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="stat-card text-center">
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Questions</div>
             <div className="h3" style={{ margin: 0 }}>{stats.totalQuestions}</div>
             <div className="flex" style={{ gap: 'var(--space-3)', justifyContent: 'center', fontSize: 'var(--font-size-sm)' }}>
-              <span style={{ color: 'var(--color-success)' }}>✅ {stats.correct}</span>
-              <span style={{ color: 'var(--color-danger)' }}>❌ {stats.wrong}</span>
+              <span style={{ color: 'var(--color-success)' }}>
+                <CheckCircle2 style={{ width: '14px', height: '14px', display: 'inline' }} /> {stats.correct}
+              </span>
+              <span style={{ color: 'var(--color-danger)' }}>
+                <XCircle style={{ width: '14px', height: '14px', display: 'inline' }} /> {stats.wrong}
+              </span>
             </div>
           </div>
           <div className="stat-card text-center">
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Mastery</div>
             <div className="h3" style={{ margin: 0 }}>{stats.topicsMastered}</div>
             <div className="flex" style={{ gap: 'var(--space-3)', justifyContent: 'center', fontSize: 'var(--font-size-sm)' }}>
-              <span style={{ color: 'var(--color-success)' }}>✅ Mastered</span>
-              <span style={{ color: 'var(--color-danger)' }}>⚠️ {stats.weakTopics} Weak</span>
+              <span style={{ color: 'var(--color-success)' }}>
+                <CheckCircle2 style={{ width: '14px', height: '14px', display: 'inline' }} /> Mastered
+              </span>
+              <span style={{ color: 'var(--color-danger)' }}>
+                <AlertCircle style={{ width: '14px', height: '14px', display: 'inline' }} /> {stats.weakTopics} Weak
+              </span>
             </div>
           </div>
           <div className="stat-card text-center">
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Streak</div>
-            <div className="h3" style={{ margin: 0, color: 'var(--color-warning)' }}>{stats.streak}🔥</div>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Mistakes: {stats.mistakes}</div>
+            <div className="h3" style={{ margin: 0, color: 'var(--color-warning)' }}>
+              <Flame style={{ width: '20px', height: '20px', display: 'inline' }} /> {stats.streak}
+            </div>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+              <BookOpen style={{ width: '14px', height: '14px', display: 'inline' }} /> Mistakes: {stats.mistakes}
+            </div>
           </div>
         </div>
 
-        {/* Daily Activity */}
         <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
             <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
@@ -481,7 +470,6 @@ export function AnalyticsPage() {
           )}
         </div>
 
-        {/* Weekly Activity */}
         <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
             <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
@@ -503,7 +491,6 @@ export function AnalyticsPage() {
           )}
         </div>
 
-        {/* Subject Progress */}
         <div className="card">
           <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
             <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
@@ -533,7 +520,6 @@ export function AnalyticsPage() {
           )}
         </div>
 
-        {/* Export Button */}
         <div style={{ marginTop: 'var(--space-6)' }}>
           <button 
             onClick={handleExportPDF} 

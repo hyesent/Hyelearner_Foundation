@@ -1944,6 +1944,33 @@ export const career = {
     return apiCall('/career/check', { method: 'POST', body: JSON.stringify(data) })
   },
 }
+// ============================================================
+// USER STATS 
+// ============================================================
+
+export const userStats = {
+  getToday: async () => {
+    return apiCall('/user/stats', { method: 'GET' })
+  },
+  save: async (stats) => {
+    return apiCall('/user/stats', { 
+      method: 'POST', 
+      body: JSON.stringify(stats) 
+    })
+  },
+  getTodayProgress: async () => {
+    return apiCall('/user/stats/today', { method: 'GET' })
+  },
+  getRange: async (days = 7) => {
+    return apiCall(`/user/stats/range?days=${days}`, { method: 'GET' })
+  },
+  getWeekly: async () => {
+    return apiCall('/user/stats/weekly', { method: 'GET' })
+  },
+  cleanup: async (daysToKeep = 30) => {
+    return apiCall(`/user/stats/old?days_to_keep=${daysToKeep}`, { method: 'DELETE' })
+  }
+}
 
 // ============================================================
 // PING SERVICE — NAMED EXPORT
@@ -2011,6 +2038,7 @@ export default {
   ping,
   social,
   voice,
+  userStats,
   feedback,           
   cutoffContributions 
 }

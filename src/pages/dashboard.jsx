@@ -1,7 +1,7 @@
 // ============================================================
 // HYELEARNER: FOUNDATION — DASHBOARD (POLISHED)
 // Premium EdTech Design with Lucide Icons
-// Now pulls real data from storage + Free tier restrictions + SOCIAL + FEEDBACK + ADMIN
+// Hybrid Stats: Backend first, localStorage fallback
 // Built by Hyesent.dev
 // ============================================================
 
@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks'
 import { storage } from '../storage'
-import { subscriptions } from '../services'
+import { subscriptions, userStats } from '../services'
 import Footer from '../Footer'
 import { LoadingScreen } from '../components/LoadingScreen'
 import {
@@ -73,6 +73,7 @@ export default function Dashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [subscription, setSubscription] = useState(null)
+  const [usingBackend, setUsingBackend] = useState(false)
 
   // ---- Mobile detection (inline, no external hook) ----
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
@@ -104,9 +105,36 @@ export default function Dashboard() {
     loadStats()
   }, [])
 
-  const loadStats = () => {
+  // Hybrid stats loader: Backend first, localStorage fallback
+  const loadStats = async () => {
     setLoading(true)
+    setUsingBackend(false)
     
+    try {
+      // ✅ Try backend first
+      const response = await userStats.getToday()
+      
+      if (response && response.xp !== undefined) {
+        // Backend returned valid data
+        setStats({
+          xp: response.xp || 0,
+          level: response.level || 1,
+          streak: response.streak || 0,
+          accuracy: response.accuracy || 0,
+          sessions: response.sessions || 0,
+          totalQuestions: response.totalQuestions || 0,
+          correct: response.correct || 0,
+          wrong: response.wrong || 0,
+        })
+        setUsingBackend(true)
+        setLoading(false)
+        return
+      }
+    } catch (error) {
+      console.log('Backend stats unavailable, using localStorage fallback')
+    }
+
+    // ✅ Fallback to localStorage
     try {
       const gamification = storage.getGamification()
       const sessions = storage.getSessions()
@@ -136,14 +164,15 @@ export default function Dashboard() {
         correct: correct,
         wrong: wrong,
       })
+      setUsingBackend(false)
     } catch (error) {
-      console.error('Failed to load stats:', error)
+      console.error('Failed to load stats from localStorage:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Refresh stats every 30 seconds
+  // Refresh stats every 30 seconds (only if using backend)
   useEffect(() => {
     if (!loading) {
       const interval = setInterval(() => {
@@ -317,6 +346,11 @@ export default function Dashboard() {
                 <Shield style={{ width: 12, height: 12, display: 'inline' }} /> Dev
               </span>
             )}
+            {usingBackend && (
+              <span className="badge badge-muted" style={{ fontSize: 'var(--font-size-xs)', marginLeft: 'var(--space-2)' }}>
+                <Database style={{ width: 12, height: 12, display: 'inline' }} /> Synced
+              </span>
+            )}
           </div>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
             <button
@@ -440,4 +474,4 @@ export default function Dashboard() {
       </div>
     </div>
   )
-  }
+}

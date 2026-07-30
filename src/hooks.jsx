@@ -6,6 +6,7 @@
 import { useState, useEffect, useContext, useRef, useCallback } from 'react'
 import { AuthContext, ThemeContext, NotificationContext } from './context'
 import { storage } from './storage'
+import { userStats } from './services'
 import { 
   calculateScore, 
   calculateXP, 
@@ -254,7 +255,40 @@ export function useProgress() {
       // 11. UPDATE HEATMAP (via mastery)
       // Heatmap reads from storage directly, so data is already there
 
-      // 12. RETURN RESULTS
+      // ✅ 12. SAVE DAILY STATS TO BACKEND (Fire and forget)
+      const today = new Date().toISOString().split('T')[0]
+      const cachedStats = JSON.parse(localStorage.getItem('hyelearner_daily_stats') || '{}')
+      
+      if (cachedStats.date === today) {
+        const updatedStats = {
+          xp: (cachedStats.xp || 0) + xp,
+          level: gamification.level || 1,
+          streak: gamification.streak || 0,
+          accuracy: scoreData.accuracy,
+          sessions: (cachedStats.sessions || 0) + 1,
+          totalQuestions: (cachedStats.totalQuestions || 0) + data.questions.length,
+          correct: (cachedStats.correct || 0) + scoreData.correct,
+          wrong: (cachedStats.wrong || 0) + scoreData.wrong,
+          studyTime: (cachedStats.studyTime || 0) + Math.floor((data.timeTaken || 0) / 60)
+        }
+        
+        // Recalculate accuracy
+        const total = updatedStats.totalQuestions
+        updatedStats.accuracy = total > 0 ? Math.round((updatedStats.correct / total) * 100) : 0
+        
+        // Save to cache
+        localStorage.setItem('hyelearner_daily_stats', JSON.stringify({
+          ...updatedStats,
+          date: today
+        }))
+        
+        // ✅ Save to backend (fire and forget)
+        userStats.save(updatedStats).catch(err => {
+          console.error('Failed to save stats to backend:', err)
+        })
+      }
+
+      // 13. RETURN RESULTS
       const result = {
         scoreData,
         xp,
@@ -738,5 +772,192 @@ export function usePing(options = {}) {
     isTabVisible,
     userId: status?.user_id || null,
     username: status?.username || null,
+  }
+}
+
+// ============================================================
+// useUserStats — Hybrid stats hook (NEW)
+// Caches stats in localStorage + syncs with backend
+// ============================================================
+const STATS_CACHE_KEY = 'hyelearner_daily_stats'
+
+export function useUserStats() {
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const getToday = () => new Date().toISOString().split('T')[0]
+
+  // Load stats from cache or backend
+  const loadStats = useCallback(async (forceRefresh = false) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const today = getToday()
+      
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = localStorage.getItem(STATS_CACHE_KEY)
+        if (cached) {
+          const data = JSON.parse(cached)
+          if (data.date === today) {
+            setStats(data)
+            setLoading(false)
+            return data
+          }
+        }
+      }
+
+      // Fetch from backend
+      const result = await userStats.getToday()
+      
+      // Save to cache
+      localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({
+        ...result,
+        date: today,
+        cachedAt: new Date().toISOString()
+      }))
+      
+      setStats(result)
+      return result
+
+    } catch (err) {
+      console.error('Failed to load stats:', err)
+      setError(err.message)
+      
+      // Fallback to localStorage
+      const gamification = storage.getGamification()
+      const sessions = storage.getSessions()
+      
+      const fallbackStats = {
+        xp: gamification.xp || 0,
+        level: gamification.level || 1,
+        streak: gamification.streak || 0,
+        accuracy: 0,
+        sessions: sessions.filter(s => s.status === 'completed').length,
+        totalQuestions: 0,
+        correct: 0,
+        wrong: 0,
+        studyTime: 0,
+        date: getToday(),
+        fromCache: true
+      }
+      
+      setStats(fallbackStats)
+      return fallbackStats
+      
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Save stats to backend
+  const saveStats = useCallback(async (statsData) => {
+    if (saving) return
+    
+    setSaving(true)
+    setError(null)
+    
+    try {
+      const result = await userStats.save(statsData)
+      
+      // Update cache
+      const today = getToday()
+      localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({
+        ...statsData,
+        date: today,
+        cachedAt: new Date().toISOString()
+      }))
+      
+      return result
+      
+    } catch (err) {
+      console.error('Failed to save stats:', err)
+      setError(err.message)
+      return null
+      
+    } finally {
+      setSaving(false)
+    }
+  }, [saving])
+
+  // Get today's quick progress
+  const getTodayProgress = useCallback(async () => {
+    try {
+      const result = await userStats.getTodayProgress()
+      return result
+    } catch (err) {
+      console.error('Failed to get today progress:', err)
+      return null
+    }
+  }, [])
+
+  // Get weekly stats
+  const getWeekly = useCallback(async () => {
+    try {
+      const result = await userStats.getWeekly()
+      return result
+    } catch (err) {
+      console.error('Failed to get weekly stats:', err)
+      return null
+    }
+  }, [])
+
+  // Get range stats
+  const getRange = useCallback(async (days = 7) => {
+    try {
+      const result = await userStats.getRange(days)
+      return result
+    } catch (err) {
+      console.error('Failed to get range stats:', err)
+      return null
+    }
+  }, [])
+
+  // Refresh stats (force fetch from backend)
+  const refresh = useCallback(() => {
+    return loadStats(true)
+  }, [loadStats])
+
+  // Auto-save on interval and cleanup
+  useEffect(() => {
+    if (!stats || stats.fromCache) return
+    
+    // Save on interval (every 5 minutes)
+    const saveInterval = setInterval(() => {
+      saveStats(stats)
+    }, 300000)
+    
+    // Save on page unload
+    const handleBeforeUnload = () => {
+      if (stats) {
+        saveStats(stats)
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      clearInterval(saveInterval)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (stats) {
+        saveStats(stats)
+      }
+    }
+  }, [stats, saveStats])
+
+  return {
+    stats,
+    loading,
+    error,
+    saving,
+    loadStats,
+    saveStats,
+    getTodayProgress,
+    getWeekly,
+    getRange,
+    refresh,
+    isReady: !loading && !!stats
   }
 }

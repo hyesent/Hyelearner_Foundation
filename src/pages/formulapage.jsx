@@ -1,6 +1,7 @@
 // ============================================================
-// HYELEARNER: FOUNDATION — FORMULA EXPLORER PAGE
+// HYELEARNER: FOUNDATION — FORMULA EXPLORER PAGE (UPGRADED)
 // Interactive formula database with calculator + Periodic Table
+// NOW WITH: Auto-generated rearranged formulas + Missing value solver
 // Built by Hyesent.dev
 // ============================================================
 
@@ -32,7 +33,9 @@ import {
   Clock,
   Hash,
   ArrowRight,
-  Atom
+  Atom,
+  HelpCircle,
+  Sparkles
 } from 'lucide-react'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { FORMULA_DATA } from '../data/formulas'
@@ -100,34 +103,205 @@ export function FormulaExplorerPage() {
   const visibleElementNumbers = new Set(filteredElements.map(([_, el]) => el.atomicNumber))
 
   // ============================================================
-  // CALCULATOR
+  // DETECT MISSING VARIABLE
   // ============================================================
-  const handleCalculate = (formula) => {
-    setSelectedFormula(formula)
-    setShowCalculator(true)
-    setVariableValues({})
-    setCalculationResult(null)
-    setCalculationError(null)
-    if (formula.example && Object.keys(formula.example).length > 0) {
-      setVariableValues(formula.example)
+  const detectMissingVariable = (variables, values) => {
+    const varKeys = Object.keys(variables)
+    const missingKeys = varKeys.filter(key => {
+      const val = values[key]
+      return val === undefined || val === '' || isNaN(parseFloat(val))
+    })
+    
+    if (missingKeys.length === 0) return null
+    if (missingKeys.length === 1) return missingKeys[0]
+    return 'multiple'
+  }
+
+  // ============================================================
+  // AUTO-GENERATE REARRANGED FORMULAS
+  // ============================================================
+  const generateRearrangedFormulas = (formula, variables) => {
+    const varKeys = Object.keys(variables)
+    const rearranged = {}
+    
+    varKeys.forEach(targetVar => {
+      // Pattern: a = b * c
+      const multMatch = formula.match(/^([a-zA-Z]+)\s*=\s*([a-zA-Z]+)\s*\*\s*([a-zA-Z]+)$/)
+      if (multMatch) {
+        const [_, left, v1, v2] = multMatch
+        if (targetVar === v1) {
+          rearranged[targetVar] = `${left} / ${v2}`
+        } else if (targetVar === v2) {
+          rearranged[targetVar] = `${left} / ${v1}`
+        } else if (targetVar === left) {
+          rearranged[targetVar] = `${v1} * ${v2}`
+        }
+        return
+      }
+      
+      // Pattern: a = b / c
+      const divMatch = formula.match(/^([a-zA-Z]+)\s*=\s*([a-zA-Z]+)\s*\/\s*([a-zA-Z]+)$/)
+      if (divMatch) {
+        const [_, left, v1, v2] = divMatch
+        if (targetVar === v1) {
+          rearranged[targetVar] = `${left} * ${v2}`
+        } else if (targetVar === v2) {
+          rearranged[targetVar] = `${v1} / ${left}`
+        } else if (targetVar === left) {
+          rearranged[targetVar] = `${v1} / ${v2}`
+        }
+        return
+      }
+      
+      // Pattern: a = b + c
+      const addMatch = formula.match(/^([a-zA-Z]+)\s*=\s*([a-zA-Z]+)\s*\+\s*([a-zA-Z]+)$/)
+      if (addMatch) {
+        const [_, left, v1, v2] = addMatch
+        if (targetVar === v1) {
+          rearranged[targetVar] = `${left} - ${v2}`
+        } else if (targetVar === v2) {
+          rearranged[targetVar] = `${left} - ${v1}`
+        } else if (targetVar === left) {
+          rearranged[targetVar] = `${v1} + ${v2}`
+        }
+        return
+      }
+      
+      // Pattern: a = b - c
+      const subMatch = formula.match(/^([a-zA-Z]+)\s*=\s*([a-zA-Z]+)\s*\-\s*([a-zA-Z]+)$/)
+      if (subMatch) {
+        const [_, left, v1, v2] = subMatch
+        if (targetVar === v1) {
+          rearranged[targetVar] = `${left} + ${v2}`
+        } else if (targetVar === v2) {
+          rearranged[targetVar] = `${v1} - ${left}`
+        } else if (targetVar === left) {
+          rearranged[targetVar] = `${v1} - ${v2}`
+        }
+        return
+      }
+      
+      // Pattern: a = b^2 (with Math.pow)
+      const powMatch = formula.match(/^([a-zA-Z]+)\s*=\s*([a-zA-Z]+)\s*\^\s*2$/)
+      if (powMatch) {
+        const [_, left, v1] = powMatch
+        if (targetVar === v1) {
+          rearranged[targetVar] = `Math.sqrt(${left})`
+        } else if (targetVar === left) {
+          rearranged[targetVar] = `${v1} * ${v1}`
+        }
+        return
+      }
+      
+      // Pattern: a^2 = b^2 + c^2 (Pythagorean)
+      const pythagMatch = formula.match(/^([a-zA-Z]+)\s*\^\s*2\s*=\s*([a-zA-Z]+)\s*\^\s*2\s*\+\s*([a-zA-Z]+)\s*\^\s*2$/)
+      if (pythagMatch) {
+        const [_, left, v1, v2] = pythagMatch
+        if (targetVar === left) {
+          rearranged[targetVar] = `Math.sqrt(${v1}*${v1} + ${v2}*${v2})`
+        } else if (targetVar === v1) {
+          rearranged[targetVar] = `Math.sqrt(${left}*${left} - ${v2}*${v2})`
+        } else if (targetVar === v2) {
+          rearranged[targetVar] = `Math.sqrt(${left}*${left} - ${v1}*${v1})`
+        }
+        return
+      }
+      
+      // Pattern: a * b = c * d (cross multiplication)
+      const crossMatch = formula.match(/^([a-zA-Z]+)\s*\*\s*([a-zA-Z]+)\s*=\s*([a-zA-Z]+)\s*\*\s*([a-zA-Z]+)$/)
+      if (crossMatch) {
+        const [_, v1, v2, v3, v4] = crossMatch
+        if (targetVar === v1) {
+          rearranged[targetVar] = `(${v3} * ${v4}) / ${v2}`
+        } else if (targetVar === v2) {
+          rearranged[targetVar] = `(${v3} * ${v4}) / ${v1}`
+        } else if (targetVar === v3) {
+          rearranged[targetVar] = `(${v1} * ${v2}) / ${v4}`
+        } else if (targetVar === v4) {
+          rearranged[targetVar] = `(${v1} * ${v2}) / ${v3}`
+        }
+        return
+      }
+    })
+    
+    return rearranged
+  }
+
+  // ============================================================
+  // NUMERICAL SOLVER (Bisection Method)
+  // ============================================================
+  const solveNumerically = (formula, variables, missingVar, options = {}) => {
+    const { tolerance = 1e-6, maxIterations = 100, guessMin = -1000, guessMax = 1000 } = options
+    
+    const fixedValues = {}
+    Object.keys(variables).forEach(key => {
+      if (key !== missingVar) {
+        fixedValues[key] = parseFloat(variables[key])
+      }
+    })
+    
+    try {
+      const evalStr = formula.formula
+      let evalWithMissing = evalStr
+      
+      Object.keys(fixedValues).forEach(key => {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`\\b${escapedKey}\\b`, 'g')
+        evalWithMissing = evalWithMissing.replace(regex, `(${fixedValues[key]})`)
+      })
+      
+      const fn = (x) => {
+        let expr = evalWithMissing
+        const escapedMissing = missingVar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`\\b${escapedMissing}\\b`, 'g')
+        expr = expr.replace(regex, `(${x})`)
+        try {
+          return Function(`"use strict"; return (${expr})`)()
+        } catch (e) {
+          return NaN
+        }
+      }
+      
+      let a = guessMin, b = guessMax
+      let fa = fn(a), fb = fn(b)
+      
+      let iterations = 0
+      while ((isNaN(fa) || isNaN(fb) || fa * fb > 0) && iterations < 20) {
+        a = a * 2
+        b = b * 2
+        fa = fn(a)
+        fb = fn(b)
+        iterations++
+      }
+      
+      if (isNaN(fa) || isNaN(fb) || fa * fb > 0) {
+        throw new Error('Unable to find a solution for the missing variable.')
+      }
+      
+      let c, fc
+      for (let i = 0; i < maxIterations; i++) {
+        c = (a + b) / 2
+        fc = fn(c)
+        if (Math.abs(fc) < tolerance) break
+        if (fa * fc < 0) {
+          b = c
+          fb = fc
+        } else {
+          a = c
+          fa = fc
+        }
+      }
+      
+      return Math.round(c * 1000000) / 1000000
+      
+    } catch (error) {
+      throw new Error(`Could not solve for ${missingVar}: ${error.message}`)
     }
   }
 
-  const handleVariableChange = (key, value) => {
-    if (value === '') {
-      setVariableValues(prev => ({ ...prev, [key]: '' }))
-      setCalculationResult(null)
-      setCalculationError(null)
-      return
-    }
-    const numValue = parseFloat(value)
-    if (!isNaN(numValue)) {
-      setVariableValues(prev => ({ ...prev, [key]: numValue }))
-      setCalculationResult(null)
-      setCalculationError(null)
-    }
-  }
-
+  // ============================================================
+  // EVALUATE FORMULA
+  // ============================================================
   const evaluateFormula = (formulaStr, variables) => {
     let evalStr = formulaStr
     evalStr = evalStr.replace(/π/g, `(${Math.PI})`)
@@ -156,6 +330,9 @@ export function FormulaExplorerPage() {
     return val !== undefined && val !== '' && !isNaN(parseFloat(val)) && isFinite(val)
   }
 
+  // ============================================================
+  // HANDLE CALCULATE WITH AUTO-GENERATED REARRANGEMENT
+  // ============================================================
   const handleCalculateResult = () => {
     if (!selectedFormula) return
     
@@ -167,77 +344,90 @@ export function FormulaExplorerPage() {
       }
       
       const varKeys = Object.keys(selectedFormula.variables || {})
-      const missingVars = varKeys.filter(key => {
-        const val = variableValues[key]
-        return val === undefined || val === '' || isNaN(parseFloat(val))
-      })
       
-      if (missingVars.length > 0) {
-        setCalculationError(`Please enter values for: ${missingVars.join(', ')}`)
+      const missingKey = detectMissingVariable(selectedFormula.variables || {}, variableValues)
+      
+      if (missingKey === 'multiple') {
+        setCalculationError('Please enter values for all but one variable to solve for the unknown.')
         setCalculationResult(null)
         return
       }
       
-      let finalVars = { ...variableValues }
-      let preCalcResult = null
-      
-      if (selectedFormula.preCalculate) {
-        preCalcResult = selectedFormula.preCalculate(variableValues)
-        Object.keys(preCalcResult).forEach(key => {
-          if (preCalcResult[key] !== undefined && variableValues[key] === undefined) {
-            setVariableValues(prev => ({ ...prev, [key]: preCalcResult[key] }))
-          }
-        })
-        finalVars = { ...finalVars, ...preCalcResult }
-        
-        if (preCalcResult.x !== undefined && preCalcResult.y !== undefined) {
-          if (isValidNumber(preCalcResult.x) && isValidNumber(preCalcResult.y)) {
-            setCalculationResult({
-              type: 'multiple',
-              values: { x: parseFloat(preCalcResult.x), y: parseFloat(preCalcResult.y) }
-            })
-            setCalculationError(null)
-            return
-          } else {
-            setCalculationResult({
-              type: 'message',
-              message: typeof preCalcResult.x === 'string' ? preCalcResult.x : 'No unique solution'
-            })
-            setCalculationError(null)
-            return
-          }
-        }
-        
-        const resultKeys = Object.keys(preCalcResult).filter(k => 
-          k !== 'det' && k !== 'status' && k !== 'ratio1' && k !== 'ratio2' && k !== 'ratio3'
-        )
-        if (resultKeys.length > 1 && resultKeys.every(k => isValidNumber(preCalcResult[k]))) {
-          const values = {}
-          resultKeys.forEach(k => { values[k] = parseFloat(preCalcResult[k]) })
-          setCalculationResult({ type: 'multiple', values })
-          setCalculationError(null)
-          return
-        }
+      if (missingKey === null) {
+        const result = evaluateFormula(selectedFormula.formula, variableValues)
+        if (isNaN(result) || !isFinite(result)) throw new Error('Invalid calculation')
+        const roundedResult = Math.round(result * 1000000) / 1000000
+        setCalculationResult({ type: 'single', value: roundedResult })
+        setCalculationError(null)
+        return
       }
       
-      const result = evaluateFormula(selectedFormula.formula, finalVars)
-      if (isNaN(result) || !isFinite(result)) throw new Error('Invalid calculation')
+      const missingVar = missingKey
+      
+      const rearranged = generateRearrangedFormulas(selectedFormula.formula, selectedFormula.variables)
+      let result
+      let methodUsed = 'auto-generated'
+      
+      if (rearranged[missingVar]) {
+        try {
+          result = evaluateFormula(rearranged[missingVar], variableValues)
+          if (isNaN(result) || !isFinite(result)) throw new Error('Invalid result')
+        } catch (e) {
+          methodUsed = 'numerical'
+        }
+      } else {
+        methodUsed = 'numerical'
+      }
+      
+      if (methodUsed === 'numerical' || !result || isNaN(result)) {
+        try {
+          result = solveNumerically(selectedFormula, variableValues, missingVar)
+          if (isNaN(result) || !isFinite(result)) throw new Error('Invalid result')
+          methodUsed = 'numerical'
+        } catch (e) {
+          throw new Error(`Could not solve for ${missingVar}: ${e.message}`)
+        }
+      }
       
       const roundedResult = Math.round(result * 1000000) / 1000000
       
-      if (preCalcResult && preCalcResult.det !== undefined) {
-        setCalculationResult({
-          type: 'multiple',
-          values: { result: roundedResult },
-          extras: { determinant: preCalcResult.det, status: preCalcResult.status }
-        })
-      } else {
-        setCalculationResult({ type: 'single', value: roundedResult })
-      }
+      setCalculationResult({
+        type: 'missing',
+        variable: missingVar,
+        value: roundedResult,
+        method: methodUsed
+      })
       setCalculationError(null)
+      
     } catch (err) {
       setCalculationError(`Calculation error: ${err.message || 'Invalid input.'}`)
       setCalculationResult(null)
+    }
+  }
+
+  const handleCalculate = (formula) => {
+    setSelectedFormula(formula)
+    setShowCalculator(true)
+    setVariableValues({})
+    setCalculationResult(null)
+    setCalculationError(null)
+    if (formula.example && Object.keys(formula.example).length > 0) {
+      setVariableValues(formula.example)
+    }
+  }
+
+  const handleVariableChange = (key, value) => {
+    if (value === '') {
+      setVariableValues(prev => ({ ...prev, [key]: '' }))
+      setCalculationResult(null)
+      setCalculationError(null)
+      return
+    }
+    const numValue = parseFloat(value)
+    if (!isNaN(numValue)) {
+      setVariableValues(prev => ({ ...prev, [key]: numValue }))
+      setCalculationResult(null)
+      setCalculationError(null)
     }
   }
 
@@ -253,8 +443,31 @@ export function FormulaExplorerPage() {
     }
   }, [searchQuery, selectedSubject, selectedTopic])
 
+  // ============================================================
+  // RENDER RESULT
+  // ============================================================
   const renderResult = () => {
     if (!calculationResult) return null
+
+    if (calculationResult.type === 'missing') {
+      const { variable, value, method } = calculationResult
+      return (
+        <div className="success-card" style={{ padding: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+          <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
+            <Sparkles style={{ width: '20px', height: '20px', color: 'var(--color-warning)', flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ width: '100%' }}>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                Solved for {variable}
+                {method === 'numerical' && <span style={{ marginLeft: 'var(--space-2)' }}>(numerical method)</span>}
+              </div>
+              <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: '700', color: 'var(--color-success)' }}>
+                {variable} = {value}
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
 
     if (calculationResult.type === 'multiple') {
       const { values, extras } = calculationResult
@@ -264,7 +477,7 @@ export function FormulaExplorerPage() {
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
             <CheckCircle2 style={{ width: '20px', height: '20px', color: 'var(--color-success)', flexShrink: 0, marginTop: '2px' }} />
             <div style={{ width: '100%' }}>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Result</div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Results</div>
               <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: '700', color: 'var(--color-success)', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
                 {entries.map(([key, val]) => (
                   <span key={key} style={{ background: 'var(--color-success-light)', padding: 'var(--space-1) var(--space-3)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
@@ -339,7 +552,7 @@ export function FormulaExplorerPage() {
               <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
                 {activeTab === 'formulas' 
                   ? `${FORMULA_DATA.length} formulas across ${subjects.length - 1} subjects`
-                  : '118 elements • Interactive periodic table'
+                  : '118 elements  Interactive periodic table'
                 }
               </p>
             </div>
@@ -396,7 +609,7 @@ export function FormulaExplorerPage() {
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
               {filteredFormulas.length} formula{filteredFormulas.length !== 1 ? 's' : ''} found
               {selectedSubject !== 'all' && ` in ${selectedSubject}`}
-              {selectedTopic !== 'all' && ` • ${selectedTopic}`}
+              {selectedTopic !== 'all' && `  ${selectedTopic}`}
             </div>
 
             {filteredFormulas.length === 0 ? (
@@ -431,6 +644,11 @@ export function FormulaExplorerPage() {
                                   <div className="flex" style={{ alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                                     <div style={{ fontWeight: '600', fontSize: 'var(--font-size-sm)', color: 'var(--color-text)' }}>{formula.name}</div>
                                     {!isEvaluable && <span className="badge badge-muted" style={{ fontSize: 'var(--font-size-xs)' }}><Info style={{ width: '12px', height: '12px', display: 'inline', marginRight: '2px' }} />Display Only</span>}
+                                    {isEvaluable && (
+                                      <span className="badge badge-success" style={{ fontSize: 'var(--font-size-xs)' }}>
+                                        <Sparkles style={{ width: '12px', height: '12px', display: 'inline', marginRight: '2px' }} />Solve for Unknown
+                                      </span>
+                                    )}
                                   </div>
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-lg)', color: 'var(--color-primary)', marginTop: 'var(--space-1)', wordBreak: 'break-all' }}>{displayFormula}</div>
                                   {formula.description && <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>{formula.description}</div>}
@@ -451,7 +669,7 @@ export function FormulaExplorerPage() {
               </div>
             )}
 
-            {/* Calculator Modal */}
+            {/* Calculator Modal - UPGRADED with Missing Value Support */}
             {showCalculator && selectedFormula && (
               <div className="modal-overlay" style={{ zIndex: 100, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
                 <div className="modal" style={{ maxWidth: '560px', width: '100%', maxHeight: '90vh', overflow: 'auto', padding: 'var(--space-6)', background: 'var(--color-surface)', borderRadius: 'var(--radius-xl)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
@@ -467,16 +685,46 @@ export function FormulaExplorerPage() {
                     </button>
                   </div>
 
+                  {/* Missing Variable Helper */}
+                  {selectedFormula.variables && Object.keys(selectedFormula.variables).length > 1 && (
+                    <div className="info-card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                      <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
+                        <HelpCircle style={{ width: '18px', height: '18px', color: 'var(--color-primary)', flexShrink: 0, marginTop: '2px' }} />
+                        <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                          <strong>Find the Unknown:</strong> Leave one field empty and click Calculate to solve for it.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {selectedFormula.variables && Object.keys(selectedFormula.variables).length > 0 ? (
                     <div className="stack" style={{ gap: 'var(--space-3)' }}>
-                      {Object.entries(selectedFormula.variables).map(([key, description]) => (
-                        <div key={key}>
-                          <label className="label" style={{ fontSize: 'var(--font-size-sm)', display: 'flex', justifyContent: 'space-between' }}>
-                            <span><span style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{key}</span> — {description}</span>
-                          </label>
-                          <input type="number" className="input" step="any" value={variableValues[key] !== undefined && variableValues[key] !== '' ? variableValues[key] : ''} onChange={(e) => handleVariableChange(key, e.target.value)} placeholder={`Enter ${key}`} />
-                        </div>
-                      ))}
+                      {Object.entries(selectedFormula.variables).map(([key, description]) => {
+                        const hasValue = variableValues[key] !== undefined && variableValues[key] !== '' && !isNaN(parseFloat(variableValues[key]))
+                        return (
+                          <div key={key}>
+                            <label className="label" style={{ fontSize: 'var(--font-size-sm)', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>{key}</span>
+                                <span style={{ color: 'var(--color-text-muted)', fontWeight: '400', marginLeft: 'var(--space-2)' }}>  {description}</span>
+                              </span>
+                              {!hasValue && (
+                                <span style={{ color: 'var(--color-warning)', fontSize: 'var(--font-size-xs)', fontWeight: '400' }}>
+                                  <Sparkles style={{ width: '14px', height: '14px', display: 'inline' }} /> Unknown
+                                </span>
+                              )}
+                            </label>
+                            <input 
+                              type="number" 
+                              className="input" 
+                              step="any" 
+                              value={variableValues[key] !== undefined && variableValues[key] !== '' ? variableValues[key] : ''} 
+                              onChange={(e) => handleVariableChange(key, e.target.value)} 
+                              placeholder={`Enter ${key}`} 
+                            />
+                          </div>
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="info-card" style={{ padding: 'var(--space-3)' }}>
@@ -497,7 +745,7 @@ export function FormulaExplorerPage() {
 
                   <div className="flex" style={{ gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
                     <button onClick={handleCalculateResult} className="btn btn-primary flex-1" disabled={Object.keys(selectedFormula.variables || {}).length === 0 || selectedFormula.evaluable === false}>
-                      <Equal style={{ width: '16px', height: '16px' }} /> Calculate
+                      <Equal style={{ width: '16px', height: '16px' }} /> {detectMissingVariable(selectedFormula.variables || {}, variableValues) ? 'Solve for Unknown' : 'Calculate'}
                     </button>
                     <button onClick={() => { setVariableValues(selectedFormula.example || {}); setCalculationResult(null); setCalculationError(null) }} className="btn btn-outline">
                       <RefreshCw style={{ width: '16px', height: '16px' }} /> Reset

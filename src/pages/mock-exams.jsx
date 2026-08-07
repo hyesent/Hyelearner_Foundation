@@ -2,6 +2,7 @@
 // HYELEARNER: MOCK EXAMS PAGE
 // Full exam simulation with 4 subjects (select any 4 from constants),
 // 100/140/180 questions, calculator, and anti-cheat
+// NOW WITH PASSAGE + SVG/DIAGRAM SUPPORT
 // Built by Hyesent.dev
 // ============================================================
 
@@ -42,7 +43,8 @@ import {
   Eye,
   Lock,
   Crown,
-  PenTool
+  PenTool,
+  FileText
 } from 'lucide-react'
 
 // ============================================================
@@ -70,6 +72,7 @@ const QUESTION_COUNTS = [100, 140, 180]
 
 // ============================================================
 // MOCK EXAMS PAGE — WITH FREE TIER LOCK + MASTERY TRACKING
+// NOW WITH PASSAGE + DIAGRAM RENDERING IN EXAM VIEW
 // ============================================================
 export function MockExamsPage() {
   const navigate = useNavigate()
@@ -564,7 +567,7 @@ export function MockExamsPage() {
     )
   }
 
-  // ===== EXAM VIEW =====
+  // ===== EXAM VIEW — WITH PASSAGE + DIAGRAM SUPPORT =====
   if (started && questions.length > 0) {
     const currentQuestion = questions[currentIndex]
     const total = questions.length
@@ -654,6 +657,65 @@ export function MockExamsPage() {
                 </div>
                 <BookmarkButton question={currentQuestion} size="md" />
               </div>
+
+              {/* ===== PASSAGE SECTION (for comprehension questions) ===== */}
+              {currentQuestion.passage && (
+                <div style={{
+                  background: 'var(--color-background)',
+                  borderRadius: 'var(--radius-xl)',
+                  border: '1px solid var(--color-border)',
+                  padding: 'var(--space-4)',
+                  marginBottom: 'var(--space-4)',
+                  maxHeight: '300px',
+                  overflowY: 'auto'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                    marginBottom: 'var(--space-3)'
+                  }}>
+                    <FileText style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                    <span style={{
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: '600',
+                      color: 'var(--color-text-muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Passage
+                    </span>
+                  </div>
+                  <div style={{
+                    fontSize: 'var(--font-size-sm)',
+                    color: 'var(--color-text)',
+                    lineHeight: '1.7',
+                    whiteSpace: 'pre-line'
+                  }}>
+                    {currentQuestion.passage}
+                  </div>
+                </div>
+              )}
+
+              {/* ===== SVG / DIAGRAM SECTION ===== */}
+              {currentQuestion.diagram && (
+                <div style={{
+                  background: 'var(--color-surface)',
+                  borderRadius: 'var(--radius-xl)',
+                  border: '1px solid var(--color-border)',
+                  padding: 'var(--space-4)',
+                  marginBottom: 'var(--space-4)',
+                  textAlign: 'center'
+                }}>
+                  <img 
+                    src={currentQuestion.diagram} 
+                    alt="Diagram for question" 
+                    style={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-lg)' }}
+                    onError={(e) => { e.target.style.display = 'none' }}
+                  />
+                </div>
+              )}
+
               <div className="h3" style={{ marginBottom: 'var(--space-4)' }}>{currentQuestion.question}</div>
               <div className="stack" style={{ gap: 'var(--space-2)' }}>
                 {currentQuestion.options.map((option, idx) => {

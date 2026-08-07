@@ -19,7 +19,8 @@ import {
   BookmarkCheck,
   AlertCircle,
   Info,
-  Zap
+  Zap,
+  Target as TargetIcon
 } from 'lucide-react'
 import { storage } from '../storage'
 
@@ -86,6 +87,50 @@ export function QuestionReview({
   const currentQuestion = questions[currentIndex]
   const letters = ['A', 'B', 'C', 'D']
 
+  // Helper: extract dash number for cloze placeholders
+  const extractDashNumber = (q) => {
+    if (!q) return null
+    const m = (q.question || '').match(/dash\s*#?(\d+)/i)
+    if (m) return m[1]
+    const m2 = (q.id || '').match(/(\d+)$/)
+    if (m2) return m2[1]
+    return null
+  }
+
+  const renderPassage = (q, fillValueForThisPlaceholder = null, showCorrectFill = false) => {
+    if (!q || !q.passage) return null
+    const dashNum = extractDashNumber(q)
+    const parts = q.passage.split(/(-\d+-)/g)
+
+    return (
+      <div className="card" style={{ marginBottom: 'var(--space-3)', padding: 'var(--space-3)' }}>
+        {parts.map((part, i) => {
+          const ph = part.match(/-(\d+)-/)
+          if (ph) {
+            const num = ph[1]
+            const isThis = dashNum && String(num) === String(dashNum)
+            let display = '_____'
+            if (isThis) {
+              display = fillValueForThisPlaceholder || '_____'
+              if (showCorrectFill && q.answer) {
+                // Optionally you can append correct answer or style differently
+              }
+            }
+            const style = {
+              display: 'inline-block',
+              minWidth: '3ch',
+              padding: '0 4px',
+              fontWeight: isThis ? 600 : 400,
+              color: isThis ? 'var(--color-text)' : 'var(--color-text-muted)'
+            }
+            return <span key={i} style={style}>{display}</span>
+          }
+          return <span key={i}>{part}</span>
+        })}
+      </div>
+    )
+  }
+
   if (total === 0) {
     return (
       <div className="empty-card text-center">
@@ -103,7 +148,7 @@ export function QuestionReview({
     <div style={{ background: 'var(--color-background)', padding: 'var(--space-6)', minHeight: '100vh' }}>
       <div style={{ maxWidth: '56rem', margin: '0 auto' }}>
         
-        {/* ===== HEADER ===== */}
+          {/* ===== HEADER ===== */}
         <div className="card flex-between" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
             <div className="flex-center" style={{ 
@@ -113,7 +158,7 @@ export function QuestionReview({
               background: accuracy >= 70 ? 'var(--color-success-light)' : accuracy >= 50 ? 'var(--color-warning-light)' : 'var(--color-danger-light)' 
             }}>
               {accuracy >= 70 ? <CheckCircle2 style={{ width: '24px', height: '24px', color: 'var(--color-success)' }} /> :
-               accuracy >= 50 ? <Target style={{ width: '24px', height: '24px', color: 'var(--color-warning)' }} /> :
+               accuracy >= 50 ? <TargetIcon style={{ width: '24px', height: '24px', color: 'var(--color-warning)' }} /> :
                <XCircle style={{ width: '24px', height: '24px', color: 'var(--color-danger)' }} />}
             </div>
             <div>
@@ -286,6 +331,9 @@ export function QuestionReview({
               )}
             </div>
 
+            {/* Passage for cloze / comprehension — filled with user's answer for this dash */}
+            {currentQuestion.passage && renderPassage(currentQuestion, answers[currentQuestion.id], true)}
+
             <div className="h3" style={{ marginBottom: 'var(--space-6)' }}>
               Q{currentIndex + 1}: {currentQuestion.question}
             </div>
@@ -412,6 +460,9 @@ export function QuestionReview({
                     )}
                   </div>
 
+                  {/* Passage — fill the placeholder for this particular question when possible */}
+                  {q.passage && renderPassage(q, answers[q.id], true)}
+
                   <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text)', marginBottom: 'var(--space-3)' }}>
                     {q.question}
                   </div>
@@ -460,7 +511,7 @@ export function QuestionReview({
             onClick={() => navigate('/practice')}
             className="btn btn-outline flex-1 flex-center"
           >
-            <Target style={{ width: '16px', height: '16px' }} /> Practice
+            <TargetIcon style={{ width: '16px', height: '16px' }} /> Practice
           </button>
         </div>
 

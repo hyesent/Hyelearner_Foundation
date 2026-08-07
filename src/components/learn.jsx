@@ -78,11 +78,12 @@ import {
   Printer,
   Share2,
   Link,
-  AlertTriangle
+  AlertTriangle,
+  Image
 } from 'lucide-react'
 
 // ============================================================
-// QUESTION RENDERER — Added Bookmark Button + Passage Rendering
+// QUESTION RENDERER — Added Passage + SVG/Diagram support
 // ============================================================
 export function QuestionRenderer({ 
   question, 
@@ -100,50 +101,6 @@ export function QuestionRenderer({
     return (
       <div className="bg-white rounded-2xl border border-slate-200/60 p-8 text-center text-slate-500 shadow-sm">
         No question available
-      </div>
-    )
-  }
-
-  // Helper: extract dash number for cloze placeholders
-  const extractDashNumber = (q) => {
-    if (!q) return null
-    // Look for "dash 96" in the question text (case-insensitive)
-    const m = (q.question || '').match(/dash\s*#?(\d+)/i)
-    if (m) return m[1]
-    // Fallback: trailing number in the id (e.g., eng_clz_096)
-    const m2 = (q.id || '').match(/(\d+)$/)
-    if (m2) return m2[1]
-    return null
-  }
-
-  const dashNumber = extractDashNumber(question)
-
-  // Render passage and replace placeholders like "-96-" with inline blanks or the selected answer
-  const renderPassage = (q, currentSelected) => {
-    if (!q || !q.passage) return null
-
-    // Split preserving placeholders like "-96-"
-    const parts = q.passage.split(/(-\d+-)/g)
-
-    return (
-      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/60 text-sm text-slate-700" style={{ marginBottom: 'var(--space-3)' }}>
-        {parts.map((part, i) => {
-          const ph = part.match(/-(\d+)-/)
-          if (ph) {
-            const num = ph[1]
-            const isThis = dashNumber && String(num) === String(dashNumber)
-            // value to show inside the blank:
-            const display = isThis ? (currentSelected || '_____') : '_____'
-            const cls = isThis ? 'font-semibold text-indigo-700' : 'text-slate-400'
-            return (
-              <span key={i} className={`inline-block px-1 ${cls}`} style={{ minWidth: '3ch' }}>
-                {display}
-              </span>
-            )
-          }
-          // normal passage text
-          return <span key={i}>{part}</span>
-        })}
       </div>
     )
   }
@@ -167,8 +124,30 @@ export function QuestionRenderer({
         )}
       </div>
 
-      {/* Passage (if present) */}
-      {question.passage && renderPassage(question, selected)}
+      {/* ===== PASSAGE SECTION (for comprehension questions) ===== */}
+      {question.passage && (
+        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-4 h-4 text-indigo-500" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Passage</span>
+          </div>
+          <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-line">
+            {question.passage}
+          </div>
+        </div>
+      )}
+
+      {/* ===== SVG / DIAGRAM SECTION ===== */}
+      {question.diagram && (
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex justify-center">
+          <img 
+            src={question.diagram} 
+            alt="Diagram for question" 
+            className="max-w-full h-auto rounded-lg"
+            onError={(e) => { e.target.style.display = 'none' }}
+          />
+        </div>
+      )}
 
       {/* Question Text */}
       <div className="text-lg font-semibold text-slate-800">{question.question}</div>
@@ -191,7 +170,8 @@ export function QuestionRenderer({
                 isWrong ? 'border-rose-500 bg-rose-50 text-rose-700' :
                 isSelected ? 'border-indigo-600 bg-indigo-50 text-indigo-700' :
                 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50 text-slate-700'
-              } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}>
+              } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
+            >
               <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
                 isCorrect ? 'bg-emerald-200 text-emerald-700' :
                 isWrong ? 'bg-rose-200 text-rose-700' :
@@ -516,7 +496,8 @@ export function CBTEngine({
                   : isAnswered 
                     ? 'bg-emerald-100 text-emerald-700' 
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-              }`}>
+              }`}
+            >
               {i + 1}
             </button>
           )

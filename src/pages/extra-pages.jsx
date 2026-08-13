@@ -1526,7 +1526,10 @@ export function SettingsPage() {
   const [subscription, setSubscription] = useState(null)
   const [subLoading, setSubLoading] = useState(true)
   const [subError, setSubError] = useState(null)
+  const [subSuccess, setSubSuccess] = useState(null)
   const [subscribing, setSubscribing] = useState(false)
+  const [hyeSpaceId, setHyeSpaceId] = useState(() => localStorage.getItem('hyespace-store-id') || '')
+  const [savingHyeSpaceId, setSavingHyeSpaceId] = useState(false)
 
   const [aiUsage, setAiUsage] = useState({ daily: 0, monthly: 0 })
 
@@ -1598,19 +1601,67 @@ export function SettingsPage() {
     if (key === 'studyReminders') setStudyReminders(value)
   }
 
+  const handleSaveHyeSpaceId = async () => {
+    setSavingHyeSpaceId(true)
+    setSubError(null)
+    setSubSuccess(null)
+    try {
+      subscriptions.linkStoreId(hyeSpaceId)
+      const status = await subscriptions.status()
+      setSubscription(status)
+      
+      // Show feedback based on status
+      if (status?.isActive) {
+        setSubSuccess('HyeSpace ID linked. Subscription active!')
+      } else if (status?.message === 'Invalid store ID') {
+        setSubError('This HyeSpace ID does not exist. Check and try again.')
+        subscriptions.unlinkStoreId()
+        setHyeSpaceId('')
+        setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
+      } else if (status?.message === 'Store ID belongs to another account') {
+        setSubError('This HyeSpace ID belongs to a different email.')
+        subscriptions.unlinkStoreId()
+        setHyeSpaceId('')
+        setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
+      } else if (status?.message === 'No active subscription') {
+        setSubError('ID linked but no active subscription. Subscribe on HyeSpace first.')
+      } else if (status?.message) {
+        setSubError(status.message)
+      } else {
+        setSubSuccess('HyeSpace ID saved.')
+      }
+    } catch (err) {
+      console.error('Failed to save HyeSpace ID:', err)
+      setSubError(err.message || 'Could not save HyeSpace ID')
+    } finally {
+      setSavingHyeSpaceId(false)
+    }
+  }
+
+  const handleRemoveHyeSpaceId = async () => {
+    subscriptions.unlinkStoreId()
+    setHyeSpaceId('')
+    setSubscription({ isActive: false, subscribed: false, tier: 'free', plan: 'Free', status: 'inactive' })
+    setSubError(null)
+    setSubSuccess('HyeSpace ID removed.')
+  }
+
   const handleSubscribe = async () => {
     setSubscribing(true)
     setSubError(null)
+    setSubSuccess(null)
     try {
       const data = await subscriptions.initialize('foundation', 'NGN')
       if (data.authorizationUrl) {
-        window.location.href = data.authorizationUrl
+        window.open(data.authorizationUrl, '_blank', 'noopener,noreferrer')
+        setSubSuccess('Opening HyeSpace...')
       } else {
-        throw new Error('No payment URL received')
+        throw new Error('No HyeSpace store URL received')
       }
     } catch (err) {
       console.error('Subscribe error:', err)
-      setSubError(err.message || 'Failed to initialize payment')
+      setSubError(err.message || 'Failed to open HyeSpace')
+    } finally {
       setSubscribing(false)
     }
   }
@@ -1726,52 +1777,103 @@ export function SettingsPage() {
               <CreditCard style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} /> Subscription
             </h3>
 
-            {subError ? (
-              <div className="danger-card">
-                <AlertCircle style={{ width: '16px', height: '16px', display: 'inline', marginRight: 'var(--space-2)' }} />
-                {subError}
-              </div>
-            ) : (
-              <div className="card">
-                <div className="flex-between" style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+            {subError && (
+              <div className="danger-card" style={{ marginBottom: 'var(--space-3)' }}>
+                <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
+                  <AlertCircle style={{ width: '16px', height: '16px', marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontWeight: '600', fontSize: 'var(--font-size-base)', color: 'var(--color-text)' }}>
-                      Foundation Plan
-                      {subscription?.isActive ? (
-                        <span className="badge badge-success" style={{ marginLeft: 'var(--space-2)' }}>
-                          <CheckCircle2 style={{ width: '12px', height: '12px', display: 'inline' }} /> Active
-                        </span>
-                      ) : (
-                        <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>
-                          Inactive
+                    <span>{subError}</span>
+                    {subError.includes('no active subscription') && (
+                      <button
+                        onClick={() => window.open('https://hyespace.vercel.app', '_blank', 'noopener,noreferrer')}
+                        className="btn btn-primary"
+                        style={{ fontSize: 'var(--font-size-xs)', padding: 'var(--space-1) var(--space-3)', marginTop: 'var(--space-2)', display: 'block' }}
+                      >
+                        Go to HyeSpace
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {subSuccess && (
+              <div className="success-card" style={{ marginBottom: 'var(--space-3)' }}>
+                <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <CheckCircle2 style={{ width: '16px', height: '16px', color: 'var(--color-success)', flexShrink: 0 }} />
+                  <span>{subSuccess}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="card">
+              <div className="flex-between" style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                <div>
+                  <div style={{ fontWeight: '600', fontSize: 'var(--font-size-base)', color: 'var(--color-text)' }}>
+                    Foundation Plan
+                    {subscription?.isActive ? (
+                      <span className="badge badge-success" style={{ marginLeft: 'var(--space-2)' }}>
+                        <CheckCircle2 style={{ width: '12px', height: '12px', display: 'inline' }} /> Active
+                      </span>
+                    ) : (
+                      <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+
+                  {subscription?.expiresAt && subscription.isActive ? (
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                      Expires: {formatDate(subscription.expiresAt)}
+                      {subscription.daysRemaining > 0 && (
+                        <span style={{ marginLeft: 'var(--space-2)' }}>
+                          ({subscription.daysRemaining} days left)
                         </span>
                       )}
                     </div>
+                  ) : (
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                      No active subscription
+                    </div>
+                  )}
 
-                    {subscription?.expiresAt && subscription.isActive ? (
-                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                        Expires: {formatDate(subscription.expiresAt)}
-                        {subscription.daysRemaining > 0 && (
-                          <span style={{ marginLeft: 'var(--space-2)' }}>
-                            ({subscription.daysRemaining} days left)
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                        No active subscription
-                      </div>
-                    )}
+                  {subscription?.isActive ? (
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-success)', marginTop: '4px' }}>
+                      <CheckCircle2 style={{ width: '14px', height: '14px', display: 'inline' }} /> Full access to all features
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                      Link your HyeSpace ID and subscribe on HyeSpace to unlock all features
+                    </div>
+                  )}
+                </div>
 
-                    {subscription?.isActive ? (
-                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-success)', marginTop: '4px' }}>
-                        <CheckCircle2 style={{ width: '14px', height: '14px', display: 'inline' }} /> Full access to all features
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                        Subscribe to unlock all features
-                      </div>
-                    )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', minWidth: '220px' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <input
+                      type="text"
+                      value={hyeSpaceId}
+                      onChange={(e) => setHyeSpaceId(e.target.value)}
+                      placeholder="Enter your HyeSpace ID"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--color-border)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                        padding: 'var(--space-2) var(--space-3)',
+                        fontSize: 'var(--font-size-sm)',
+                      }}
+                    />
+                    <button
+                      onClick={handleSaveHyeSpaceId}
+                      disabled={savingHyeSpaceId}
+                      className="btn btn-ghost"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {savingHyeSpaceId ? 'Saving...' : 'Save'}
+                    </button>
                   </div>
 
                   {!subscription?.isActive && (
@@ -1782,29 +1884,39 @@ export function SettingsPage() {
                       style={{ whiteSpace: 'nowrap' }}
                     >
                       {subscribing ? (
-                        <><Loader2 className="animate-spin" style={{ width: '16px', height: '16px', marginRight: 'var(--space-2)' }} /> Processing...</>
+                        <><Loader2 className="animate-spin" style={{ width: '16px', height: '16px', marginRight: 'var(--space-2)' }} /> Opening...</>
                       ) : (
-                        <><CreditCard style={{ width: '16px', height: '16px' }} /> Subscribe Now</>
+                        <><CreditCard style={{ width: '16px', height: '16px' }} /> Subscribe on HyeSpace</>
                       )}
                     </button>
                   )}
 
-                  {subscription?.isActive && (
-                    <div className="flex-center" style={{ gap: 'var(--space-2)', color: 'var(--color-success)', fontWeight: '600' }}>
-                      <CheckCircle2 style={{ width: '20px', height: '20px' }} />
-                      Subscribed
-                    </div>
+                  {hyeSpaceId && (
+                    <button
+                      onClick={handleRemoveHyeSpaceId}
+                      className="btn btn-ghost"
+                      style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}
+                    >
+                      Remove HyeSpace ID
+                    </button>
                   )}
                 </div>
 
-                {subscription?.isHardcoded && (
-                  <div className="info-card" style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
-                    <Sparkles style={{ width: '16px', height: '16px', display: 'inline' }} />
-                    {' '}Developer account — all features unlocked.
+                {subscription?.isActive && (
+                  <div className="flex-center" style={{ gap: 'var(--space-2)', color: 'var(--color-success)', fontWeight: '600' }}>
+                    <CheckCircle2 style={{ width: '20px', height: '20px' }} />
+                    Subscribed
                   </div>
                 )}
               </div>
-            )}
+
+              {subscription?.isHardcoded && (
+                <div className="info-card" style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
+                  <Sparkles style={{ width: '16px', height: '16px', display: 'inline' }} />
+                  {' '}Developer account — all features unlocked.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Logout */}

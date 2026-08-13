@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { AuthProvider } from './context'
 import { ThemeProvider } from './context'
 import { NotificationProvider } from './context'
+import { SubscriptionProvider } from './context'
 import { LoadingScreen } from './components/LoadingScreen'
 
 export function Providers({ children }) {
@@ -27,9 +28,11 @@ export function Providers({ children }) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        <SubscriptionProvider>
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
+        </SubscriptionProvider>
       </AuthProvider>
     </ThemeProvider>
   )

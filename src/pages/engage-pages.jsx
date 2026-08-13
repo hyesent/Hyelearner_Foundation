@@ -71,10 +71,17 @@ function FreeUserLockScreen({ featureName, navigate }) {
           Go to Practice
         </button>
         <button 
-          onClick={() => navigate('/settings')} 
+          onClick={() => {
+            const linkedId = localStorage.getItem('hyespace-store-id')
+            if (linkedId) {
+              navigate('/settings')
+              return
+            }
+            window.open('https://hyespace.vercel.app', '_blank', 'noopener,noreferrer')
+          }} 
           className="btn btn-primary flex-center"
         >
-          Subscribe Now
+          Subscribe on HyeSpace
         </button>
       </div>
     </div>

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useState, useEffect, useContext, useRef, useCallback } from 'react'
-import { AuthContext, ThemeContext, NotificationContext } from './context'
+import { AuthContext, ThemeContext, NotificationContext, SubscriptionContext } from './context'
 import { storage } from './storage'
 import { userStats } from './services'
 import { 
@@ -27,6 +27,17 @@ export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
+
+// ============================================================
+// useSubscription — Subscription hook (NEW from V2)
+// ============================================================
+export function useSubscription() {
+  const context = useContext(SubscriptionContext)
+  if (!context) {
+    throw new Error('useSubscription must be used within a SubscriptionProvider')
   }
   return context
 }
@@ -255,7 +266,7 @@ export function useProgress() {
       // 11. UPDATE HEATMAP (via mastery)
       // Heatmap reads from storage directly, so data is already there
 
-      // ✅ 12. SAVE DAILY STATS TO BACKEND (Fire and forget)
+      // ✅ 12. SAVE DAILY STATS TO BACKEND (Fire and forget) - FROM V1
       const today = new Date().toISOString().split('T')[0]
       const cachedStats = JSON.parse(localStorage.getItem('hyelearner_daily_stats') || '{}')
       
@@ -282,7 +293,7 @@ export function useProgress() {
           date: today
         }))
         
-        // ✅ Save to backend (fire and forget)
+        // ✅ Save to backend (fire and forget) - FROM V1
         userStats.save(updatedStats).catch(err => {
           console.error('Failed to save stats to backend:', err)
         })
@@ -776,7 +787,7 @@ export function usePing(options = {}) {
 }
 
 // ============================================================
-// useUserStats — Hybrid stats hook (NEW)
+// useUserStats — Hybrid stats hook (FROM V1)
 // Caches stats in localStorage + syncs with backend
 // ============================================================
 const STATS_CACHE_KEY = 'hyelearner_daily_stats'

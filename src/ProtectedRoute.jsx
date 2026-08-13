@@ -7,17 +7,12 @@
 // ============================================================
 
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth, usePing } from './hooks'
-import { subscriptions } from './services'
-import { useState, useEffect } from 'react'
+import { useAuth, usePing, useSubscription } from './hooks'
 
 export default function ProtectedRoute() {
-  const { user, loading, token } = useAuth()
+  const { user, loading } = useAuth()
+  const { isSubscribed, loading: subLoading } = useSubscription()
   const location = useLocation()
-
-  // --- Subscription state ---
-  const [subLoading, setSubLoading] = useState(true)
-  const [isActive, setIsActive] = useState(false)
 
   // --- Global ping — every 5 minutes when authenticated ---
   const { isOnline, lastPing, username } = usePing({
@@ -32,30 +27,7 @@ export default function ProtectedRoute() {
     },
   })
 
-  // Load subscription status
-  useEffect(() => {
-    const loadSubscription = async () => {
-      const storedToken = localStorage.getItem('token')
-      if (!storedToken) {
-        setIsActive(false)
-        setSubLoading(false)
-        return
-      }
-
-      try {
-        const status = await subscriptions.status()
-        setIsActive(status.isActive || false)
-      } catch (error) {
-        console.error('Failed to load subscription status:', error)
-        setIsActive(false)
-      } finally {
-        setSubLoading(false)
-      }
-    }
-    loadSubscription()
-  }, [token])
-
-  // --- Auth check — return null so Suspense handles loading ---
+  // --- Auth + Subscription loading check ---
   if (loading || subLoading) {
     return null
   }
@@ -81,7 +53,7 @@ export default function ProtectedRoute() {
   )
 
   // If user is NOT paid AND trying to access a restricted route → redirect to practice
-  if (!isActive && !isFreeRoute) {
+  if (!isSubscribed && !isFreeRoute) {
     return <Navigate to="/practice" replace />
   }
 

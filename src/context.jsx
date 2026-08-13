@@ -1,11 +1,11 @@
 // ============================================================
 // HYELEARNER: FOUNDATION — CONTEXT
-// Auth, Theme, Notification Contexts
+// Auth, Theme, Notification, Subscription Contexts
 // Built by Hyesent.dev
 // ============================================================
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'
-import { auth as authService } from './services'
+import { auth as authService, subscriptions } from './services'
 import { storage } from './storage'
 
 // ============================================================
@@ -52,7 +52,9 @@ export function AuthProvider({ children }) {
       } catch (err) {
         console.error('🟣 [AUTH-ERROR] Failed to load user:', err)
         localStorage.removeItem('token')
+        localStorage.removeItem('refresh_token')
         localStorage.removeItem('user')
+        localStorage.removeItem('hyespace-store-id')
         setUser(null)
         setToken(null)
       } finally {
@@ -164,7 +166,9 @@ export function AuthProvider({ children }) {
       console.error('Logout error:', err)
     } finally {
       localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
+      localStorage.removeItem('hyespace-store-id')
       setUser(null)
       setToken(null)
       setLoading(false)
@@ -264,6 +268,82 @@ export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
     throw new Error('useAuth must be used within AuthProvider')
+  }
+  return context
+}
+
+// ============================================================
+// SUBSCRIPTION CONTEXT — SINGLE SOURCE OF TRUTH
+// ============================================================
+
+const SubscriptionContext = createContext(null)
+
+export function SubscriptionProvider({ children }) {
+  const { user } = useAuth()
+  const [subscription, setSubscription] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const refreshSubscription = useCallback(async () => {
+    setLoading(true)
+    try {
+      const status = await subscriptions.status()
+      setSubscription(status)
+    } catch (error) {
+      console.error('Failed to load subscription:', error)
+      setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Re-run when user changes (login/logout/switch account)
+  useEffect(() => {
+    if (!user) {
+      setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
+      setLoading(false)
+      return
+    }
+    refreshSubscription()
+  }, [user?.id, refreshSubscription])
+
+  // Periodic refresh (every 4 hours)
+  useEffect(() => {
+    if (!user) return
+    const interval = setInterval(() => {
+      refreshSubscription()
+    }, 4 * 60 * 60 * 1000) // 4 hours
+    return () => clearInterval(interval)
+  }, [user?.id, refreshSubscription])
+
+  // Sync across tabs
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'hyespace-store-id') {
+        refreshSubscription()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [refreshSubscription])
+
+  const value = {
+    subscription,
+    isSubscribed: subscription?.isActive || false,
+    loading,
+    refreshSubscription,
+  }
+
+  return (
+    <SubscriptionContext.Provider value={value}>
+      {children}
+    </SubscriptionContext.Provider>
+  )
+}
+
+export const useSubscription = () => {
+  const context = useContext(SubscriptionContext)
+  if (!context) {
+    throw new Error('useSubscription must be used within SubscriptionProvider')
   }
   return context
 }
@@ -455,4 +535,5 @@ export {
   AuthContext,
   ThemeContext,
   NotificationContext,
+  SubscriptionContext,
 }

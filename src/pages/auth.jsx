@@ -242,7 +242,7 @@ export function Register() {
                 <input
                   className="input"
                   style={{ paddingLeft: 'var(--space-10)' }}
-                  placeholder="John"
+                  placeholder="Kai"
                   value={form.firstName}
                   onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                   required
@@ -253,7 +253,7 @@ export function Register() {
               <label className="label">Last name</label>
               <input
                 className="input"
-                placeholder="Doe"
+                placeholder="Parker"
                 value={form.lastName}
                 onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                 required
@@ -269,7 +269,7 @@ export function Register() {
               <input
                 className="input"
                 style={{ paddingLeft: 'var(--space-10)' }}
-                placeholder="johndoe"
+                placeholder="KaiParker"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
                 required

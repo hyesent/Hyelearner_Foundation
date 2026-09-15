@@ -12,11 +12,14 @@ import { LoadingScreen } from './components/LoadingScreen'
 import Login from './pages/auth'
 import { Register, ForgotPassword } from './pages/auth'
 
+// ===== HOME (NEW — tabbed shell) =====
+import Home from './pages/Home'
+
 // ===== DASHBOARD =====
 import Dashboard from './pages/dashboard'
 
 // ===== HYETUTOR =====
-import { HyeTutorPage } from './pages/hyetutor'
+import { HyeTutorPage, HyeTutorChatPage } from './pages/hyetutor'
 
 // ===== LEARN PAGES =====
 import { 
@@ -69,7 +72,7 @@ import SocialPage from './pages/social/SocialPage'
 // ===== NEW PAGES =====
 import { DictionaryPage } from './pages/dictionary'
 import { FormulaExplorerPage } from './pages/formulapage'
-import{ AdminPage } from './pages/AdminPage'
+import { AdminPage } from './pages/AdminPage'
 import FeedbackContributionsPage from './pages/FeedbackContributionsPage'
 
 export default function Router() {
@@ -83,12 +86,15 @@ export default function Router() {
 
         {/* ===== PROTECTED ROUTES ===== */}
         <Route element={<ProtectedRoute />}>
-          {/* Dashboard */}
-          <Route path="/" element={<Dashboard />} />
+          {/* Home (tabbed shell: Home / Study / Duel) */}
+          <Route path="/" element={<Home />} />
+
+          {/* Dashboard (opened via 4-dot nav button) */}
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* HyeTutor */}
           <Route path="/hyetutor" element={<HyeTutorPage />} />
+          <Route path="/hyetutor/chat" element={<HyeTutorChatPage />} />
 
           {/* Learn */}
           <Route path="/lessons" element={<LessonsPage />} />
@@ -129,7 +135,7 @@ export default function Router() {
           <Route path="/social" element={<SocialPage />} />
           <Route path="/social/chat" element={<SocialPage />} />
 
-          {/* ✅ NEW ROUTES */}
+          {/* NEW */}
           <Route path="/feedback" element={<FeedbackContributionsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/dictionary" element={<DictionaryPage />} />

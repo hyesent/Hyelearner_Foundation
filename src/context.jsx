@@ -9,26 +9,73 @@ import { auth as authService, subscriptions } from './services'
 import { storage } from './storage'
 
 // ============================================================
+// STORAGE HELPERS — remember-me aware
+// ============================================================
+
+const TOKEN_KEY = 'token'
+const REFRESH_KEY = 'refresh_token'
+const USER_KEY = 'user'
+const STORE_ID_KEY = 'hyespace-store-id'
+
+const getStoredToken = () =>
+  localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+
+const getStoredUser = () => {
+  const raw =
+    localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+const persistSession = (token, user, remember = true) => {
+  const target = remember ? localStorage : sessionStorage
+  const other = remember ? sessionStorage : localStorage
+
+  // clear the other store so we don't have stale data
+  other.removeItem(TOKEN_KEY)
+  other.removeItem(REFRESH_KEY)
+  other.removeItem(USER_KEY)
+
+  target.setItem(TOKEN_KEY, token)
+  target.setItem(USER_KEY, JSON.stringify(user))
+}
+
+const clearSession = () => {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(USER_KEY)
+  localStorage.removeItem(STORE_ID_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_KEY)
+  sessionStorage.removeItem(USER_KEY)
+}
+
+// ============================================================
 // AUTH CONTEXT
 // ============================================================
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // ✅ Rehydrate immediately from storage so no flash of null
+  const [user, setUser] = useState(() => getStoredUser())
+  const [token, setToken] = useState(() => getStoredToken())
+  // ✅ If we have a token, don't show loading skeleton — we already have user
+  const [loading, setLoading] = useState(() => !getStoredToken())
   const [error, setError] = useState(null)
-  const [token, setToken] = useState(localStorage.getItem('token'))
 
-  // Load user on mount
+  // Load user on mount — validate token with backend, but DON'T wipe on network errors
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem('token')
+      const storedToken = getStoredToken()
       console.log('🟣 [AUTH-1] AuthProvider mounted, loading user...')
-      console.log('🟣 [AUTH-1] Token in localStorage:', token ? '✅ Present' : '❌ Missing')
-      
-      if (!token) {
-        console.log('🟣 [AUTH-2] No token, setting loading=false')
+      console.log('🟣 [AUTH-1] Token:', storedToken ? '✅ Present' : '❌ Missing')
+
+      if (!storedToken) {
         setLoading(false)
         return
       }
@@ -37,26 +84,39 @@ export function AuthProvider({ children }) {
         console.log('🟣 [AUTH-3] Calling authService.getMe()...')
         const response = await authService.getMe()
         console.log('🟣 [AUTH-4] getMe response:', response)
-        
-        // ✅ Handle both response formats
+
         let userData = null
-        if (response && response.user) {
-          userData = response.user
-        } else if (response && response.id) {
-          userData = response
+        if (response && response.user) userData = response.user
+        else if (response && response.id) userData = response
+
+        if (userData) {
+          setUser(userData)
+          // refresh stored user in whichever store has the token
+          const target = localStorage.getItem(TOKEN_KEY)
+            ? localStorage
+            : sessionStorage
+          target.setItem(USER_KEY, JSON.stringify(userData))
         }
-        
-        setUser(userData)
-        setToken(token)
-        console.log('🟣 [AUTH-5] User set from token:', userData)
+        setToken(storedToken)
       } catch (err) {
-        console.error('🟣 [AUTH-ERROR] Failed to load user:', err)
-        localStorage.removeItem('token')
-        localStorage.removeItem('refresh_token')
-        localStorage.removeItem('user')
-        localStorage.removeItem('hyespace-store-id')
-        setUser(null)
-        setToken(null)
+        console.error('🟣 [AUTH-ERROR] getMe failed:', err)
+
+        // ✅ Only clear session if token is definitely invalid (401 / 403)
+        const status = err?.response?.status || err?.status
+        const isAuthError = status === 401 || status === 403
+
+        if (isAuthError) {
+          console.warn('🟣 [AUTH] Token invalid — clearing session')
+          clearSession()
+          setUser(null)
+          setToken(null)
+        } else {
+          // Network / server error → KEEP user logged in with cached data
+          console.warn('🟣 [AUTH] Network/backend error — keeping cached session')
+          const cachedUser = getStoredUser()
+          if (cachedUser) setUser(cachedUser)
+          setToken(storedToken)
+        }
       } finally {
         setLoading(false)
         console.log('🟣 [AUTH-6] AuthProvider loading complete')
@@ -66,93 +126,70 @@ export function AuthProvider({ children }) {
     loadUser()
   }, [])
 
-  // ✅ FIXED: Login — uses user from response directly
-  const login = useCallback(async (email, password) => {
+  // ✅ Login — accepts remember flag from the login form
+  const login = useCallback(async (email, password, remember = true) => {
     console.log('🟢 [LOGIN-1] AuthContext.login called')
-    console.log('🟢 [LOGIN-1] Email:', email)
-    
+    console.log('🟢 [LOGIN-1] Email:', email, '| Remember:', remember)
+
     setLoading(true)
     setError(null)
-    
+
     try {
-      console.log('🟢 [LOGIN-2] Calling authService.login()...')
       const response = await authService.login(email, password)
       console.log('🟢 [LOGIN-3] authService.login response:', response)
-      
-      // ✅ Get the token
-      const token = response.access_token || response.token
-      console.log('🟢 [LOGIN-4] Token extracted:', token ? '✅ Present' : '❌ Missing')
-      
-      // ✅ User is in the response!
-      const user = response.user
-      console.log('🟢 [LOGIN-5] User from login response:', user)
-      
-      if (!user) {
-        console.error('🟢 [LOGIN-ERROR] No user in response!')
-        throw new Error('Login response missing user data')
-      }
-      
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-      console.log('🟢 [LOGIN-6] Token and user stored in localStorage')
-      
-      setUser(user)
-      setToken(token)
-      console.log('🟢 [LOGIN-7] User set in state:', user)
-      
+
+      const newToken = response.access_token || response.token
+      const newUser = response.user
+
+      if (!newToken) throw new Error('Login response missing token')
+      if (!newUser) throw new Error('Login response missing user data')
+
+      // ✅ Persist to localStorage or sessionStorage based on remember
+      persistSession(newToken, newUser, remember)
+      console.log('🟢 [LOGIN-6] Session stored in', remember ? 'localStorage' : 'sessionStorage')
+
+      setUser(newUser)
+      setToken(newToken)
+
       storage.updateStreak()
-      
-      return { user, token }
+
+      return { user: newUser, token: newToken }
     } catch (err) {
-      console.error('🟢 [LOGIN-ERROR] AuthContext.login error:', err)
+      console.error('🟢 [LOGIN-ERROR]', err)
       setError(err.message || 'Login failed')
       throw err
     } finally {
       setLoading(false)
-      console.log('🟢 [LOGIN-8] AuthContext.login complete')
     }
   }, [])
 
-  // Register
+  // Register — always remembers (new user)
   const register = useCallback(async (data) => {
     console.log('🟢 [REGISTER-1] AuthContext.register called')
-    console.log('🟢 [REGISTER-1] Email:', data.email)
-    
+
     setLoading(true)
     setError(null)
-    
+
     try {
-      console.log('🟢 [REGISTER-2] Calling authService.register()...')
       const response = await authService.register(data)
-      console.log('🟢 [REGISTER-3] authService.register response:', response)
-      
-      const token = response.access_token || response.token
-      console.log('🟢 [REGISTER-4] Token extracted:', token ? '✅ Present' : '❌ Missing')
-      
-      const user = response.user
-      console.log('🟢 [REGISTER-5] User from register response:', user)
-      
-      if (!user) {
-        console.error('🟢 [REGISTER-ERROR] No user in response!')
-        throw new Error('Registration response missing user data')
-      }
-      
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-      console.log('🟢 [REGISTER-6] Token and user stored in localStorage')
-      
-      setUser(user)
-      setToken(token)
-      console.log('🟢 [REGISTER-7] User set in state:', user)
-      
-      return { user, token }
+      const newToken = response.access_token || response.token
+      const newUser = response.user
+
+      if (!newToken) throw new Error('Registration response missing token')
+      if (!newUser) throw new Error('Registration response missing user data')
+
+      persistSession(newToken, newUser, true)
+
+      setUser(newUser)
+      setToken(newToken)
+
+      return { user: newUser, token: newToken }
     } catch (err) {
-      console.error('🟢 [REGISTER-ERROR] AuthContext.register error:', err)
+      console.error('🟢 [REGISTER-ERROR]', err)
       setError(err.message || 'Registration failed')
       throw err
     } finally {
       setLoading(false)
-      console.log('🟢 [REGISTER-8] AuthContext.register complete')
     }
   }, [])
 
@@ -165,10 +202,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
-      localStorage.removeItem('token')
-      localStorage.removeItem('refresh_token')
-      localStorage.removeItem('user')
-      localStorage.removeItem('hyespace-store-id')
+      clearSession()
       setUser(null)
       setToken(null)
       setLoading(false)
@@ -178,32 +212,24 @@ export function AuthProvider({ children }) {
 
   // Forgot Password
   const forgotPassword = useCallback(async (email) => {
-    console.log('🟡 [FORGOT-1] AuthContext.forgotPassword called')
-    console.log('🟡 [FORGOT-1] Email:', email)
-    
     setLoading(true)
     setError(null)
     try {
-      const response = await authService.forgotPassword(email)
-      console.log('🟡 [FORGOT-2] Reset link sent')
-      return response
+      return await authService.forgotPassword(email)
     } catch (err) {
-      console.error('🟡 [FORGOT-ERROR] Failed:', err)
       setError(err.message || 'Failed to send reset link')
       throw err
     } finally {
       setLoading(false)
-      console.log('🟡 [FORGOT-3] Complete')
     }
   }, [])
 
   // Reset Password
-  const resetPassword = useCallback(async (token, password) => {
+  const resetPassword = useCallback(async (resetToken, password) => {
     setLoading(true)
     setError(null)
     try {
-      const response = await authService.resetPassword(token, password)
-      return response
+      return await authService.resetPassword(resetToken, password)
     } catch (err) {
       setError(err.message || 'Failed to reset password')
       throw err
@@ -220,7 +246,11 @@ export function AuthProvider({ children }) {
       const response = await authService.updateProfile(data)
       if (response.user) {
         setUser(response.user)
-        localStorage.setItem('user', JSON.stringify(response.user))
+        // update whichever store has the session
+        const target = localStorage.getItem(TOKEN_KEY)
+          ? localStorage
+          : sessionStorage
+        target.setItem(USER_KEY, JSON.stringify(response.user))
       }
       return response
     } catch (err) {
@@ -236,8 +266,7 @@ export function AuthProvider({ children }) {
     setLoading(true)
     setError(null)
     try {
-      const response = await authService.updatePassword(data)
-      return response
+      return await authService.updatePassword(data)
     } catch (err) {
       setError(err.message || 'Failed to update password')
       throw err
@@ -278,9 +307,18 @@ export const useAuth = () => {
 
 const SubscriptionContext = createContext(null)
 
+const SUB_CACHE_KEY = 'hyelearner_subscription_cache'
+
 export function SubscriptionProvider({ children }) {
   const { user } = useAuth()
-  const [subscription, setSubscription] = useState(null)
+  const [subscription, setSubscription] = useState(() => {
+    // ✅ Rehydrate from cache immediately so paid users don't flash free
+    try {
+      const cached = localStorage.getItem(SUB_CACHE_KEY)
+      if (cached) return JSON.parse(cached)
+    } catch {}
+    return null
+  })
   const [loading, setLoading] = useState(true)
 
   const refreshSubscription = useCallback(async () => {
@@ -288,18 +326,27 @@ export function SubscriptionProvider({ children }) {
     try {
       const status = await subscriptions.status()
       setSubscription(status)
+      // cache the result
+      try {
+        localStorage.setItem(SUB_CACHE_KEY, JSON.stringify(status))
+      } catch {}
     } catch (error) {
       console.error('Failed to load subscription:', error)
-      setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
+      // ✅ On failure, keep whatever we have (cached or previous) — don't downgrade
+      setSubscription((prev) => {
+        if (prev) return prev
+        return { isActive: false, tier: 'free', plan: 'Free' }
+      })
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Re-run when user changes (login/logout/switch account)
+  // Re-run when user changes
   useEffect(() => {
     if (!user) {
       setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
+      localStorage.removeItem(SUB_CACHE_KEY)
       setLoading(false)
       return
     }
@@ -311,14 +358,14 @@ export function SubscriptionProvider({ children }) {
     if (!user) return
     const interval = setInterval(() => {
       refreshSubscription()
-    }, 4 * 60 * 60 * 1000) // 4 hours
+    }, 4 * 60 * 60 * 1000)
     return () => clearInterval(interval)
   }, [user?.id, refreshSubscription])
 
   // Sync across tabs
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'hyespace-store-id') {
+      if (e.key === STORE_ID_KEY) {
         refreshSubscription()
       }
     }
@@ -366,26 +413,15 @@ export function ThemeProvider({ children }) {
   }, [theme])
 
   const toggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light')
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
   }, [])
 
-  const setDarkMode = useCallback(() => {
-    setTheme('dark')
-  }, [])
-
-  const setLightMode = useCallback(() => {
-    setTheme('light')
-  }, [])
+  const setDarkMode = useCallback(() => setTheme('dark'), [])
+  const setLightMode = useCallback(() => setTheme('light'), [])
 
   const isDark = theme === 'dark'
 
-  const value = {
-    theme,
-    isDark,
-    toggleTheme,
-    setDarkMode,
-    setLightMode,
-  }
+  const value = { theme, isDark, toggleTheme, setDarkMode, setLightMode }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
@@ -408,20 +444,22 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([])
   const [toasts, setToasts] = useState([])
 
-  // Load notifications from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('hyelearner_notifications')
     if (saved) {
-      setNotifications(JSON.parse(saved))
+      try {
+        setNotifications(JSON.parse(saved))
+      } catch {}
     }
   }, [])
 
-  // Save notifications to localStorage
   useEffect(() => {
-    localStorage.setItem('hyelearner_notifications', JSON.stringify(notifications))
+    localStorage.setItem(
+      'hyelearner_notifications',
+      JSON.stringify(notifications),
+    )
   }, [notifications])
 
-  // Add a notification
   const addNotification = useCallback((notification) => {
     const newNotification = {
       id: `notif_${Date.now()}`,
@@ -429,71 +467,56 @@ export function NotificationProvider({ children }) {
       createdAt: new Date().toISOString(),
       ...notification,
     }
-    setNotifications(prev => [newNotification, ...prev])
+    setNotifications((prev) => [newNotification, ...prev])
     return newNotification
   }, [])
 
-  // Mark notification as read
   const markRead = useCallback((id) => {
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === id ? { ...n, read: true } : n
-      )
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     )
   }, [])
 
-  // Mark all as read
   const markAllRead = useCallback(() => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    )
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
   }, [])
 
-  // Remove notification
   const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
-  // Clear all notifications
-  const clearAll = useCallback(() => {
-    setNotifications([])
-  }, [])
+  const clearAll = useCallback(() => setNotifications([]), [])
 
-  // Show toast
   const showToast = useCallback((message, type = 'info', duration = 3000) => {
     const id = `toast_${Date.now()}`
-    setToasts(prev => [...prev, { id, message, type }])
+    setToasts((prev) => [...prev, { id, message, type }])
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id))
+      setToasts((prev) => prev.filter((t) => t.id !== id))
     }, duration)
   }, [])
 
-  // Remove toast
   const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
+    setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  // Success toast shortcut
-  const success = useCallback((message, duration) => {
-    showToast(message, 'success', duration)
-  }, [showToast])
+  const success = useCallback(
+    (message, duration) => showToast(message, 'success', duration),
+    [showToast],
+  )
+  const error = useCallback(
+    (message, duration) => showToast(message, 'error', duration),
+    [showToast],
+  )
+  const warning = useCallback(
+    (message, duration) => showToast(message, 'warning', duration),
+    [showToast],
+  )
+  const info = useCallback(
+    (message, duration) => showToast(message, 'info', duration),
+    [showToast],
+  )
 
-  // Error toast shortcut
-  const error = useCallback((message, duration) => {
-    showToast(message, 'error', duration)
-  }, [showToast])
-
-  // Warning toast shortcut
-  const warning = useCallback((message, duration) => {
-    showToast(message, 'warning', duration)
-  }, [showToast])
-
-  // Info toast shortcut
-  const info = useCallback((message, duration) => {
-    showToast(message, 'info', duration)
-  }, [showToast])
-
-  const unreadCount = notifications.filter(n => !n.read).length
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   const value = {
     notifications,

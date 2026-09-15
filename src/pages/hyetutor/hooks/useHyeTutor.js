@@ -16,6 +16,57 @@ import { ai } from '../../../services'
 const CACHE_KEY_PREFIX = 'hyetutor'
 
 // ============================================================
+// STUDY PLAN → EXAM DAYS HELPERS
+// Authoritative source: localStorage['hyelearner_study_plan_v2']
+// Fallback: storage.getPlanner().examDate
+// ============================================================
+
+const getStudyPlanExamDate = () => {
+  try {
+    const raw = localStorage.getItem('hyelearner_study_plan_v2')
+    if (!raw) return null
+    const plan = JSON.parse(raw)
+    return (
+      plan?.exam_date ||
+      plan?.exam_info?.exam_date ||
+      plan?.plan?.exam_date ||
+      null
+    )
+  } catch {
+    return null
+  }
+}
+
+const calculateDaysRemaining = (dateStr) => {
+  if (!dateStr) return null
+  const target = new Date(dateStr)
+  if (isNaN(target.getTime())) return null
+  const now = new Date()
+  const diff = target - now
+  if (diff <= 0) return 0
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
+const getExamDaysFromStudyPlan = () => {
+  // 1) Study plan exam_date is the source of truth
+  const studyPlanDate = getStudyPlanExamDate()
+  if (studyPlanDate) {
+    const days = calculateDaysRemaining(studyPlanDate)
+    if (days !== null) return days
+  }
+  // 2) Fallback to planner examDate
+  try {
+    const planner = storage.getPlanner()
+    if (planner?.examDate) {
+      const days = calculateDaysRemaining(planner.examDate)
+      if (days !== null) return days
+    }
+  } catch {}
+  // 3) Nothing → null (no hardcoded 52)
+  return null
+}
+
+// ============================================================
 // TIMEZONE HELPERS
 // ============================================================
 
@@ -44,8 +95,7 @@ export function useHyeTutor() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [isStale, setIsStale] = useState(false)
-  
-  // ✅ Use ref to prevent infinite loops
+
   const isInitialized = useRef(false)
   const isAnalyzing = useRef(false)
 
@@ -85,8 +135,8 @@ export function useHyeTutor() {
     const now = new Date()
     const thirtyDaysAgo = new Date(now)
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    
-    const recentSessions = sessions.filter(s => 
+
+    const recentSessions = sessions.filter(s =>
       new Date(s.createdAt || s.date) > thirtyDaysAgo
     )
 
@@ -105,14 +155,15 @@ export function useHyeTutor() {
       if (dayBreakdown.hasOwnProperty(day)) dayBreakdown[day]++
     })
 
-    const sessionTimes = recentSessions.map(s => 
+    const sessionTimes = recentSessions.map(s =>
       new Date(s.createdAt || s.date).toLocaleTimeString('en-US', { hour: '2-digit' })
     )
 
     return {
       user_id: user?.id,
       date: today,
-      exam_date: planner?.examDate || null,
+      // ✅ Study plan exam date takes priority, then planner
+      exam_date: getStudyPlanExamDate() || planner?.examDate || null,
       difficulty_preference: planner?.difficulty || 'balanced',
       data: {
         study_plan: planner || {},
@@ -172,7 +223,10 @@ export function useHyeTutor() {
         const { data, date } = JSON.parse(cached)
         const today = getTodayInUserTimezone()
         if (date === today) {
-          setData(data)
+          // ✅ Re-stamp examDays from current study plan (in case plan changed)
+          const freshExamDays = getExamDaysFromStudyPlan()
+          const merged = { ...data, examDays: freshExamDays }
+          setData(merged)
           setIsStale(false)
           return true
         } else {
@@ -194,8 +248,8 @@ export function useHyeTutor() {
     try {
       const today = getTodayInUserTimezone()
       const cacheKey = getCacheKey(user?.id)
-      localStorage.setItem(cacheKey, JSON.stringify({ 
-        data: response, 
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data: response,
         date: today,
         timestamp: new Date().toISOString()
       }))
@@ -210,7 +264,6 @@ export function useHyeTutor() {
   // ============================================================
 
   const analyze = useCallback(async (force = false) => {
-    // ✅ Prevent concurrent analysis
     if (isAnalyzing.current) {
       console.log('⏳ Analysis already in progress, skipping...')
       return data
@@ -221,7 +274,7 @@ export function useHyeTutor() {
     try {
       const today = getTodayInUserTimezone()
       const cacheKey = getCacheKey(user?.id)
-      
+
       // Check cache first (unless force)
       if (!force) {
         try {
@@ -229,10 +282,13 @@ export function useHyeTutor() {
           if (cached) {
             const { data: cachedData, date } = JSON.parse(cached)
             if (date === today && cachedData) {
-              setData(cachedData)
+              // ✅ Re-stamp examDays from current study plan
+              const freshExamDays = getExamDaysFromStudyPlan()
+              const merged = { ...cachedData, examDays: freshExamDays }
+              setData(merged)
               setIsStale(false)
               setLoading(false)
-              return cachedData
+              return merged
             }
           }
         } catch (e) {}
@@ -243,32 +299,32 @@ export function useHyeTutor() {
       setIsStale(false)
 
       const bundled = bundleData()
-      
+
       if (!bundled || bundled.error) {
         setError(bundled?.error || 'No user data available')
         setLoading(false)
         return null
       }
 
-      // ✅ Check if AI service is available
       let response
       try {
         response = await ai.hyetutor.analyze(bundled)
       } catch (apiError) {
         console.error('API Error:', apiError)
-        // ✅ Fallback to cached data if available
         const cached = loadFromCache()
         if (cached) {
           setIsStale(true)
           return data
         }
-        // ✅ If no cache, throw
         throw apiError
       }
-      
+
+      // ✅ Authoritative exam days — study plan wins, AI's number is ignored
+      const authoritativeExamDays = getExamDaysFromStudyPlan()
+
       const enrichedResponse = {
         ...response,
-        examDays: response.examDays || 52,
+        examDays: authoritativeExamDays,   // null if no study plan exists
         missions: response.missions || [],
         totalXpReward: response.totalXpReward || 0,
         timeBudget: response.timeBudget || { total: 0, completed: 0, remaining: 0 },
@@ -301,13 +357,13 @@ export function useHyeTutor() {
     } catch (err) {
       console.error('HyeTutor analysis failed:', err)
       setError(err.message || 'Failed to analyze data')
-      
+
       const cached = loadFromCache()
       if (cached) {
         setIsStale(true)
         return data
       }
-      
+
       return null
     } finally {
       setRefreshing(false)
@@ -344,16 +400,16 @@ export function useHyeTutor() {
 
     try {
       const response = await ai.hyetutor.completeMission(missionId)
-      
+
       if (data?.missions) {
-        const updatedMissions = data.missions.map(m => 
+        const updatedMissions = data.missions.map(m =>
           m.id === missionId ? { ...m, completed: true } : m
         )
         const updatedData = { ...data, missions: updatedMissions }
         setData(updatedData)
         saveToCache(updatedData)
       }
-      
+
       return response
     } catch (err) {
       console.error('Failed to complete mission:', err)
@@ -371,15 +427,15 @@ export function useHyeTutor() {
     }
 
     try {
-      const response = await ai.hyetutor.reflection({ 
-        reflection, 
+      const response = await ai.hyetutor.reflection({
+        reflection,
         user_id: user?.id,
         date: getTodayInUserTimezone()
       })
-      
+
       const cacheKey = getCacheKey(user?.id)
       localStorage.removeItem(cacheKey)
-      
+
       return response
     } catch (err) {
       console.error('Failed to submit reflection:', err)
@@ -388,12 +444,16 @@ export function useHyeTutor() {
   }, [user?.id])
 
   // ============================================================
-  // LISTEN FOR STORAGE EVENTS (Tab sync)
+  // LISTEN FOR STORAGE EVENTS (Tab sync + study plan changes)
   // ============================================================
 
   useEffect(() => {
     const handleStorageChange = (event) => {
       if (event.key === 'hyetutor_invalidate') {
+        analyze(true)
+      }
+      // ✅ Study plan changed → refresh HyeTutor data (exam days etc.)
+      if (event.key === 'hyelearner_study_plan_v2') {
         analyze(true)
       }
       if (event.key && event.key.startsWith('hyetutor_')) {
@@ -403,7 +463,8 @@ export function useHyeTutor() {
           if (cached) {
             const { data: cachedData, date } = JSON.parse(cached)
             if (date === today && event.key === getCacheKey(user?.id)) {
-              setData(cachedData)
+              const freshExamDays = getExamDaysFromStudyPlan()
+              setData({ ...cachedData, examDays: freshExamDays })
               setIsStale(false)
             }
           }
@@ -420,7 +481,6 @@ export function useHyeTutor() {
   // ============================================================
 
   useEffect(() => {
-    // ✅ Prevent running twice
     if (isInitialized.current) return
     isInitialized.current = true
 
@@ -441,11 +501,10 @@ export function useHyeTutor() {
 
     init()
 
-    // ✅ Cleanup
     return () => {
       isInitialized.current = false
     }
-  }, []) // ✅ EMPTY ARRAY = RUNS ONCE
+  }, [])
 
   // ============================================================
   // RETURN

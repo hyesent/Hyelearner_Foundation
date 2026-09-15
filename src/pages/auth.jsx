@@ -7,12 +7,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks'
-import { 
-  Mail, 
-  Lock, 
-  User, 
-  UserPlus, 
-  LogIn, 
+import {
+  Mail,
+  Lock,
+  User,
+  UserPlus,
+  LogIn,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -40,20 +40,20 @@ export default function Login() {
     console.log('🔵 [LOGIN-1] Form submitted')
     console.log('🔵 [LOGIN-1] Email:', form.email)
     console.log('🔵 [LOGIN-1] Password length:', form.password?.length || 0)
-    
+
     setLoading(true)
     setError('')
-    
+
     try {
       console.log('🔵 [LOGIN-2] Calling login() from AuthContext...')
       const response = await login(form.email, form.password)
-      
+
       console.log('🔵 [LOGIN-3] Login successful! Response:', response)
       console.log('🔵 [LOGIN-3] User:', response?.user)
       console.log('🔵 [LOGIN-3] Token:', response?.token || response?.access_token)
-      
-      console.log('🔵 [LOGIN-4] Navigating to /dashboard...')
-      navigate('/dashboard')
+
+      console.log('🔵 [LOGIN-4] Navigating to / (Home)...')
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('🔴 [LOGIN-ERROR] Login failed:', err)
       console.error('🔴 [LOGIN-ERROR] Error message:', err.message)
@@ -130,7 +130,7 @@ export default function Login() {
           {/* Remember & Forgot */}
           <div className="flex-between" style={{ fontSize: 'var(--font-size-sm)' }}>
             <label className="checkbox">
-              <input type="checkbox" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked }) } />
+              <input type="checkbox" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} />
               <span style={{ color: 'var(--color-text-secondary)' }}>Remember me</span>
             </label>
             <button type="button" onClick={() => navigate('/forgot-password')} className="link" style={{ fontWeight: '500' }}>
@@ -190,18 +190,18 @@ export function Register() {
     console.log('🟢 [REGISTER-1] Form submitted')
     console.log('🟢 [REGISTER-1] Email:', form.email)
     console.log('🟢 [REGISTER-1] Username:', form.username)
-    
+
     setLoading(true)
     setError('')
-    
+
     try {
       console.log('🟢 [REGISTER-2] Calling register() from AuthContext...')
       const response = await register(form)
       console.log('🟢 [REGISTER-3] Registration successful! Response:', response)
       console.log('🟢 [REGISTER-3] User:', response?.user)
-      
-      console.log('🟢 [REGISTER-4] Navigating to /dashboard...')
-      navigate('/dashboard')
+
+      console.log('🟢 [REGISTER-4] Navigating to / (Home)...')
+      navigate('/', { replace: true })
     } catch (err) {
       console.error('🔴 [REGISTER-ERROR] Registration failed:', err)
       console.error('🔴 [REGISTER-ERROR] Error message:', err.message)
@@ -412,10 +412,10 @@ export function ForgotPassword() {
     e.preventDefault()
     console.log('🟡 [FORGOT-1] Form submitted')
     console.log('🟡 [FORGOT-1] Email:', email)
-    
+
     setLoading(true)
     setError('')
-    
+
     try {
       console.log('🟡 [FORGOT-2] Calling forgotPassword()...')
       await forgotPassword(email)

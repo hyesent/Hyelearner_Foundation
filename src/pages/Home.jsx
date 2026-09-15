@@ -7,7 +7,7 @@
 // ============================================================
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks'
 import { storage } from '../storage'
 import { userStats } from '../services'
@@ -118,10 +118,20 @@ const getBgForColor = (color) => {
 // ============================================================
 export default function Home() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState(() => location.state?.tab || 'home')
   const [refreshing, setRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // Pick up tab state from router (Dashboard nav → Study/Duel)
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.tab])
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -148,90 +158,95 @@ export default function Home() {
           maxWidth: '48rem',
         }}
       >
-        {/* ================= HEADER (Home tab only) ================= */}
+        {/* ================= HEADER (Home tab only) — wrapped in a card ================= */}
         {activeTab === 'home' && (
-          <header
-            className="flex-between"
-            style={{ marginBottom: 'var(--space-5)' }}
+          <div
+            className="card"
+            style={{
+              padding: 'var(--space-4)',
+              marginBottom: 'var(--space-4)',
+            }}
           >
-            <div
-              className="flex"
-              style={{ gap: 'var(--space-3)', alignItems: 'center' }}
-            >
+            <div className="flex-between">
               <div
-                className="flex-center"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  background: 'var(--color-primary-light)',
-                  flexShrink: 0,
-                  color: 'var(--color-primary)',
-                  fontWeight: 700,
-                  fontSize: 'var(--font-size-lg)',
-                }}
+                className="flex"
+                style={{ gap: 'var(--space-3)', alignItems: 'center' }}
               >
-                {firstName.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ lineHeight: 1.15 }}>
                 <div
+                  className="flex-center"
                   style={{
-                    fontSize: 'var(--font-size-xs)',
-                    color: 'var(--color-text-muted)',
-                    fontWeight: 500,
-                  }}
-                >
-                  Welcome
-                </div>
-                <div
-                  style={{
-                    fontSize: 'var(--font-size-lg)',
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: 'var(--color-primary-light)',
+                    flexShrink: 0,
+                    color: 'var(--color-primary)',
                     fontWeight: 700,
-                    color: 'var(--color-text)',
+                    fontSize: 'var(--font-size-lg)',
                   }}
                 >
-                  {firstName}
+                  {firstName.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ lineHeight: 1.15 }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--color-text-muted)',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Welcome
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 'var(--font-size-lg)',
+                      fontWeight: 700,
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    {firstName}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div
-              className="flex"
-              style={{ gap: 'var(--space-2)', alignItems: 'center' }}
-            >
-              <button
-                onClick={handleRefresh}
-                className="btn btn-ghost"
-                style={{ padding: 'var(--space-2)' }}
-                aria-label="Refresh"
+              <div
+                className="flex"
+                style={{ gap: 'var(--space-2)', alignItems: 'center' }}
               >
-                <RefreshCw
-                  size={18}
+                <button
+                  onClick={handleRefresh}
+                  className="btn btn-ghost"
+                  style={{ padding: 'var(--space-2)' }}
+                  aria-label="Refresh"
+                >
+                  <RefreshCw
+                    size={18}
+                    style={{
+                      animation: refreshing
+                        ? 'spin 0.8s linear infinite'
+                        : 'none',
+                    }}
+                  />
+                </button>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="flex-center"
                   style={{
-                    animation: refreshing
-                      ? 'spin 0.8s linear infinite'
-                      : 'none',
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: 'var(--color-primary-light)',
+                    color: 'var(--color-primary)',
+                    border: 'none',
+                    cursor: 'pointer',
                   }}
-                />
-              </button>
-              <button
-                onClick={() => navigate('/profile')}
-                className="flex-center"
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  background: 'var(--color-primary-light)',
-                  color: 'var(--color-primary)',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-                aria-label="Profile"
-              >
-                <User size={20} />
-              </button>
+                  aria-label="Profile"
+                >
+                  <User size={20} />
+                </button>
+              </div>
             </div>
-          </header>
+          </div>
         )}
 
         {/* ============ CENTERED TITLE (Study / Duel) ============ */}
@@ -286,7 +301,7 @@ function HomeTab({ navigate, refreshing }) {
 }
 
 // ============================================================
-// 1. QUICK STATS — grouped 2x2 card
+// 1. QUICK STATS — outer card, 4 mini-cards inside (2x2)
 // ============================================================
 function QuickStats() {
   const [stats, setStats] = useState({
@@ -395,14 +410,14 @@ function QuickStats() {
   ]
 
   return (
-    <section className="card" style={{ padding: 'var(--space-5)' }}>
+    <section className="card" style={{ padding: 'var(--space-4)' }}>
       <div
         style={{
           fontSize: 'var(--font-size-xs)',
           fontWeight: 700,
           letterSpacing: '0.08em',
           color: 'var(--color-text-muted)',
-          marginBottom: 'var(--space-4)',
+          marginBottom: 'var(--space-3)',
         }}
       >
         QUICK STATS
@@ -417,7 +432,7 @@ function QuickStats() {
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: 'var(--space-4)',
+            gap: 'var(--space-3)',
           }}
         >
           {statsConfig.map((s) => {
@@ -426,7 +441,14 @@ function QuickStats() {
               <div
                 key={s.key}
                 className="flex-between"
-                style={{ alignItems: 'flex-start', gap: 'var(--space-2)' }}
+                style={{
+                  alignItems: 'flex-start',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-3)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  background: 'var(--color-surface)',
+                }}
               >
                 <div style={{ minWidth: 0 }}>
                   <div
@@ -683,7 +705,6 @@ function StudyPlanCard({ navigate, refreshing }) {
   const [plan, setPlan] = useState(null)
   const [now, setNow] = useState(() => new Date())
 
-  // Load saved plan
   useEffect(() => {
     try {
       const raw = localStorage.getItem('hyelearner_study_plan_v2')
@@ -698,7 +719,6 @@ function StudyPlanCard({ navigate, refreshing }) {
     }
   }, [refreshing])
 
-  // Live countdown tick
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
@@ -724,7 +744,6 @@ function StudyPlanCard({ navigate, refreshing }) {
     }
   })()
 
-  // Today's day from weekly schedule
   const todayName = now.toLocaleDateString('en-US', { weekday: 'long' })
   const todayEntry = plan?.plan?.weekly_schedule?.find(
     (d) => d.day?.toLowerCase() === todayName.toLowerCase(),
@@ -735,7 +754,6 @@ function StudyPlanCard({ navigate, refreshing }) {
     plan?.exam_type?.toUpperCase() ||
     null
 
-  // Empty state
   if (!plan) {
     return (
       <section
@@ -796,7 +814,6 @@ function StudyPlanCard({ navigate, refreshing }) {
     )
   }
 
-  // Populated state
   return (
     <section
       className="card card-hover"
@@ -809,10 +826,7 @@ function StudyPlanCard({ navigate, refreshing }) {
     >
       <div
         className="flex-between"
-        style={{
-          alignItems: 'center',
-          marginBottom: 'var(--space-3)',
-        }}
+        style={{ alignItems: 'center', marginBottom: 'var(--space-3)' }}
       >
         <div
           className="flex"
@@ -840,7 +854,6 @@ function StudyPlanCard({ navigate, refreshing }) {
         )}
       </div>
 
-      {/* Countdown */}
       {countdown && (
         <div
           style={{
@@ -902,7 +915,6 @@ function StudyPlanCard({ navigate, refreshing }) {
         </div>
       )}
 
-      {/* Today's schedule */}
       {todayEntry ? (
         <div>
           <div
@@ -982,7 +994,6 @@ function RevisionPlannerCard({ navigate, refreshing }) {
   const [paused, setPaused] = useState(false)
   const touchStartX = useRef(null)
 
-  // Load tasks
   useEffect(() => {
     try {
       const raw = localStorage.getItem('hyelearner_revision_planner_v2')
@@ -998,7 +1009,6 @@ function RevisionPlannerCard({ navigate, refreshing }) {
     }
   }, [refreshing])
 
-  // Auto-advance
   useEffect(() => {
     if (paused || tasks.length <= 1) return
     const id = setInterval(() => {
@@ -1007,7 +1017,6 @@ function RevisionPlannerCard({ navigate, refreshing }) {
     return () => clearInterval(id)
   }, [paused, tasks.length])
 
-  // Swipe handlers
   const onTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX
     setPaused(true)
@@ -1023,7 +1032,6 @@ function RevisionPlannerCard({ navigate, refreshing }) {
     setTimeout(() => setPaused(false), 3000)
   }
 
-  // Empty state
   if (tasks.length === 0) {
     return (
       <section
@@ -1133,7 +1141,6 @@ function RevisionPlannerCard({ navigate, refreshing }) {
         </span>
       </div>
 
-      {/* Task slide */}
       <div key={task.id || index} className="animate-fade">
         <div
           className="flex"
@@ -1190,7 +1197,6 @@ function RevisionPlannerCard({ navigate, refreshing }) {
         </div>
       </div>
 
-      {/* Dots */}
       {tasks.length > 1 && (
         <div
           className="flex-center"

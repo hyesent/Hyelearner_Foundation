@@ -2323,7 +2323,7 @@ img.rounded-full {
 }
 
 /* ============================================================
-   24. BOTTOM NAVIGATION — Dipped Center Button
+   24. BOTTOM NAVIGATION — Rounded Top + Dipped Center
    ============================================================ */
 
 .bottom-nav {
@@ -2340,27 +2340,35 @@ img.rounded-full {
   position: relative;
   max-width: 480px;
   margin: 0 auto;
-  height: 72px;
+  height: 76px;
   pointer-events: auto;
 }
 
-/* --- The bar with the curved dip --- */
-.bottom-nav-bar {
+/* --- The bar with rounded top corners + curve (SVG path) --- */
+.bottom-nav-bar-svg {
   position: absolute;
   inset: 0;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  filter: drop-shadow(0 -4px 12px rgba(0, 0, 0, 0.04));
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 -6px 20px rgba(0, 0, 0, 0.08));
+  pointer-events: none;
+  overflow: visible;
 }
 
-[data-theme="dark"] .bottom-nav-bar,
-.dark-mode .bottom-nav-bar {
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  filter: drop-shadow(0 -4px 12px rgba(0, 0, 0, 0.3));
+.bottom-nav-bar-path {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
-/* --- Tabs row (sits above the bar path) --- */
+[data-theme="dark"] .bottom-nav-bar-svg,
+.dark-mode .bottom-nav-bar-svg {
+  filter: drop-shadow(0 -6px 20px rgba(0, 0, 0, 0.45));
+}
+
+/* --- Tabs row --- */
 .bottom-nav-tabs {
   position: relative;
   display: grid;
@@ -2374,7 +2382,7 @@ img.rounded-full {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   height: 100%;
   color: var(--color-text-muted);
   transition: color var(--transition);
@@ -2392,25 +2400,35 @@ img.rounded-full {
   color: var(--color-primary);
 }
 
+.bottom-nav-tab.active svg {
+  transform: scale(1.08);
+  transition: transform var(--transition);
+}
+
 .bottom-nav-tab-label {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-/* --- Center button slot (empty in grid, button overlays) --- */
+.bottom-nav-tab.active .bottom-nav-tab-label {
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+/* --- Center slot --- */
 .bottom-nav-center-slot {
   position: relative;
 }
 
-/* --- The raised center button --- */
+/* --- Raised center button --- */
 .bottom-nav-center {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -90%);
-  width: 64px;
-  height: 64px;
+  transform: translate(-50%, -95%);
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   background: linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #4338CA 100%);
   color: white;
@@ -2421,58 +2439,63 @@ img.rounded-full {
   border: none;
   z-index: 2;
   box-shadow:
-    0 8px 24px rgba(79, 70, 229, 0.4),
+    0 10px 28px rgba(79, 70, 229, 0.45),
     0 0 0 6px var(--color-surface);
   transition: transform var(--transition), box-shadow var(--transition);
 }
 
 .bottom-nav-center:hover {
-  transform: translate(-50%, -90%) scale(1.05);
+  transform: translate(-50%, -95%) scale(1.05);
 }
 
 .bottom-nav-center:active {
-  transform: translate(-50%, -90%) scale(0.96);
+  transform: translate(-50%, -95%) scale(0.96);
 }
 
 [data-theme="dark"] .bottom-nav-center,
 .dark-mode .bottom-nav-center {
   box-shadow:
-    0 8px 24px rgba(99, 102, 241, 0.5),
+    0 10px 28px rgba(99, 102, 241, 0.55),
     0 0 0 6px var(--color-surface);
 }
 
-/* --- Soft glow behind the center button --- */
+/* --- Soft glow behind center button --- */
 .bottom-nav-center-glow {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -90%);
-  width: 64px;
-  height: 64px;
+  transform: translate(-50%, -95%);
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, transparent 70%);
-  filter: blur(12px);
+  background: radial-gradient(
+    circle,
+    rgba(99, 102, 241, 0.5) 0%,
+    rgba(99, 102, 241, 0.15) 40%,
+    transparent 70%
+  );
+  filter: blur(10px);
   z-index: 1;
   pointer-events: none;
 }
 
 /* --- Page padding so content doesn't hide behind nav --- */
 .has-bottom-nav {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + var(--space-4));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px) + var(--space-4));
 }
 
 /* --- Small mobile tweaks --- */
 @media (max-width: 480px) {
   .bottom-nav-inner {
-    height: 68px;
+    height: 72px;
   }
   .bottom-nav-center {
-    width: 58px;
-    height: 58px;
+    width: 62px;
+    height: 62px;
   }
   .bottom-nav-center-glow {
-    width: 58px;
-    height: 58px;
+    width: 82px;
+    height: 82px;
   }
   .bottom-nav-tab-label {
     font-size: 9px;

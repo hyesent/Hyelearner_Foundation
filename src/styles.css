@@ -2321,3 +2321,160 @@ img.rounded-full {
 .aspect-portrait {
   aspect-ratio: 3 / 4;
 }
+
+/* ============================================================
+   24. BOTTOM NAVIGATION — Dipped Center Button
+   ============================================================ */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-sticky);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  pointer-events: none;
+}
+
+.bottom-nav-inner {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto;
+  height: 72px;
+  pointer-events: auto;
+}
+
+/* --- The bar with the curved dip --- */
+.bottom-nav-bar {
+  position: absolute;
+  inset: 0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  filter: drop-shadow(0 -4px 12px rgba(0, 0, 0, 0.04));
+}
+
+[data-theme="dark"] .bottom-nav-bar,
+.dark-mode .bottom-nav-bar {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  filter: drop-shadow(0 -4px 12px rgba(0, 0, 0, 0.3));
+}
+
+/* --- Tabs row (sits above the bar path) --- */
+.bottom-nav-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  height: 100%;
+  align-items: center;
+}
+
+.bottom-nav-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 100%;
+  color: var(--color-text-muted);
+  transition: color var(--transition);
+  background: none;
+  border: none;
+  cursor: pointer;
+  min-height: var(--touch-target-min);
+}
+
+.bottom-nav-tab:hover {
+  color: var(--color-text-secondary);
+}
+
+.bottom-nav-tab.active {
+  color: var(--color-primary);
+}
+
+.bottom-nav-tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* --- Center button slot (empty in grid, button overlays) --- */
+.bottom-nav-center-slot {
+  position: relative;
+}
+
+/* --- The raised center button --- */
+.bottom-nav-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -90%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #4338CA 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  z-index: 2;
+  box-shadow:
+    0 8px 24px rgba(79, 70, 229, 0.4),
+    0 0 0 6px var(--color-surface);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.bottom-nav-center:hover {
+  transform: translate(-50%, -90%) scale(1.05);
+}
+
+.bottom-nav-center:active {
+  transform: translate(-50%, -90%) scale(0.96);
+}
+
+[data-theme="dark"] .bottom-nav-center,
+.dark-mode .bottom-nav-center {
+  box-shadow:
+    0 8px 24px rgba(99, 102, 241, 0.5),
+    0 0 0 6px var(--color-surface);
+}
+
+/* --- Soft glow behind the center button --- */
+.bottom-nav-center-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -90%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, transparent 70%);
+  filter: blur(12px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* --- Page padding so content doesn't hide behind nav --- */
+.has-bottom-nav {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + var(--space-4));
+}
+
+/* --- Small mobile tweaks --- */
+@media (max-width: 480px) {
+  .bottom-nav-inner {
+    height: 68px;
+  }
+  .bottom-nav-center {
+    width: 58px;
+    height: 58px;
+  }
+  .bottom-nav-center-glow {
+    width: 58px;
+    height: 58px;
+  }
+  .bottom-nav-tab-label {
+    font-size: 9px;
+  }
+}

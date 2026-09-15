@@ -46,7 +46,7 @@ export default function Login() {
 
     try {
       console.log('🔵 [LOGIN-2] Calling login() from AuthContext...')
-      const response = await login(form.email, form.password)
+      const response = await login(form.email, form.password, form.remember)
 
       console.log('🔵 [LOGIN-3] Login successful! Response:', response)
       console.log('🔵 [LOGIN-3] User:', response?.user)

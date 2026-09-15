@@ -18,27 +18,35 @@ import {
   QuickActions,
   ReflectionModal
 } from './components'
-import { ArrowLeft, Brain, Sparkles, RefreshCw, MessageSquare } from 'lucide-react'
+import {
+  ArrowLeft,
+  Brain,
+  Sparkles,
+  RefreshCw,
+  MessageSquare,
+  X,
+} from 'lucide-react'
 
 export default function HyeTutorPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { 
-    data, 
-    loading, 
-    refreshing, 
-    error, 
+  const {
+    data,
+    loading,
+    refreshing,
+    error,
     isStale,
-    refresh, 
-    askQuestion, 
+    refresh,
+    askQuestion,
     completeMission,
-    submitReflection 
+    submitReflection
   } = useHyeTutor()
-  
+
   const [chatLoading, setChatLoading] = useState(false)
   const [showReflection, setShowReflection] = useState(false)
   const [reflectionSubmitting, setReflectionSubmitting] = useState(false)
   const [reflectionSuccess, setReflectionSuccess] = useState(false)
+  const [showChatModal, setShowChatModal] = useState(false)
 
   const handleAsk = async (question) => {
     setChatLoading(true)
@@ -79,7 +87,7 @@ export default function HyeTutorPage() {
     return (
       <div className="flex-center" style={{ minHeight: '400px' }}>
         <div className="card text-center" style={{ padding: 'var(--space-8)', maxWidth: '480px' }}>
-          <div className="flex-center" style={{ 
+          <div className="flex-center" style={{
             width: '64px', height: '64px', borderRadius: '50%',
             background: 'var(--color-primary-light)',
             margin: '0 auto var(--space-4)'
@@ -123,22 +131,28 @@ export default function HyeTutorPage() {
                 )}
               </div>
               <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
-                Your personal AI coach • {data.examDays || 52} days until exam
+                Your personal AI coach
+                {data.examDays != null && (
+                  <> • {data.examDays} {data.examDays === 1 ? 'day' : 'days'} until exam</>
+                )}
+                {data.examDays == null && (
+                  <> • No exam date set</>
+                )}
               </p>
             </div>
           </div>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-            <button 
-              onClick={() => setShowReflection(true)} 
-              className="btn btn-ghost" 
+            <button
+              onClick={() => setShowReflection(true)}
+              className="btn btn-ghost"
               style={{ padding: 'var(--space-1) var(--space-3)', fontSize: 'var(--font-size-sm)' }}
             >
               <MessageSquare style={{ width: '16px', height: '16px' }} /> Reflect
             </button>
-            <button 
-              onClick={refresh} 
-              className="btn btn-ghost" 
-              style={{ padding: 'var(--space-1) var(--space-2)' }} 
+            <button
+              onClick={refresh}
+              className="btn btn-ghost"
+              style={{ padding: 'var(--space-1) var(--space-2)' }}
               disabled={refreshing}
             >
               <RefreshCw style={{ width: '16px', height: '16px' }} />
@@ -208,16 +222,18 @@ export default function HyeTutorPage() {
                 { day: 'Sunday', hours: 1.6 }
               ]
             }} />
-            
+
             <AIHabits habits={data.habits || []} />
           </div>
 
           {/* Right Column */}
           <div className="stack" style={{ gap: 'var(--space-4)' }}>
-            <HyeTutorChat 
+            <HyeTutorChat
               insights={data.insights || []}
               onAsk={handleAsk}
               loading={chatLoading}
+              mode="embedded"
+              onExpand={() => setShowChatModal(true)}
             />
           </div>
         </div>
@@ -235,6 +251,82 @@ export default function HyeTutorPage() {
           submitting={reflectionSubmitting}
           success={reflectionSuccess}
         />
+
+        {/* ===== FULL CHAT MODAL ===== */}
+        {showChatModal && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowChatModal(false)}
+            style={{ zIndex: 200 }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="modal"
+              style={{
+                maxWidth: '640px',
+                width: '100%',
+                padding: 0,
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Modal header */}
+              <div
+                className="flex-between"
+                style={{
+                  padding: 'var(--space-3) var(--space-4)',
+                  borderBottom: '1px solid var(--color-border)',
+                  flexShrink: 0,
+                }}
+              >
+                <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <Brain size={18} style={{ color: 'var(--color-primary)' }} />
+                  <span
+                    style={{
+                      fontStyle: 'italic',
+                      fontWeight: 700,
+                      fontSize: 'var(--font-size-base)',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    HyeTutor
+                  </span>
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 'var(--font-size-base)',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    Chat
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowChatModal(false)}
+                  className="btn btn-ghost"
+                  style={{ padding: 'var(--space-1)' }}
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Full-mode chat */}
+              <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <HyeTutorChat
+                    insights={data.insights || []}
+                    onAsk={handleAsk}
+                    loading={chatLoading}
+                    mode="full"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

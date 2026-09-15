@@ -10,7 +10,6 @@
 
 import questionIndex from './data/questions/index.js'
 
-// ✅ FIXED: USE_MOCK is true only when explicitly set to 'true'
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 const API_BASE = import.meta.env.VITE_API_URL || 'https://hyelearner-api.onrender.com'
 
@@ -25,7 +24,7 @@ const MOCK_DELAYS = {
 // HELPERS
 // ============================================================
 
-const delay = (ms = MOCK_DELAYS.normal) => 
+const delay = (ms = MOCK_DELAYS.normal) =>
   new Promise(resolve => setTimeout(resolve, ms))
 
 const generateId = () => `mock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -42,6 +41,10 @@ const randomDate = (start, end) => {
 const safeJSONParse = (str, fallback = null) => {
   try { return JSON.parse(str) } catch { return fallback }
 }
+
+// ✅ NEW: read a value from either store (remember-me aware)
+const getSessionValue = (key) =>
+  localStorage.getItem(key) || sessionStorage.getItem(key)
 
 // Fisher-Yates shuffle
 const shuffleArray = (array) => {
@@ -64,7 +67,6 @@ const loadRealQuestions = async (data) => {
   let allQuestions = []
 
   try {
-    // 1. Find the subject in the index
     const subjectEntry = questionIndex.find(
       entry => entry.subject === subject
     )
@@ -73,7 +75,6 @@ const loadRealQuestions = async (data) => {
       return generateMockQuestions(count, subject, topic, difficulty)
     }
 
-    // 2. Determine which files to load
     let filesToLoad = []
     if (topic) {
       const topicEntry = subjectEntry.topics.find(t => t.name === topic)
@@ -86,9 +87,8 @@ const loadRealQuestions = async (data) => {
       filesToLoad = subjectEntry.topics.map(t => t.file)
     }
 
-    // 3. ✅ Use glob import to load questions
     const questionFiles = import.meta.glob('../data/questions/**/*.js')
-    
+
     for (const file of filesToLoad) {
       const cacheKey = file
       if (!questionCache[cacheKey]) {
@@ -118,19 +118,16 @@ const loadRealQuestions = async (data) => {
       }
     }
 
-    // Fallback if nothing loaded
     if (allQuestions.length === 0) {
       console.warn(`[Questions] No real questions for ${subject}, using mock`)
       return generateMockQuestions(count, subject, topic, difficulty)
     }
 
-    // Filter by difficulty
     if (difficulty && difficulty !== 'mixed') {
       const filtered = allQuestions.filter(q => q.difficulty === difficulty)
       if (filtered.length > 0) allQuestions = filtered
     }
 
-    // Apply difficulty distribution
     if (difficultyDistribution) {
       const selected = []
       for (const [diff, percentage] of Object.entries(difficultyDistribution)) {
@@ -239,11 +236,12 @@ const generateMockQuestions = (count = 30, subject = null, topic = null, difficu
 
 const apiCall = async (endpoint, options = {}) => {
   const url = `${API_BASE}${endpoint}`
-  const token = localStorage.getItem('token')
-  
+  // ✅ Read token from either store (remember-me aware)
+  const token = getSessionValue('token')
+
   console.log(`🔍 [API] Calling: ${url}`)
   console.log(`🔍 [API] Token present: ${!!token}`)
-  
+
   const headers = {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -253,18 +251,18 @@ const apiCall = async (endpoint, options = {}) => {
   try {
     const response = await fetch(url, { ...options, headers })
     console.log(`🔍 [API] Response status: ${response.status}`)
-    
+
     const data = await response.json()
     console.log(`🔍 [API] Response data:`, data)
 
     if (!response.ok) {
       let errorMessage = 'API request failed'
-      
+
       if (data.detail) {
         if (typeof data.detail === 'string') {
           errorMessage = data.detail
         } else if (Array.isArray(data.detail)) {
-          errorMessage = data.detail.map(err => 
+          errorMessage = data.detail.map(err =>
             `${err.loc?.join('.') || ''}: ${err.msg || 'Invalid'}`
           ).join('; ')
         } else if (typeof data.detail === 'object') {
@@ -275,7 +273,10 @@ const apiCall = async (endpoint, options = {}) => {
       }
 
       console.error('[API] Error response:', { status: response.status, data })
-      throw new Error(errorMessage)
+      const err = new Error(errorMessage)
+      err.status = response.status
+      err.response = { status: response.status, data }
+      throw err
     }
 
     return data
@@ -295,20 +296,22 @@ export const auth = {
       await delay(MOCK_DELAYS.normal)
       if (!email || !password) throw new Error('Email and password required')
       mockToken = `mock_jwt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+      // NOTE: AuthContext handles storage now; only set localStorage here
+      // to keep mock parity. Real flow relies on AuthContext persistence.
       localStorage.setItem('token', mockToken)
       localStorage.setItem('user', JSON.stringify(MOCK_USER))
       return { user: MOCK_USER, token: mockToken }
     }
-    
-    const result = await apiCall('/auth/login', { 
-      method: 'POST', 
-      body: JSON.stringify({ email, password }) 
+
+    const result = await apiCall('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
     })
-    
+
     if (result.refresh_token) {
       localStorage.setItem('refresh_token', result.refresh_token)
     }
-    
+
     return result
   },
 
@@ -336,56 +339,67 @@ export const auth = {
       localStorage.setItem('user', JSON.stringify(newUser))
       return { user: newUser, token: mockToken }
     }
-    
+
     const result = await apiCall('/auth/register', { method: 'POST', body: JSON.stringify(payload) })
-    
+
     if (result.refresh_token) {
       localStorage.setItem('refresh_token', result.refresh_token)
     }
-    
+
     return result
   },
 
   logout: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
+      // ✅ Clear both stores
       localStorage.removeItem('token')
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
       localStorage.removeItem('hyespace-store-id')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('refresh_token')
+      sessionStorage.removeItem('user')
       return { success: true }
     }
     const result = await apiCall('/auth/logout', { method: 'POST' })
+    // ✅ Clear both stores
     localStorage.removeItem('token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user')
     localStorage.removeItem('hyespace-store-id')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('refresh_token')
+    sessionStorage.removeItem('user')
     return result
   },
 
   refresh: async () => {
-    const refreshToken = localStorage.getItem('refresh_token')
+    const refreshToken = getSessionValue('refresh_token')
     if (!refreshToken) throw new Error('No refresh token available')
-    
+
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.normal)
       mockToken = `mock_jwt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-      localStorage.setItem('token', mockToken)
+      // Preserve whichever store was in use
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('token', mockToken)
       return { token: mockToken }
     }
-    
-    const result = await apiCall('/auth/refresh', { 
-      method: 'POST', 
-      body: JSON.stringify({ refresh_token: refreshToken }) 
+
+    const result = await apiCall('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken })
     })
-    
+
+    const target = localStorage.getItem('token') ? localStorage : sessionStorage
     if (result.access_token) {
-      localStorage.setItem('token', result.access_token)
+      target.setItem('token', result.access_token)
     }
     if (result.refresh_token) {
-      localStorage.setItem('refresh_token', result.refresh_token)
+      target.setItem('refresh_token', result.refresh_token)
     }
-    
+
     return result
   },
 
@@ -411,36 +425,40 @@ export const auth = {
   getMe: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      const token = localStorage.getItem('token')
+      // ✅ Read token + user from either store
+      const token = getSessionValue('token')
       if (!token) throw new Error('Not authenticated')
-      const user = safeJSONParse(localStorage.getItem('user'), MOCK_USER)
+      const user = safeJSONParse(getSessionValue('user'), MOCK_USER)
       return { user }
     }
-    
+
     const result = await apiCall('/auth/me')
-    
+
     if (result && result.user) {
       return result
     }
-    
+
     if (result && result.id) {
       return { user: result }
     }
-    
+
     return { user: null }
   },
 
   updateProfile: async (data) => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.normal)
-      const current = safeJSONParse(localStorage.getItem('user'), MOCK_USER)
+      const current = safeJSONParse(getSessionValue('user'), MOCK_USER)
       const updated = { ...current, ...data, updatedAt: new Date().toISOString() }
-      localStorage.setItem('user', JSON.stringify(updated))
+      // Write back to whichever store has the token
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('user', JSON.stringify(updated))
       return { user: updated }
     }
     const result = await apiCall('/user/profile', { method: 'PUT', body: JSON.stringify(data) })
     if (result.user) {
-      localStorage.setItem('user', JSON.stringify(result.user))
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('user', JSON.stringify(result.user))
     }
     return result
   },
@@ -460,10 +478,11 @@ export const auth = {
       await delay(MOCK_DELAYS.slow)
       if (!file) throw new Error('File required')
       const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}`
-      const user = safeJSONParse(localStorage.getItem('user'), MOCK_USER)
+      const user = safeJSONParse(getSessionValue('user'), MOCK_USER)
       user.avatar = avatarUrl
       user.updatedAt = new Date().toISOString()
-      localStorage.setItem('user', JSON.stringify(user))
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('user', JSON.stringify(user))
       return { avatar: avatarUrl }
     }
     const formData = new FormData()
@@ -474,7 +493,7 @@ export const auth = {
   getSubjects: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      const user = safeJSONParse(localStorage.getItem('user'), MOCK_USER)
+      const user = safeJSONParse(getSessionValue('user'), MOCK_USER)
       return { subjects: user.subjects || MOCK_USER.subjects }
     }
     return apiCall('/user/subjects')
@@ -484,10 +503,11 @@ export const auth = {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.normal)
       if (!subjects || !Array.isArray(subjects) || subjects.length === 0) throw new Error('At least one subject required')
-      const user = safeJSONParse(localStorage.getItem('user'), MOCK_USER)
+      const user = safeJSONParse(getSessionValue('user'), MOCK_USER)
       user.subjects = subjects
       user.updatedAt = new Date().toISOString()
-      localStorage.setItem('user', JSON.stringify(user))
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('user', JSON.stringify(user))
       return { subjects }
     }
     return apiCall('/user/subjects', { method: 'PUT', body: JSON.stringify({ subjects }) })
@@ -587,15 +607,15 @@ export const sessions = {
         if (answers[q.id] && answers[q.id] !== q.answer) {
           mistakes.push({
             id: `mist_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            questionId: q.id, 
-            question: q.question, 
+            questionId: q.id,
+            question: q.question,
             options: q.options,
-            userAnswer: answers[q.id], 
+            userAnswer: answers[q.id],
             correctAnswer: q.answer,
-            subject: session.subject, 
+            subject: session.subject,
             topic: q.topic || 'General',
             explanation: q.explanation || '',
-            isResolved: false, 
+            isResolved: false,
             createdAt: new Date().toISOString(),
           })
         }
@@ -774,7 +794,7 @@ export const ai = {
     const safeUserAnswer = userAnswer || 'No answer provided'
     const safeOptions = Array.isArray(options) ? options : []
     const safeCorrectAnswer = correctAnswer || null
-    
+
     if (!question || question.trim() === '') {
       return {
         explanation: 'No question provided. Please try again.',
@@ -785,7 +805,7 @@ export const ai = {
         error: true
       }
     }
-    
+
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.slow)
       return {
@@ -799,18 +819,18 @@ export const ai = {
         user_answer: safeUserAnswer
       }
     }
-    
+
     try {
-      const payload = { 
-        question: safeQuestion, 
+      const payload = {
+        question: safeQuestion,
         userAnswer: safeUserAnswer,
         options: safeOptions,
         correctAnswer: safeCorrectAnswer
       }
-      
-      const result = await apiCall('/ai/explain', { 
-        method: 'POST', 
-        body: JSON.stringify(payload) 
+
+      const result = await apiCall('/ai/explain', {
+        method: 'POST',
+        body: JSON.stringify(payload)
       })
       return result
     } catch (error) {
@@ -839,7 +859,7 @@ export const ai = {
         createdAt: new Date().toISOString(),
       }
     }
-    
+
     try {
       const result = await apiCall('/ai/weakness', { method: 'POST', body: JSON.stringify(data) })
       return result
@@ -952,7 +972,16 @@ const normalizeHyeSpaceId = (value) => {
   return value.trim().toLowerCase()
 }
 
-const safeCurrentUser = () => safeJSONParse(localStorage.getItem('user'), MOCK_USER)
+// ✅ FIXED: read user from either store — hardcoded account check no longer
+// breaks when "remember me" is off (sessionStorage)
+const safeCurrentUser = () => {
+  const raw = getSessionValue('user')
+  if (raw) {
+    const parsed = safeJSONParse(raw, null)
+    if (parsed) return parsed
+  }
+  return MOCK_USER
+}
 
 const getLinkedHyeSpaceId = () => normalizeHyeSpaceId(localStorage.getItem('hyespace-store-id'))
 
@@ -1171,7 +1200,8 @@ export const subscriptions = {
       const user = safeCurrentUser()
       user.tier = tier
       user.subscriptionExpires = new Date(Date.now() + 30 * 86400000).toISOString()
-      localStorage.setItem('user', JSON.stringify(user))
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('user', JSON.stringify(user))
       return { success: true, tier, expiresAt: user.subscriptionExpires }
     }
 
@@ -1203,7 +1233,7 @@ export const subscriptions = {
 
 export const parent = {
   generateCode: async () => {
-    const response = await apiCall('/parent/generate-code', { 
+    const response = await apiCall('/parent/generate-code', {
       method: 'POST',
       body: JSON.stringify({})
     })
@@ -1214,9 +1244,9 @@ export const parent = {
     if (!code || code.length < 4) {
       throw new Error('Invalid code. Must be at least 4 characters.')
     }
-    const response = await apiCall('/parent/link', { 
-      method: 'POST', 
-      body: JSON.stringify({ code }) 
+    const response = await apiCall('/parent/link', {
+      method: 'POST',
+      body: JSON.stringify({ code })
     })
     return response
   },
@@ -1235,7 +1265,7 @@ export const parent = {
   },
 
   unlink: async () => {
-    const response = await apiCall('/parent/unlink', { 
+    const response = await apiCall('/parent/unlink', {
       method: 'POST',
       body: JSON.stringify({})
     })
@@ -1249,9 +1279,9 @@ export const parent = {
     if (!action) {
       throw new Error('Action is required')
     }
-    const response = await apiCall(`/parent/approve/${studentId}`, { 
-      method: 'POST', 
-      body: JSON.stringify({ action }) 
+    const response = await apiCall(`/parent/approve/${studentId}`, {
+      method: 'POST',
+      body: JSON.stringify({ action })
     })
     return response
   },
@@ -1271,19 +1301,19 @@ export const duels = {
       is_public: data.is_public || false,
       questions: data.questions || []
     }
-    
+
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.normal)
       const code = Math.random().toString(36).substring(2, 8).toUpperCase()
-      return { 
-        id: `duel_${Date.now()}`, 
+      return {
+        id: `duel_${Date.now()}`,
         code: code,
-        createdAt: new Date().toISOString() 
+        createdAt: new Date().toISOString()
       }
     }
-    return apiCall('/duel/create', { 
-      method: 'POST', 
-      body: JSON.stringify(payload) 
+    return apiCall('/duel/create', {
+      method: 'POST',
+      body: JSON.stringify(payload)
     })
   },
 
@@ -1291,8 +1321,8 @@ export const duels = {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.normal)
       const sampleQuestions = generateMockQuestions(10, 'Mathematics', 'Algebra')
-      return { 
-        id: `duel_${Date.now()}`, 
+      return {
+        id: `duel_${Date.now()}`,
         opponent: { name: 'Opponent Player', id: 'opponent-1' },
         questions: sampleQuestions,
         timeLimit: 300
@@ -1313,9 +1343,9 @@ export const duels = {
         winner: correct >= Math.floor(total / 2) ? 'You' : 'Opponent'
       }
     }
-    return apiCall('/duel/submit', { 
-      method: 'POST', 
-      body: JSON.stringify({ duel_id: duelId, answers }) 
+    return apiCall('/duel/submit', {
+      method: 'POST',
+      body: JSON.stringify({ duel_id: duelId, answers })
     })
   },
 
@@ -1341,7 +1371,7 @@ export const duels = {
   getActiveUsers: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      return { 
+      return {
         count: 12,
         users: [
           { id: '1', username: 'John Doe', avatar_url: null },
@@ -1396,10 +1426,10 @@ export const leaderboard = {
         { rank: 2, name: 'Mary Smith', xp: 10230, level: 22, streak: 8, school: 'UI' },
         { rank: 3, name: 'Alex Johnson', xp: 8900, level: 20, streak: 15, school: 'UNILAG' },
       ]
-      
-      return { 
-        rankings, 
-        totalUsers: 2847, 
+
+      return {
+        rankings,
+        totalUsers: 2847,
         filter,
         userRank: null
       }
@@ -1903,14 +1933,14 @@ export const ping = {
   pingAuth: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      const user = safeJSONParse(localStorage.getItem('user'), MOCK_USER)
-      return { 
-        status: 'ok', 
+      const user = safeJSONParse(getSessionValue('user'), MOCK_USER)
+      return {
+        status: 'ok',
         authenticated: true,
         user_id: user?.id || 'mock_user',
         username: user?.username || 'mock_user',
         timestamp: new Date().toISOString(),
-        mock: true 
+        mock: true
       }
     }
     return apiCall('/ping/auth', { method: 'GET' })
@@ -1919,12 +1949,12 @@ export const ping = {
   health: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      return { 
-        status: 'healthy', 
+      return {
+        status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: '99.99%',
         version: '1.0.0',
-        mock: true 
+        mock: true
       }
     }
     return apiCall('/health', { method: 'GET' })
@@ -1936,26 +1966,26 @@ export const ping = {
 // ============================================================
 
 export default {
-  auth, 
-  user: auth, 
-  sessions, 
-  mistakes, 
-  bookmarks, 
-  ai, 
-  subscriptions, 
-  parent, 
+  auth,
+  user: auth,
+  sessions,
+  mistakes,
+  bookmarks,
+  ai,
+  subscriptions,
+  parent,
   duels,
-  career, 
-  leaderboard, 
-  referrals, 
-  notifications,  
+  career,
+  leaderboard,
+  referrals,
+  notifications,
   adminExtended,
   offline,
   ping,
   social,
   voice,
   userStats,
-  feedback,           
+  feedback,
   cutoffContributions,
   handleSubscribeClick,
   hasLinkedHyeSpaceId

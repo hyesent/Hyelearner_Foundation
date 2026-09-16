@@ -916,7 +916,88 @@ export const ai = {
       }
       return apiCall('/hyetutor/analyze', { method: 'POST', body: JSON.stringify(data) })
     },
+dailyTutor: {
+  generateLesson: async (payload) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.slow)
+      return {
+        success: true,
+        generated_at: new Date().toISOString(),
+        lesson: {
+          title: `${payload.topic} — Quick Lesson`,
+          estimated_minutes: 12,
+          difficulty: 'medium',
+          sections: [
+            {
+              heading: `What is ${payload.topic}?`,
+              body: `${payload.topic} is a core concept in ${payload.subject}. In this lesson we'll cover the essential idea, then walk through an exam-style application.\n\nThink of it as the foundation — once you understand this, the rest of the topic clicks into place.`,
+            },
+            {
+              heading: 'How it works',
+              body: `At its core, ${payload.topic} describes a relationship between the quantities involved. The key is to see what stays constant and what changes.\n\nFor JAMB, they love testing this in multi-step questions — so focus on the mechanism, not just the formula.`,
+            },
+            {
+              heading: 'Exam-style example',
+              body: `A typical ${payload.exam_type.toUpperCase()} question will give you two known quantities and ask for a third. Identify what you have, pick the right relationship, and solve step by step.\n\nWatch out for unit conversions — they cost marks every year.`,
+            },
+            {
+              heading: 'Common pitfalls',
+              body: `⚠️ Students often confuse ${payload.topic} with a related concept. Remember: the definition here is precise, and examiners test the boundary cases.\n\nAlways double-check your final answer makes sense in context.`,
+            },
+          ],
+          key_points: [
+            `${payload.topic} is a foundational topic in ${payload.subject}`,
+            'Focus on the mechanism, not just memorizing formulas',
+            'Watch for unit conversions and boundary cases in exams',
+          ],
+          personalization_notes: [
+            `Generated for level ${payload.user_level} with ${payload.study_style} study style`,
+          ],
+        },
+      }
+    }
 
+    return apiCall('/ai/daily-tutor/lesson', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  generateQuiz: async (payload) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.slow)
+      const count = payload.question_count || 5
+      const questions = Array.from({ length: count }, (_, i) => {
+        const options = [
+          `Option A for Q${i + 1}`,
+          `Option B for Q${i + 1}`,
+          `Option C for Q${i + 1}`,
+          `Option D for Q${i + 1}`,
+        ]
+        return {
+          id: `q${i + 1}`,
+          question: `${payload.topic} — question ${i + 1}?`,
+          options,
+          answer: options[0],
+          explanation: `Explanation for question ${i + 1} on ${payload.topic}.`,
+          difficulty: i < 2 ? 'easy' : i < 4 ? 'medium' : 'hard',
+          topic: payload.topic,
+          concept: 'general',
+        }
+      })
+      return {
+        success: true,
+        generated_at: new Date().toISOString(),
+        quiz: { questions, personalization_notes: [] },
+      }
+    }
+
+    return apiCall('/ai/daily-tutor/quiz', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+},
     chat: async (question, context) => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.slow)

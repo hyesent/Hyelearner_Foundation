@@ -1,6 +1,7 @@
 // ============================================================
 // HYELEARNER: FOUNDATION — DICTIONARY PAGE
 // Backend-proxied dictionary + Word of the Day + Vocabulary Builder
+// Local list is ONLY for the Word of the Day
 // Built by Hyesent.dev
 // ============================================================
 
@@ -21,12 +22,11 @@ import {
 import { LoadingScreen } from '../components/LoadingScreen'
 import { WORD_OF_THE_DAY_DATA } from '../data/words'
 
-// ✅ Read API base from env (same as services.js)
 const API_BASE =
   import.meta.env.VITE_API_URL || 'https://hyelearner-api.onrender.com'
 
 // ============================================================
-// WORD OF THE DAY — picks from the shared 730-word list
+// WORD OF THE DAY — from the local 730-word list
 // ============================================================
 
 const getWordOfTheDay = () => {
@@ -41,7 +41,7 @@ const getWordOfTheDay = () => {
 }
 
 // ============================================================
-// DICTIONARY LOOKUP — proxied through our backend (no CORS)
+// API — proxied through our backend (normalized object)
 // ============================================================
 
 const fetchWordDefinition = async (word) => {
@@ -50,8 +50,7 @@ const fetchWordDefinition = async (word) => {
   try {
     res = await fetch(url)
   } catch (e) {
-    // network error (offline, DNS, etc.)
-    throw new Error('Network error. Check your connection and try again.')
+    throw new Error('Network error. Check your connection.')
   }
 
   if (!res.ok) {
@@ -60,12 +59,15 @@ const fetchWordDefinition = async (word) => {
       const body = await res.json()
       if (body?.detail) detail = body.detail
     } catch {}
+
     if (res.status === 404) throw new Error('Word not found')
-    if (res.status === 502) throw new Error('Dictionary service unavailable')
+    if (res.status === 502 || res.status === 504) {
+      throw new Error('Dictionary service is busy. Try again in a moment.')
+    }
     throw new Error(detail)
   }
 
-  return res.json()
+  return res.json() // → { word, phonetic, phonetics, meanings, sourceUrls }
 }
 
 // ============================================================
@@ -111,31 +113,62 @@ export function DictionaryPage() {
   const lookupWord = async (word) => {
     setLoading(true)
     setError(null)
+    setWordData(null)
 
     try {
       const data = await fetchWordDefinition(word)
 
-      if (Array.isArray(data) && data.length > 0) {
-        setWordData(data[0])
-
-        const updated = [
-          word,
-          ...recentSearches.filter((w) => w !== word),
-        ].slice(0, 10)
-        setRecentSearches(updated)
-        localStorage.setItem(
-          'dictionary_recent',
-          JSON.stringify(updated)
-        )
-      } else {
+      // Backend returns a normalized OBJECT with a meanings array
+      if (
+        !data ||
+        !Array.isArray(data.meanings) ||
+        data.meanings.length === 0
+      ) {
         setError('No definition found')
+        return
       }
+
+      setWordData(data)
+
+      const updated = [
+        word,
+        ...recentSearches.filter((w) => w !== word),
+      ].slice(0, 10)
+      setRecentSearches(updated)
+      localStorage.setItem('dictionary_recent', JSON.stringify(updated))
     } catch (err) {
       setError(err.message || 'Something went wrong')
-      setWordData(null)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Word of the Day → show directly from local list, no API call
+  const showWordOfTheDay = () => {
+    if (!wordOfTheDay) return
+    setError(null)
+    setLoading(false)
+    setWordData({
+      word: wordOfTheDay.word,
+      phonetic: '',
+      phonetics: [],
+      meanings: [
+        {
+          partOfSpeech: '—',
+          definitions: [
+            {
+              definition: wordOfTheDay.definition,
+              example: wordOfTheDay.example || '',
+              synonyms: [],
+              antonyms: [],
+            },
+          ],
+        },
+      ],
+      sourceUrls: [],
+      _local: true,
+    })
+    setSearchQuery(wordOfTheDay.word)
   }
 
   const handleSpeak = (text) => {
@@ -151,11 +184,9 @@ export function DictionaryPage() {
     utterance.rate = 0.9
     utterance.pitch = 1
     utterance.lang = 'en-US'
-
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
-
     window.speechSynthesis.speak(utterance)
   }
 
@@ -164,10 +195,7 @@ export function DictionaryPage() {
       ? favorites.filter((w) => w !== word)
       : [...favorites, word]
     setFavorites(updated)
-    localStorage.setItem(
-      'dictionary_favorites',
-      JSON.stringify(updated)
-    )
+    localStorage.setItem('dictionary_favorites', JSON.stringify(updated))
   }
 
   const isFavorite = (word) => favorites.includes(word)
@@ -198,6 +226,14 @@ export function DictionaryPage() {
                 /{data.phonetic}/
               </span>
             )}
+            {data._local && (
+              <span
+                className="badge badge-muted"
+                style={{ fontSize: 'var(--font-size-xs)' }}
+              >
+                Word of the Day
+              </span>
+            )}
           </div>
           <div className="flex" style={{ gap: 'var(--space-2)' }}>
             <button
@@ -212,9 +248,6 @@ export function DictionaryPage() {
               onClick={() => toggleFavorite(data.word)}
               className="btn btn-ghost"
               style={{ padding: 'var(--space-1) var(--space-2)' }}
-              title={
-                isFavorite(data.word) ? 'Remove favorite' : 'Add favorite'
-              }
             >
               <Star
                 size={20}
@@ -231,7 +264,7 @@ export function DictionaryPage() {
           </div>
         </div>
 
-        {data.phonetics &&
+        {Array.isArray(data.phonetics) &&
           data.phonetics.some((p) => p.audio) && (
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <audio
@@ -242,83 +275,82 @@ export function DictionaryPage() {
             </div>
           )}
 
-        {data.meanings &&
-          data.meanings.map((meaning, idx) => (
-            <div key={idx} style={{ marginBottom: 'var(--space-4)' }}>
+        {data.meanings.map((meaning, idx) => (
+          <div key={idx} style={{ marginBottom: 'var(--space-4)' }}>
+            <div
+              style={{
+                display: 'inline-block',
+                padding: 'var(--space-1) var(--space-3)',
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--color-primary-light)',
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 600,
+                color: 'var(--color-primary)',
+                marginBottom: 'var(--space-2)',
+              }}
+            >
+              {meaning.partOfSpeech || '—'}
+            </div>
+
+            {(meaning.definitions || []).map((def, i) => (
               <div
+                key={i}
                 style={{
-                  display: 'inline-block',
-                  padding: 'var(--space-1) var(--space-3)',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'var(--color-primary-light)',
-                  fontSize: 'var(--font-size-xs)',
-                  fontWeight: 600,
-                  color: 'var(--color-primary)',
-                  marginBottom: 'var(--space-2)',
+                  padding: 'var(--space-2) var(--space-3)',
+                  borderBottom:
+                    i < meaning.definitions.length - 1
+                      ? '1px solid var(--color-border-light)'
+                      : 'none',
                 }}
               >
-                {meaning.partOfSpeech}
-              </div>
-
-              {meaning.definitions.map((def, i) => (
                 <div
-                  key={i}
                   style={{
-                    padding: 'var(--space-2) var(--space-3)',
-                    borderBottom:
-                      i < meaning.definitions.length - 1
-                        ? '1px solid var(--color-border-light)'
-                        : 'none',
+                    fontSize: 'var(--font-size-sm)',
+                    color: 'var(--color-text)',
                   }}
                 >
+                  {i + 1}. {def.definition}
+                </div>
+                {def.example && (
                   <div
                     style={{
                       fontSize: 'var(--font-size-sm)',
-                      color: 'var(--color-text)',
+                      color: 'var(--color-text-muted)',
+                      fontStyle: 'italic',
+                      marginTop: 'var(--space-1)',
+                      paddingLeft: 'var(--space-4)',
                     }}
                   >
-                    {i + 1}. {def.definition}
+                    "{def.example}"
                   </div>
-                  {def.example && (
-                    <div
-                      style={{
-                        fontSize: 'var(--font-size-sm)',
-                        color: 'var(--color-text-muted)',
-                        fontStyle: 'italic',
-                        marginTop: 'var(--space-1)',
-                        paddingLeft: 'var(--space-4)',
-                      }}
-                    >
-                      "{def.example}"
-                    </div>
-                  )}
-                  {def.synonyms?.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: 'var(--space-1)',
-                        fontSize: 'var(--font-size-xs)',
-                        color: 'var(--color-text-muted)',
-                      }}
-                    >
-                      <strong>Synonyms:</strong> {def.synonyms.join(', ')}
-                    </div>
-                  )}
-                  {def.antonyms?.length > 0 && (
-                    <div
-                      style={{
-                        fontSize: 'var(--font-size-xs)',
-                        color: 'var(--color-text-muted)',
-                      }}
-                    >
-                      <strong>Antonyms:</strong> {def.antonyms.join(', ')}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
+                )}
+                {def.synonyms?.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 'var(--space-1)',
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--color-text-muted)',
+                    }}
+                  >
+                    <strong>Synonyms:</strong> {def.synonyms.join(', ')}
+                  </div>
+                )}
+                {def.antonyms?.length > 0 && (
+                  <div
+                    style={{
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--color-text-muted)',
+                    }}
+                  >
+                    <strong>Antonyms:</strong> {def.antonyms.join(', ')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
 
-        {data.sourceUrls?.length > 0 && (
+        {Array.isArray(data.sourceUrls) && data.sourceUrls.length > 0 && (
           <div
             style={{
               fontSize: 'var(--font-size-xs)',
@@ -332,11 +364,7 @@ export function DictionaryPage() {
               rel="noopener noreferrer"
               style={{ color: 'var(--color-primary)' }}
             >
-              <ExternalLink
-                size={14}
-                style={{ display: 'inline' }}
-              />{' '}
-              Source
+              <ExternalLink size={14} style={{ display: 'inline' }} /> Source
             </a>
           </div>
         )}
@@ -368,10 +396,7 @@ export function DictionaryPage() {
                 background: 'var(--color-primary-light)',
               }}
             >
-              <BookOpen
-                size={24}
-                style={{ color: 'var(--color-primary)' }}
-              />
+              <BookOpen size={24} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
               <h1 className="h2" style={{ margin: 0 }}>
@@ -393,7 +418,7 @@ export function DictionaryPage() {
           </button>
         </div>
 
-        {/* Word of the Day */}
+        {/* Word of the Day — from local list, no API */}
         {wordOfTheDay && (
           <div
             className="card"
@@ -472,10 +497,7 @@ export function DictionaryPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => {
-                      setSearchQuery(wordOfTheDay.word)
-                      lookupWord(wordOfTheDay.word.toLowerCase())
-                    }}
+                    onClick={showWordOfTheDay}
                     className="btn btn-primary"
                     style={{
                       fontSize: 'var(--font-size-sm)',
@@ -494,10 +516,7 @@ export function DictionaryPage() {
         {/* Search Bar */}
         <div
           className="card"
-          style={{
-            padding: 'var(--space-4)',
-            marginBottom: 'var(--space-4)',
-          }}
+          style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}
         >
           <form
             onSubmit={handleSearch}
@@ -590,17 +609,28 @@ export function DictionaryPage() {
               style={{ gap: 'var(--space-2)', alignItems: 'center' }}
             >
               <AlertCircle size={20} />
-              <span>{error}</span>
+              <span>
+                {error}
+                {error.includes('busy') && (
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: 'var(--font-size-xs)',
+                      marginTop: 4,
+                    }}
+                  >
+                    The dictionary service is slow right now. Try again in a
+                    moment.
+                  </span>
+                )}
+              </span>
             </div>
           </div>
         )}
 
         {/* Results */}
         {loading ? (
-          <div
-            className="flex-center"
-            style={{ padding: 'var(--space-8)' }}
-          >
+          <div className="flex-center" style={{ padding: 'var(--space-8)' }}>
             <Loader2
               size={32}
               style={{ animation: 'spin 1s linear infinite' }}

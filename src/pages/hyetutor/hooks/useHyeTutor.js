@@ -67,6 +67,92 @@ const getExamDaysFromStudyPlan = () => {
 }
 
 // ============================================================
+// PERFORMANCE METRICS — computed from real Daily Tutor data
+// readiness = adherence × 0.4 + quizAvg × 0.4 + streak × 0.2
+// confidence = reflection trend if enough data, else quizAvg
+// ============================================================
+
+const computePerformanceMetrics = () => {
+  try {
+    const sessions = storage.getSessions()
+    const gamification = storage.getGamification() || {}
+    const streak = gamification.streak || 0
+
+    // ---- Daily Tutor sessions ----
+    const dailySessions = sessions.filter(
+      (s) => s.mode === 'daily_tutor' && s.status === 'completed'
+    )
+
+    const quizAccuracies = dailySessions
+      .map((s) => s.accuracy)
+      .filter((a) => typeof a === 'number' && a > 0)
+
+    const quizAvg =
+      quizAccuracies.length > 0
+        ? quizAccuracies.reduce((a, b) => a + b, 0) / quizAccuracies.length
+        : 0
+
+    // ---- Reflections ----
+    let reflectionsClear = 0
+    let reflectionsTotal = 0
+    try {
+      const raw = localStorage.getItem('hyelearner_daily_tutor_v1')
+      const cache = raw ? JSON.parse(raw) : null
+      const entries = Object.values(cache?.sessions || {})
+      entries.forEach((s) => {
+        if (s.reflection?.feeling) {
+          reflectionsTotal++
+          if (s.reflection.feeling === 'clear') reflectionsClear++
+        }
+      })
+    } catch {}
+    const confidencePct =
+      reflectionsTotal > 0 ? (reflectionsClear / reflectionsTotal) * 100 : 0
+
+    // ---- Adherence ----
+    // days elapsed = number of daily tutor sessions attempted (proxy until plan start date is tracked)
+    const daysElapsed = dailySessions.length > 0 ? dailySessions.length : 1
+    const adherence =
+      daysElapsed > 0
+        ? Math.min(100, Math.round((dailySessions.length / daysElapsed) * 100))
+        : 0
+
+    const streakConsistency = Math.min(100, streak * 10)
+
+    // ---- Final numbers ----
+    const readiness = Math.round(
+      adherence * 0.4 + quizAvg * 0.4 + streakConsistency * 0.2
+    )
+
+    const confidence =
+      reflectionsTotal >= 3 ? Math.round(confidencePct) : Math.round(quizAvg)
+
+    const consistency = Math.round(
+      adherence * 0.6 + streakConsistency * 0.4
+    )
+
+    const focus = Math.round(quizAvg)
+
+    return {
+      examReadiness: readiness,
+      confidence,
+      consistency,
+      focus,
+      hasData: dailySessions.length > 0 || reflectionsTotal > 0,
+    }
+  } catch (e) {
+    console.error('computePerformanceMetrics error:', e)
+    return {
+      examReadiness: 0,
+      confidence: 0,
+      consistency: 0,
+      focus: 0,
+      hasData: false,
+    }
+  }
+}
+
+// ============================================================
 // TIMEZONE HELPERS
 // ============================================================
 
@@ -162,7 +248,6 @@ export function useHyeTutor() {
     return {
       user_id: user?.id,
       date: today,
-      // ✅ Study plan exam date takes priority, then planner
       exam_date: getStudyPlanExamDate() || planner?.examDate || null,
       difficulty_preference: planner?.difficulty || 'balanced',
       data: {
@@ -223,7 +308,6 @@ export function useHyeTutor() {
         const { data, date } = JSON.parse(cached)
         const today = getTodayInUserTimezone()
         if (date === today) {
-          // ✅ Re-stamp examDays from current study plan (in case plan changed)
           const freshExamDays = getExamDaysFromStudyPlan()
           const merged = { ...data, examDays: freshExamDays }
           setData(merged)
@@ -282,7 +366,6 @@ export function useHyeTutor() {
           if (cached) {
             const { data: cachedData, date } = JSON.parse(cached)
             if (date === today && cachedData) {
-              // ✅ Re-stamp examDays from current study plan
               const freshExamDays = getExamDaysFromStudyPlan()
               const merged = { ...cachedData, examDays: freshExamDays }
               setData(merged)
@@ -322,21 +405,27 @@ export function useHyeTutor() {
       // ✅ Authoritative exam days — study plan wins, AI's number is ignored
       const authoritativeExamDays = getExamDaysFromStudyPlan()
 
+      // ⭐ Compute real performance metrics from Daily Tutor data
+      const computed = computePerformanceMetrics()
+
       const enrichedResponse = {
         ...response,
-        examDays: authoritativeExamDays,   // null if no study plan exists
+        examDays: authoritativeExamDays,
+
+        // ⭐ Override AI's performance with real computed numbers
+        performance: {
+          examReadiness: computed.examReadiness,
+          confidence: computed.confidence,
+          consistency: computed.consistency,
+          focus: response.performance?.focus ?? computed.focus,
+          burnoutRisk: response.performance?.burnoutRisk || 'Low',
+        },
+
         missions: response.missions || [],
         totalXpReward: response.totalXpReward || 0,
         timeBudget: response.timeBudget || { total: 0, completed: 0, remaining: 0 },
         weeklyGoal: response.weeklyGoal || { total: 0, completed: 0, percentage: 0 },
         nextSession: response.nextSession || null,
-        performance: response.performance || {
-          examReadiness: 0,
-          confidence: 0,
-          consistency: 0,
-          focus: 0,
-          burnoutRisk: 'Low'
-        },
         insights: response.insights || [],
         habits: response.habits || [],
         momentum: response.momentum || {
@@ -418,7 +507,7 @@ export function useHyeTutor() {
   }, [data, saveToCache])
 
   // ============================================================
-  // SUBMIT REFLECTION
+  // SUBMIT REFLECTION (old — HyeTutor-level reflection)
   // ============================================================
 
   const submitReflection = useCallback(async (reflection) => {
@@ -454,6 +543,10 @@ export function useHyeTutor() {
       }
       // ✅ Study plan changed → refresh HyeTutor data (exam days etc.)
       if (event.key === 'hyelearner_study_plan_v2') {
+        analyze(true)
+      }
+      // ⭐ Daily Tutor session completed → recompute performance
+      if (event.key === 'hyelearner_daily_tutor_v1') {
         analyze(true)
       }
       if (event.key && event.key.startsWith('hyetutor_')) {

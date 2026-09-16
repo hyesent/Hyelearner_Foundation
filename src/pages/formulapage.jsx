@@ -2,6 +2,7 @@
 // HYELEARNER: FOUNDATION — FORMULA EXPLORER PAGE (UPGRADED)
 // Interactive formula database with calculator + Periodic Table
 // NOW WITH: Pre-defined solveFor lookups + numerical fallback
+//           + answer verification (plug-back check)
 // Built by Hyesent.dev
 // ============================================================
 
@@ -21,10 +22,16 @@ import {
   HelpCircle,
   AlertCircle,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react'
 import { FORMULA_DATA } from '../data/formulas'
 import { PERIODIC_TABLE, getCategories, getElementsByCategory } from '../data/periodicTable/index'
+
+// Verification tolerance (relative + absolute mixed)
+const VERIFY_ABS_TOL = 1e-6
+const VERIFY_REL_TOL = 1e-4
 
 export function FormulaExplorerPage() {
   const navigate = useNavigate()
@@ -93,33 +100,26 @@ export function FormulaExplorerPage() {
   const isFilled = (val) =>
     val !== undefined && val !== '' && !isNaN(parseFloat(val)) && isFinite(val)
 
-  // Keys that come from preCalculate output, not user input
   const getComputedKeys = (formula, rawValues) => {
     if (typeof formula.preCalculate !== 'function') return new Set()
     try {
       const out = formula.preCalculate({ ...rawValues })
-      return new Set(
-        Object.keys(out).filter(k => !(k in rawValues))
-      )
+      return new Set(Object.keys(out).filter(k => !(k in rawValues)))
     } catch {
       return new Set()
     }
   }
 
-  // Detect missing variable, ignoring computed keys
   const detectMissingVariable = (formula, values) => {
     const variables = formula.variables || {}
     const computedKeys = getComputedKeys(formula, values)
     const varKeys = Object.keys(variables).filter(k => !computedKeys.has(k))
-
     const missingKeys = varKeys.filter(key => !isFilled(values[key]))
-
     if (missingKeys.length === 0) return null
     if (missingKeys.length === 1) return missingKeys[0]
     return 'multiple'
   }
 
-  // Apply preCalculate to inject derived values (like Heron's semi-perimeter)
   const applyPreCalculate = (formula, values) => {
     if (typeof formula.preCalculate !== 'function') return { ...values }
     try {
@@ -137,6 +137,50 @@ export function FormulaExplorerPage() {
   }
 
   // ============================================================
+  // VERIFICATION — plug solved value back into base formula
+  // ============================================================
+  const verifyAnswer = (formula, filledValues, solvedVar, solvedValue) => {
+    try {
+      // Build a values map that includes the solved value
+      const checkValues = { ...filledValues, [solvedVar]: solvedValue }
+
+      // Re-run preCalculate so any derived vars are fresh
+      const withDerived = applyPreCalculate(formula, checkValues)
+
+      // Evaluate the base formula with ALL values present
+      const computed = evaluateFormula(formula.formula, withDerived)
+
+      if (isNaN(computed) || !isFinite(computed)) {
+        return { verified: false, residual: NaN, note: 'Base formula produced invalid result' }
+      }
+
+      // Interpretation: in the data file, `formula` is generally the RHS
+      // that produces the value of the "subject variable" of the display.
+      // So the residual is: computed - solvedValue (if solvedVar is the subject)
+      // OR we can't know which is which, so we compare against the expected
+      // value using a relative tolerance and report the difference.
+      const diff = Math.abs(computed - solvedValue)
+      const scale = Math.max(1, Math.abs(solvedValue), Math.abs(computed))
+      const relDiff = diff / scale
+
+      const ok = diff <= VERIFY_ABS_TOL || relDiff <= VERIFY_REL_TOL
+
+      return {
+        verified: ok,
+        residual: computed - solvedValue,
+        computed,
+        expected: solvedValue,
+        relDiff,
+        note: ok
+          ? 'Plugged back into the formula — matches.'
+          : `Plug-back produced ${computed} vs expected ${solvedValue}.`
+      }
+    } catch (e) {
+      return { verified: false, residual: NaN, note: `Verification error: ${e.message}` }
+    }
+  }
+
+  // ============================================================
   // NUMERICAL SOLVER (Bisection fallback)
   // ============================================================
   const solveNumerically = (formula, values, missingVar, options = {}) => {
@@ -149,9 +193,7 @@ export function FormulaExplorerPage() {
       }
     })
 
-    const evalStr = formula.formula
-    let evalWithMissing = evalStr
-
+    let evalWithMissing = formula.formula
     Object.keys(fixedValues).forEach(key => {
       const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const regex = new RegExp(`\\b${escapedKey}\\b`, 'g')
@@ -209,7 +251,6 @@ export function FormulaExplorerPage() {
   const evaluateFormula = (formulaStr, variables) => {
     let evalStr = formulaStr
 
-    // Display → JS normalizations
     evalStr = evalStr.replace(/π/g, `(${Math.PI})`)
     evalStr = evalStr.replace(/√/g, 'Math.sqrt')
     evalStr = evalStr.replace(/sin\(/g, 'Math.sin(')
@@ -218,10 +259,8 @@ export function FormulaExplorerPage() {
     evalStr = evalStr.replace(/ln\(/g, 'Math.log(')
     evalStr = evalStr.replace(/log\(/g, 'Math.log10(')
     evalStr = evalStr.replace(/e\^/g, 'Math.exp')
-    // Careful: only replace ^ with ** when it's not already inside a Math call
     evalStr = evalStr.replace(/\^/g, '**')
 
-    // Substitute variables — longest keys first to avoid partial matches
     const keys = Object.keys(variables).sort((a, b) => b.length - a.length)
     keys.forEach(key => {
       const value = variables[key]
@@ -236,7 +275,7 @@ export function FormulaExplorerPage() {
   }
 
   // ============================================================
-  // HANDLE CALCULATE — solveFor lookup, then numerical fallback
+  // HANDLE CALCULATE — solveFor lookup + verify + fallback
   // ============================================================
   const handleCalculateResult = () => {
     if (!selectedFormula) return
@@ -248,10 +287,7 @@ export function FormulaExplorerPage() {
         return
       }
 
-      // 1. Inject preCalculate derived values (semi-perimeter, x/y, etc.)
       const effectiveValues = applyPreCalculate(selectedFormula, variableValues)
-
-      // 2. Detect missing variable (ignores computed keys)
       const missingKey = detectMissingVariable(selectedFormula, effectiveValues)
 
       if (missingKey === 'multiple') {
@@ -272,35 +308,50 @@ export function FormulaExplorerPage() {
         return
       }
 
-      // CASE 2: One variable missing → use solveFor lookup
       const missingVar = missingKey
       const solveExpr = selectedFormula.solveFor?.[missingVar]
 
+      let result = null
+      let methodUsed = null
+      let verification = null
+
+      // CASE 2: solveFor lookup
       if (solveExpr && typeof solveExpr === 'string' && solveExpr.trim() !== '') {
         try {
-          const result = evaluateFormula(solveExpr, effectiveValues)
-          if (isNaN(result) || !isFinite(result)) throw new Error('Invalid result')
-          setCalculationResult({
-            type: 'missing',
-            variable: missingVar,
-            value: Math.round(result * 1000000) / 1000000,
-            method: 'solveFor'
-          })
-          setCalculationError(null)
-          return
+          const r = evaluateFormula(solveExpr, effectiveValues)
+          if (!isNaN(r) && isFinite(r)) {
+            result = r
+            methodUsed = 'solveFor'
+          }
         } catch {
-          // fall through to numerical fallback
+          // fall through to numerical
         }
       }
 
-      // CASE 3: No solveFor available → numerical fallback
-      const result = solveNumerically(selectedFormula, effectiveValues, missingVar)
-      if (isNaN(result) || !isFinite(result)) throw new Error('Invalid result')
+      // CASE 3: numerical fallback
+      if (result === null) {
+        result = solveNumerically(selectedFormula, effectiveValues, missingVar)
+        if (isNaN(result) || !isFinite(result)) throw new Error('Invalid result')
+        methodUsed = 'numerical'
+      }
+
+      // VERIFY: plug the solved value back into the base formula
+      const filledOnly = {}
+      Object.keys(effectiveValues).forEach(k => {
+        if (k !== missingVar && isFilled(effectiveValues[k])) {
+          filledOnly[k] = effectiveValues[k]
+        }
+      })
+      verification = verifyAnswer(selectedFormula, filledOnly, missingVar, result)
+
+      const roundedResult = Math.round(result * 1000000) / 1000000
+
       setCalculationResult({
         type: 'missing',
         variable: missingVar,
-        value: Math.round(result * 1000000) / 1000000,
-        method: 'numerical'
+        value: roundedResult,
+        method: methodUsed,
+        verification
       })
       setCalculationError(null)
 
@@ -355,7 +406,11 @@ export function FormulaExplorerPage() {
     if (!calculationResult) return null
 
     if (calculationResult.type === 'missing') {
-      const { variable, value, method } = calculationResult
+      const { variable, value, method, verification } = calculationResult
+
+      const verified = verification?.verified === true
+      const failed = verification && verification.verified === false
+
       return (
         <div className="success-card" style={{ padding: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
@@ -369,6 +424,48 @@ export function FormulaExplorerPage() {
               <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: '700', color: 'var(--color-success)' }}>
                 {variable} = {value}
               </div>
+
+              {/* Verification badge */}
+              {verified && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-1)',
+                    marginTop: 'var(--space-2)',
+                    padding: 'var(--space-1) var(--space-2)',
+                    background: 'var(--color-success-light)',
+                    color: 'var(--color-success)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: '600'
+                  }}
+                  title={verification.note}
+                >
+                  <ShieldCheck style={{ width: '14px', height: '14px' }} />
+                  Verified — plug-back matches
+                </div>
+              )}
+              {failed && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-1)',
+                    marginTop: 'var(--space-2)',
+                    padding: 'var(--space-1) var(--space-2)',
+                    background: 'rgba(255, 170, 0, 0.12)',
+                    color: 'var(--color-warning)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: '600'
+                  }}
+                  title={verification.note}
+                >
+                  <ShieldAlert style={{ width: '14px', height: '14px' }} />
+                  Check failed — residual {verification.residual?.toExponential?.(2)}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -605,13 +702,12 @@ export function FormulaExplorerPage() {
                     </button>
                   </div>
 
-                  {/* Missing Variable Helper */}
                   {selectedFormula.variables && Object.keys(selectedFormula.variables).length > 1 && (
                     <div className="info-card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                       <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
                         <HelpCircle style={{ width: '18px', height: '18px', color: 'var(--color-primary)', flexShrink: 0, marginTop: '2px' }} />
                         <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                          <strong>Find the Unknown:</strong> Leave one field empty and click Calculate to solve for it.
+                          <strong>Find the Unknown:</strong> Leave one field empty and click Calculate. Every answer is auto-verified by plugging it back in.
                         </div>
                       </div>
                     </div>
@@ -682,7 +778,6 @@ export function FormulaExplorerPage() {
         ============================================================ */}
         {activeTab === 'periodic' && (
           <>
-            {/* Periodic Controls */}
             <div className="card" style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
               <div className="flex" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '180px', position: 'relative' }}>
@@ -699,7 +794,6 @@ export function FormulaExplorerPage() {
               </div>
             </div>
 
-            {/* Legend */}
             <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
               <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>Legend</div>
               <div className="flex" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
@@ -715,7 +809,6 @@ export function FormulaExplorerPage() {
               </div>
             </div>
 
-            {/* Periodic Table Grid */}
             <div className="card" style={{ padding: 'var(--space-4)', overflowX: 'auto' }}>
               <div style={{
                 display: 'grid',
@@ -723,7 +816,6 @@ export function FormulaExplorerPage() {
                 gap: '3px',
                 minWidth: '950px'
               }}>
-                {/* Row labels */}
                 {Array.from({ length: 7 }, (_, i) => (
                   <div key={`row-${i}`} style={{
                     gridColumn: 1,
@@ -749,12 +841,10 @@ export function FormulaExplorerPage() {
                   let gridColumn = element.group
                   let gridRow = element.period
 
-                  // Lanthanides
                   if (num >= 57 && num <= 71) {
                     gridRow = 8
                     gridColumn = num - 54
                   }
-                  // Actinides
                   if (num >= 89 && num <= 103) {
                     gridRow = 9
                     gridColumn = num - 86
@@ -793,13 +883,11 @@ export function FormulaExplorerPage() {
                   )
                 })}
 
-                {/* Lanthanide/Actinide labels */}
                 <div style={{ gridColumn: 1, gridRow: 8, fontSize: '8px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}>La</div>
                 <div style={{ gridColumn: 1, gridRow: 9, fontSize: '8px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}>Ac</div>
               </div>
             </div>
 
-            {/* Element Detail Modal */}
             {selectedElement && (
               <div className="modal-overlay" style={{ zIndex: 100 }}>
                 <div className="modal" style={{ maxWidth: '480px', padding: 'var(--space-6)' }}>

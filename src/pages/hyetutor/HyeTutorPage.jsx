@@ -16,7 +16,9 @@ import {
   HyeTutorChat,
   AIHabits,
   QuickActions,
-  ReflectionModal
+  ReflectionModal,
+  DailyTutorCard,
+  DailyTutorModal,
 } from './components'
 import {
   ArrowLeft,
@@ -39,7 +41,7 @@ export default function HyeTutorPage() {
     refresh,
     askQuestion,
     completeMission,
-    submitReflection
+    submitReflection,
   } = useHyeTutor()
 
   const [chatLoading, setChatLoading] = useState(false)
@@ -47,6 +49,7 @@ export default function HyeTutorPage() {
   const [reflectionSubmitting, setReflectionSubmitting] = useState(false)
   const [reflectionSuccess, setReflectionSuccess] = useState(false)
   const [showChatModal, setShowChatModal] = useState(false)
+  const [showDailyTutor, setShowDailyTutor] = useState(false)
 
   const handleAsk = async (question) => {
     setChatLoading(true)
@@ -77,6 +80,14 @@ export default function HyeTutorPage() {
     } finally {
       setReflectionSubmitting(false)
     }
+  }
+
+  const handleDailyTutorOpen = ({ needsPlan }) => {
+    if (needsPlan) {
+      navigate('/study-plan')
+      return
+    }
+    setShowDailyTutor(true)
   }
 
   if (loading) {
@@ -228,6 +239,9 @@ export default function HyeTutorPage() {
 
           {/* Right Column */}
           <div className="stack" style={{ gap: 'var(--space-4)' }}>
+            {/* ⭐ Daily Tutor — primary daily action, above chat */}
+            <DailyTutorCard onOpen={handleDailyTutorOpen} />
+
             <HyeTutorChat
               insights={data.insights || []}
               onAsk={handleAsk}
@@ -243,13 +257,19 @@ export default function HyeTutorPage() {
           <QuickActions />
         </div>
 
-        {/* Reflection Modal */}
+        {/* Reflection Modal — kept as-is */}
         <ReflectionModal
           isOpen={showReflection}
           onClose={() => setShowReflection(false)}
           onSubmit={handleReflectionSubmit}
           submitting={reflectionSubmitting}
           success={reflectionSuccess}
+        />
+
+        {/* ===== DAILY TUTOR MODAL ===== */}
+        <DailyTutorModal
+          isOpen={showDailyTutor}
+          onClose={() => setShowDailyTutor(false)}
         />
 
         {/* ===== FULL CHAT MODAL ===== */}
@@ -330,4 +350,4 @@ export default function HyeTutorPage() {
       </div>
     </div>
   )
-}
+  }

@@ -1,7 +1,7 @@
 // ============================================================
-// HYELEARNER: STUDY PLAN PAGE (V3 — Plan + Progress Toggle)
+// HYELEARNER: STUDY PLAN PAGE (V4 — Daily Tutor Integration)
 // AI-generated study plan with real-time progress tracking
-// Auto-countdown to exam day with auto-end
+// Daily Tutor CTA + readiness computed from real data
 // Built by Hyesent.dev
 // ============================================================
 
@@ -13,6 +13,7 @@ import { ai, subscriptions } from '../services'
 import { SUBJECTS, AI_LIMITS } from '../constants'
 import { trackAIUsage } from '../utils'
 import { LoadingScreen } from '../components/LoadingScreen'
+import { DailyTutorModal } from '../pages/hyetutor/components'
 import jsPDF from 'jspdf'
 import {
   ArrowLeft,
@@ -53,11 +54,11 @@ import {
   StopCircle,
   Timer,
   Eye,
-  EyeOff
+  EyeOff,
 } from 'lucide-react'
 
 // ============================================================
-// COUNTDOWN COMPONENT — PERSISTENT (Survives page refresh)
+// COUNTDOWN COMPONENT — unchanged
 // ============================================================
 function CountdownTimer({ targetDate, onEnd }) {
   const STORAGE_KEY = 'hyelearner_countdown_state'
@@ -67,9 +68,7 @@ function CountdownTimer({ targetDate, onEnd }) {
     const now = new Date()
     const diff = target - now
 
-    if (diff <= 0) {
-      return { days: 0, hours: 0, minutes: 0, seconds: 0, isOver: true }
-    }
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isOver: true }
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -77,16 +76,16 @@ function CountdownTimer({ targetDate, onEnd }) {
         const data = JSON.parse(saved)
         if (data.targetDate === targetDate && !data.isOver) {
           const elapsed = Math.floor((now - new Date(data.savedAt)) / 1000)
-          const totalSeconds = data.days * 86400 + data.hours * 3600 + data.minutes * 60 + data.seconds
+          const totalSeconds =
+            data.days * 86400 + data.hours * 3600 + data.minutes * 60 + data.seconds
           const remaining = Math.max(0, totalSeconds - elapsed)
-          
           if (remaining > 0) {
             return {
               days: Math.floor(remaining / 86400),
               hours: Math.floor((remaining % 86400) / 3600),
               minutes: Math.floor((remaining % 3600) / 60),
               seconds: Math.floor(remaining % 60),
-              isOver: false
+              isOver: false,
             }
           }
         }
@@ -94,11 +93,11 @@ function CountdownTimer({ targetDate, onEnd }) {
     } catch (e) {}
 
     return {
-      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-      minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-      seconds: Math.floor((diff % (1000 * 60)) / 1000),
-      isOver: false
+      days: Math.floor(diff / 86400000),
+      hours: Math.floor((diff % 86400000) / 3600000),
+      minutes: Math.floor((diff % 3600000) / 60000),
+      seconds: Math.floor((diff % 60000) / 1000),
+      isOver: false,
     }
   }
 
@@ -107,17 +106,15 @@ function CountdownTimer({ targetDate, onEnd }) {
 
   useEffect(() => {
     if (!isEnded && !timeRemaining.isOver) {
-      const stateToSave = {
-        targetDate: targetDate,
-        days: timeRemaining.days,
-        hours: timeRemaining.hours,
-        minutes: timeRemaining.minutes,
-        seconds: timeRemaining.seconds,
-        isOver: timeRemaining.isOver,
-        savedAt: new Date().toISOString()
-      }
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave))
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            targetDate,
+            ...timeRemaining,
+            savedAt: new Date().toISOString(),
+          })
+        )
       } catch (e) {}
     } else {
       try {
@@ -133,10 +130,7 @@ function CountdownTimer({ targetDate, onEnd }) {
     }
 
     const interval = setInterval(() => {
-      const target = new Date(targetDate)
-      const now = new Date()
-      const diff = target - now
-
+      const diff = new Date(targetDate) - new Date()
       if (diff <= 0) {
         setIsEnded(true)
         setTimeRemaining({ days: 0, hours: 0, minutes: 0, seconds: 0, isOver: true })
@@ -144,13 +138,12 @@ function CountdownTimer({ targetDate, onEnd }) {
         clearInterval(interval)
         return
       }
-
       setTimeRemaining({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
-        isOver: false
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+        isOver: false,
       })
     }, 1000)
 
@@ -162,37 +155,320 @@ function CountdownTimer({ targetDate, onEnd }) {
   if (isOver || isEnded) {
     return (
       <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', color: 'var(--color-danger)' }}>
-        <StopCircle style={{ width: '20px', height: '20px' }} />
-        <span style={{ fontWeight: '700', fontSize: 'var(--font-size-lg)' }}>Exam Day! 🎯</span>
-        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>— Plan Complete</span>
+        <StopCircle size={20} />
+        <span style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)' }}>Exam Day! 🎯</span>
+        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+          — Plan Complete
+        </span>
       </div>
     )
   }
 
   return (
     <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
-      <Timer style={{ width: '20px', height: '20px', color: 'var(--color-primary)' }} />
+      <Timer size={20} style={{ color: 'var(--color-primary)' }} />
       <div className="flex" style={{ gap: 'var(--space-1)', alignItems: 'center', fontFamily: 'var(--font-mono)' }}>
-        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: '700', color: 'var(--color-primary)' }}>
+        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary)' }}>
           {days}d
         </span>
-        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: '700', color: 'var(--color-text)' }}>
+        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-text)' }}>
           {String(hours).padStart(2, '0')}h
         </span>
-        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: '700', color: 'var(--color-text)' }}>
+        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-text)' }}>
           {String(minutes).padStart(2, '0')}m
         </span>
-        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: '700', color: 'var(--color-text)' }}>
+        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-text)' }}>
           {String(seconds).padStart(2, '0')}s
         </span>
       </div>
-      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>remaining</span>
+      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+        remaining
+      </span>
     </div>
   )
 }
 
 // ============================================================
-// PLAN VIEW — Static AI-generated plan (NO stats card)
+// TODAY'S DAILY TUTOR — inline CTA
+// ============================================================
+function DailyTutorCTA({ onOpen, plan }) {
+  const [session, setSession] = useState(null)
+  const [todayTopic, setTodayTopic] = useState(null)
+
+  // Load today's state on mount + when storage changes
+  useEffect(() => {
+    const load = () => {
+      try {
+        // Today's session from cache
+        const raw = localStorage.getItem('hyelearner_daily_tutor_v1')
+        const today = new Date().toISOString().split('T')[0]
+        const cached = raw ? JSON.parse(raw) : null
+        setSession(cached?.sessions?.[today] || null)
+
+        // Today's plan entry
+        const schedule = plan?.plan?.weekly_schedule || []
+        const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+        const entry = schedule.find(
+          (d) => d.day?.toLowerCase() === todayName.toLowerCase()
+        )
+        setTodayTopic(entry?.topics?.[0] || null)
+      } catch {
+        setSession(null)
+        setTodayTopic(null)
+      }
+    }
+    load()
+
+    const onStorage = (e) => {
+      if (e.key === 'hyelearner_daily_tutor_v1') load()
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [plan])
+
+  // No topic for today
+  if (!todayTopic) {
+    return null
+  }
+
+  const isCompleted = session?.status === 'completed'
+  const isInProgress = session?.status === 'in_progress'
+  const accuracy = session?.result?.accuracy ?? null
+
+  // ----- COMPLETED -----
+  if (isCompleted) {
+    return (
+      <div
+        className="card"
+        style={{
+          marginBottom: 'var(--space-4)',
+          padding: 'var(--space-4) var(--space-5)',
+          border: '1px solid var(--color-success)',
+          background: 'var(--color-success-light)',
+        }}
+      >
+        <div className="flex-between" style={{ gap: 'var(--space-3)' }}>
+          <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center', minWidth: 0 }}>
+            <div
+              className="flex-center"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'var(--color-surface)',
+                flexShrink: 0,
+              }}
+            >
+              <CheckCircle2 size={22} style={{ color: 'var(--color-success)' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-xs)',
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: 'var(--color-success)',
+                  marginBottom: 2,
+                }}
+              >
+                ✅ DAY COMPLETE
+              </div>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: 700,
+                  color: 'var(--color-text)',
+                  lineHeight: 1.2,
+                }}
+              >
+                {session.topic}
+              </div>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-sm)',
+                  color: 'var(--color-text-secondary)',
+                  marginTop: 2,
+                }}
+              >
+                {session.subject}
+                {accuracy !== null && ` · ${accuracy}% on quiz`}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => onOpen({ action: 'review' })}
+            className="btn btn-outline"
+            style={{ flexShrink: 0 }}
+          >
+            Review
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ----- IN PROGRESS -----
+  if (isInProgress) {
+    const stepLabel =
+      session.currentStep === 'lesson'
+        ? 'Lesson in progress'
+        : session.currentStep === 'quiz'
+          ? 'Quiz in progress'
+          : session.currentStep === 'result'
+            ? 'Result ready'
+            : session.currentStep === 'reflection'
+              ? 'Almost done'
+              : 'In progress'
+
+    return (
+      <div
+        className="card"
+        style={{
+          marginBottom: 'var(--space-4)',
+          padding: 'var(--space-4) var(--space-5)',
+          border: '1px solid var(--color-warning)',
+          background:
+            'linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-surface) 100%)',
+        }}
+      >
+        <div className="flex-between" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+          <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center', minWidth: 0, flex: 1 }}>
+            <div
+              className="flex-center"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'var(--color-surface)',
+                flexShrink: 0,
+              }}
+            >
+              <PlayCircle size={22} style={{ color: 'var(--color-warning)' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-xs)',
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: 'var(--color-warning)',
+                  marginBottom: 2,
+                }}
+              >
+                ⏸ {stepLabel.toUpperCase()}
+              </div>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: 700,
+                  color: 'var(--color-text)',
+                  lineHeight: 1.2,
+                }}
+              >
+                {session.topic}
+              </div>
+              <div
+                style={{
+                  fontSize: 'var(--font-size-sm)',
+                  color: 'var(--color-text-secondary)',
+                  marginTop: 2,
+                }}
+              >
+                {session.subject}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => onOpen({ action: 'resume' })}
+            className="btn btn-warning"
+            style={{ flexShrink: 0 }}
+          >
+            <PlayCircle size={16} /> Continue
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ----- PENDING (start today) -----
+  return (
+    <div
+      className="card"
+      style={{
+        marginBottom: 'var(--space-4)',
+        padding: 'var(--space-5)',
+        border: '2px solid var(--color-primary)',
+        background:
+          'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-surface) 100%)',
+      }}
+    >
+      <div className="flex-between" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+        <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center', flex: 1, minWidth: 220 }}>
+          <div
+            className="flex-center"
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              background: 'var(--color-primary)',
+              color: 'white',
+              flexShrink: 0,
+            }}
+          >
+            <BookOpen size={24} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                color: 'var(--color-primary)',
+                marginBottom: 4,
+              }}
+            >
+              📚 TODAY'S LESSON
+            </div>
+            <div
+              style={{
+                fontSize: 'var(--font-size-lg)',
+                fontWeight: 700,
+                color: 'var(--color-text)',
+                lineHeight: 1.2,
+              }}
+            >
+              {todayTopic.topic}
+            </div>
+            <div
+              style={{
+                fontSize: 'var(--font-size-sm)',
+                color: 'var(--color-text-secondary)',
+                marginTop: 2,
+              }}
+            >
+              {todayTopic.subject}
+              {todayTopic.hours ? ` · ~${Math.round(todayTopic.hours * 60)} min` : ''}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => onOpen({ action: 'start' })}
+          className="btn btn-primary btn-lg"
+          style={{
+            flexShrink: 0,
+            padding: 'var(--space-3) var(--space-6)',
+            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+          }}
+        >
+          <PlayCircle size={18} /> Start Daily Tutor
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// PLAN VIEW — unchanged
 // ============================================================
 function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, generating }) {
   return (
@@ -203,15 +479,19 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
             {plan?.exam_info?.exam_type && (
               <div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Exam</div>
-                <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>{plan.exam_info.exam_type.toUpperCase()}</div>
+                <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
+                  {plan.exam_info.exam_type.toUpperCase()}
+                </div>
               </div>
             )}
-            {planData?.summary?.weak_areas && planData.summary.weak_areas.length > 0 && (
+            {planData?.summary?.weak_areas?.length > 0 && (
               <div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Weak Areas</div>
                 <div className="flex" style={{ gap: 'var(--space-1)', flexWrap: 'wrap' }}>
                   {planData.summary.weak_areas.map((area, i) => (
-                    <span key={i} className="badge badge-danger" style={{ fontSize: 'var(--font-size-xs)' }}>{area}</span>
+                    <span key={i} className="badge badge-danger" style={{ fontSize: 'var(--font-size-xs)' }}>
+                      {area}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -219,7 +499,9 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
             {planData?.summary?.target_score && (
               <div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>Target</div>
-                <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--color-primary)' }}>{planData.summary.target_score}</div>
+                <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500, color: 'var(--color-primary)' }}>
+                  {planData.summary.target_score}
+                </div>
               </div>
             )}
           </div>
@@ -229,15 +511,19 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
       {planData?.subject_breakdown && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-            <BarChart3 style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '500' }}>Subject Breakdown</span>
+            <BarChart3 size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 500 }}>Subject Breakdown</span>
           </div>
           <div className="stack" style={{ gap: 'var(--space-3)' }}>
             {Object.entries(planData.subject_breakdown).map(([subject, data]) => (
-              <div key={subject} className="card" style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}>
+              <div
+                key={subject}
+                className="card"
+                style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}
+              >
                 <div className="flex-between">
                   <div>
-                    <div style={{ fontWeight: '500', fontSize: 'var(--font-size-sm)' }}>{subject}</div>
+                    <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)' }}>{subject}</div>
                     <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                       {data.topics?.length || 0} topics • {data.hours_per_week}h/week
                     </div>
@@ -267,15 +553,21 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
       {planData?.weekly_schedule && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <Calendar style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '600' }}>Weekly Schedule</span>
+            <Calendar size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 600 }}>Weekly Schedule</span>
           </div>
           <div className="stack" style={{ gap: 'var(--space-3)' }}>
             {planData.weekly_schedule.slice(0, 7).map((day, idx) => (
-              <div key={idx} className="card" style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}>
+              <div
+                key={idx}
+                className="card"
+                style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}
+              >
                 <div className="flex-between">
-                  <div style={{ fontWeight: '500', fontSize: 'var(--font-size-sm)' }}>{day.day}</div>
-                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{day.total_hours}h</span>
+                  <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)' }}>{day.day}</div>
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                    {day.total_hours}h
+                  </span>
                 </div>
                 {day.focus && (
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
@@ -285,7 +577,9 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
                 <div className="stack" style={{ gap: 'var(--space-1)', marginTop: 'var(--space-2)' }}>
                   {day.topics.map((topic, i) => (
                     <div key={i} className="flex-between" style={{ fontSize: 'var(--font-size-xs)' }}>
-                      <span>{topic.subject} — {topic.topic}</span>
+                      <span>
+                        {topic.subject} — {topic.topic}
+                      </span>
                       <span style={{ color: 'var(--color-text-muted)' }}>{topic.hours}h</span>
                     </div>
                   ))}
@@ -296,35 +590,58 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
         </div>
       )}
 
-      {planData?.topic_priorities && planData.topic_priorities.length > 0 && (
+      {planData?.topic_priorities?.length > 0 && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <Target style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '600' }}>Topic Priorities</span>
+            <Target size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 600 }}>Topic Priorities</span>
           </div>
-          <div className="stack" style={{ gap: 'var(--space-2)', maxHeight: '200px', overflowY: 'auto' }}>
+          <div className="stack" style={{ gap: 'var(--space-2)', maxHeight: 200, overflowY: 'auto' }}>
             {planData.topic_priorities.slice(0, 10).map((topic, i) => (
-              <div key={i} className="flex-between" style={{ fontSize: 'var(--font-size-sm)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-background)', borderRadius: 'var(--radius)' }}>
+              <div
+                key={i}
+                className="flex-between"
+                style={{
+                  fontSize: 'var(--font-size-sm)',
+                  padding: 'var(--space-2) var(--space-3)',
+                  background: 'var(--color-background)',
+                  borderRadius: 'var(--radius)',
+                }}
+              >
                 <div>
                   <span style={{ color: 'var(--color-text)' }}>{topic.subject}</span>
                   <span style={{ color: 'var(--color-text-muted)' }}> — {topic.topic}</span>
                 </div>
-                <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <span className={`badge ${topic.priority === 'High' ? 'badge-danger' : topic.priority === 'Medium' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: 'var(--font-size-xs)' }}>
-                    {topic.priority}
-                  </span>
-                </div>
+                <span
+                  className={`badge ${
+                    topic.priority === 'High'
+                      ? 'badge-danger'
+                      : topic.priority === 'Medium'
+                        ? 'badge-warning'
+                        : 'badge-success'
+                  }`}
+                  style={{ fontSize: 'var(--font-size-xs)' }}
+                >
+                  {topic.priority}
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {planData?.recommendations && planData.recommendations.length > 0 && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)' }}>
+      {planData?.recommendations?.length > 0 && (
+        <div
+          className="card"
+          style={{
+            marginBottom: 'var(--space-4)',
+            background: 'var(--color-primary-light)',
+            border: '1px solid var(--color-primary)',
+          }}
+        >
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
-            <Lightbulb style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '500' }}>Recommendations</span>
+            <Lightbulb size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 500 }}>Recommendations</span>
           </div>
           <ul className="stack" style={{ gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
             {planData.recommendations.map((rec, i) => (
@@ -337,28 +654,42 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
         </div>
       )}
 
-      {planData?.milestones && planData.milestones.length > 0 && (
+      {planData?.milestones?.length > 0 && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-            <Trophy style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '500' }}>Milestones</span>
+            <Trophy size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 500 }}>Milestones</span>
           </div>
           <div className="grid-2" style={{ gap: 'var(--space-3)' }}>
             {planData.milestones.map((milestone, i) => (
-              <div key={i} className="card" style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)', textAlign: 'center' }}>
-                <div style={{ fontSize: 'var(--font-size-3xl)' }}>
-                  {milestone.icon === '🌱' ? <Sparkles style={{ width: '32px', height: '32px', color: 'var(--color-success)' }} /> :
-                   milestone.icon === '📈' ? <TrendingUp style={{ width: '32px', height: '32px', color: 'var(--color-primary)' }} /> :
-                   milestone.icon === '🎯' ? <Target style={{ width: '32px', height: '32px', color: 'var(--color-warning)' }} /> :
-                   milestone.icon === '🏆' ? <Trophy style={{ width: '32px', height: '32px', color: 'var(--color-warning)' }} /> :
-                   <Star style={{ width: '32px', height: '32px', color: 'var(--color-primary)' }} />}
+              <div
+                key={i}
+                className="card"
+                style={{
+                  padding: 'var(--space-3) var(--space-4)',
+                  background: 'var(--color-background)',
+                  textAlign: 'center',
+                }}
+              >
+                <div>
+                  {milestone.icon === '🌱' ? (
+                    <Sparkles size={32} style={{ color: 'var(--color-success)', margin: '0 auto' }} />
+                  ) : milestone.icon === '📈' ? (
+                    <TrendingUp size={32} style={{ color: 'var(--color-primary)', margin: '0 auto' }} />
+                  ) : milestone.icon === '🎯' ? (
+                    <Target size={32} style={{ color: 'var(--color-warning)', margin: '0 auto' }} />
+                  ) : milestone.icon === '🏆' ? (
+                    <Trophy size={32} style={{ color: 'var(--color-warning)', margin: '0 auto' }} />
+                  ) : (
+                    <Star size={32} style={{ color: 'var(--color-primary)', margin: '0 auto' }} />
+                  )}
                 </div>
-                <div style={{ fontWeight: '500', fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-1)' }}>
+                <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-1)' }}>
                   Day {milestone.day}: {milestone.percentage}%
                 </div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{milestone.target}</div>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-success)', marginTop: 'var(--space-1)' }}>
-                  <Award style={{ width: '14px', height: '14px', display: 'inline', marginRight: 'var(--space-1)' }} />
+                  <Award size={14} style={{ display: 'inline', marginRight: 'var(--space-1)' }} />
                   {milestone.reward}
                 </div>
               </div>
@@ -368,22 +699,18 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
       )}
 
       <div className="flex" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-        <button
-          onClick={onRegenerate}
-          disabled={generating}
-          className="btn btn-outline flex-1 flex-center"
-        >
-          <RefreshCw style={{ width: '16px', height: '16px' }} /> Regenerate
+        <button onClick={onRegenerate} disabled={generating} className="btn btn-outline flex-1 flex-center">
+          <RefreshCw size={16} /> Regenerate
         </button>
-        <button
-          onClick={onExportPDF}
-          disabled={exporting}
-          className="btn btn-primary flex-1 flex-center"
-        >
+        <button onClick={onExportPDF} disabled={exporting} className="btn btn-primary flex-1 flex-center">
           {exporting ? (
-            <><Loader2 className="animate-spin" style={{ width: '16px', height: '16px', marginRight: 'var(--space-2)' }} /> Exporting...</>
+            <>
+              <Loader2 className="animate-spin" size={16} style={{ marginRight: 'var(--space-2)' }} /> Exporting...
+            </>
           ) : (
-            <><Download style={{ width: '16px', height: '16px' }} /> Export PDF</>
+            <>
+              <Download size={16} /> Export PDF
+            </>
           )}
         </button>
       </div>
@@ -392,7 +719,7 @@ function PlanView({ planData, plan, onExportPDF, onRegenerate, exporting, genera
 }
 
 // ============================================================
-// PROGRESS VIEW — Dynamically recalculates everything from real data
+// PROGRESS VIEW — updated with Daily Tutor signals
 // ============================================================
 function ProgressView({ planData, plan }) {
   const [progressData, setProgressData] = useState(null)
@@ -400,39 +727,91 @@ function ProgressView({ planData, plan }) {
 
   const calculateProgress = () => {
     if (!planData) return
-
     setLoading(true)
+
     const mastery = storage.getMastery()
     const sessions = storage.getSessions()
-    const lessons = storage.getLessons()
 
+    // ---- Daily Tutor stats ----
+    const dailyTutorSessions = sessions.filter((s) => s.mode === 'daily_tutor')
+    const completedDailySessions = dailyTutorSessions.filter((s) => s.status === 'completed')
+
+    const quizAccuracies = completedDailySessions
+      .map((s) => s.accuracy)
+      .filter((a) => typeof a === 'number' && a > 0)
+    const quizAvg =
+      quizAccuracies.length > 0
+        ? Math.round(quizAccuracies.reduce((a, b) => a + b, 0) / quizAccuracies.length)
+        : 0
+
+    // Reflection trend
+    let reflectionsClear = 0
+    let reflectionsTotal = 0
+    try {
+      const raw = localStorage.getItem('hyelearner_daily_tutor_v1')
+      const cache = raw ? JSON.parse(raw) : null
+      const entries = Object.values(cache?.sessions || {})
+      entries.forEach((s) => {
+        if (s.reflection?.feeling) {
+          reflectionsTotal++
+          if (s.reflection.feeling === 'clear') reflectionsClear++
+        }
+      })
+    } catch {}
+    const confidencePct =
+      reflectionsTotal > 0 ? Math.round((reflectionsClear / reflectionsTotal) * 100) : 0
+
+    // Plan adherence — sessions done vs days since plan generated
+    let daysElapsed = 1
+    if (plan?.exam_date) {
+      const examDays = planData?.summary?.days_remaining || 0
+      const totalPlanDays = examDays + completedDailySessions.length
+      daysElapsed = Math.max(1, totalPlanDays - examDays)
+    }
+    const adherence =
+      daysElapsed > 0
+        ? Math.min(100, Math.round((completedDailySessions.length / daysElapsed) * 100))
+        : 0
+
+    // Streak consistency from gamification
+    const gamification = storage.getGamification() || {}
+    const streak = gamification.streak || 0
+    const streakConsistency = Math.min(100, streak * 10)
+
+    // ---- Readiness formula ----
+    const readiness = Math.round(
+      adherence * 0.4 + quizAvg * 0.4 + streakConsistency * 0.2
+    )
+
+    // ---- Existing topic progress ----
     const allTopics = []
     if (planData.weekly_schedule) {
-      planData.weekly_schedule.forEach(day => {
-        day.topics.forEach(topic => {
-          if (!allTopics.find(t => t.topic === topic.topic && t.subject === topic.subject)) {
+      planData.weekly_schedule.forEach((day) => {
+        day.topics.forEach((topic) => {
+          if (!allTopics.find((t) => t.topic === topic.topic && t.subject === topic.subject)) {
             allTopics.push({
               topic: topic.topic,
               subject: topic.subject,
-              hours: topic.hours || 0
+              hours: topic.hours || 0,
             })
           }
         })
       })
     }
 
-    const topicProgress = allTopics.map(t => {
+    const topicProgress = allTopics.map((t) => {
       const masteryKey = Object.keys(mastery).find(
-        key => key.toLowerCase().includes(t.topic.toLowerCase()) ||
-               t.topic.toLowerCase().includes(key.toLowerCase())
+        (key) =>
+          key.toLowerCase().includes(t.topic.toLowerCase()) ||
+          t.topic.toLowerCase().includes(key.toLowerCase())
       )
       const masteryData = masteryKey ? mastery[masteryKey] : null
 
-      const topicSessions = sessions.filter(s => {
+      const topicSessions = sessions.filter((s) => {
         if (s.topic && s.topic.toLowerCase().includes(t.topic.toLowerCase())) return true
         if (s.questions) {
-          return s.questions.some(q => 
-            q.topic && q.topic.toLowerCase().includes(t.topic.toLowerCase())
+          return s.questions.some(
+            (q) => q.topic && q.topic.toLowerCase().includes(t.topic.toLowerCase())
           )
         }
         return false
@@ -447,25 +826,25 @@ function ProgressView({ planData, plan }) {
         sessions: topicSessions.length,
         status,
         lastStudied: masteryData?.updatedAt || null,
-        attempts: masteryData?.attempts || 0
+        attempts: masteryData?.attempts || 0,
       }
     })
 
     const total = topicProgress.length
-    const completed = topicProgress.filter(t => t.status === 'completed').length
-    const inProgress = topicProgress.filter(t => t.status === 'in-progress').length
-    const notStarted = topicProgress.filter(t => t.status === 'not-started').length
+    const completed = topicProgress.filter((t) => t.status === 'completed').length
+    const inProgress = topicProgress.filter((t) => t.status === 'in-progress').length
+    const notStarted = topicProgress.filter((t) => t.status === 'not-started').length
     const overallCompletion = total > 0 ? Math.round((completed / total) * 100) : 0
 
     const subjectBreakdown = {}
-    topicProgress.forEach(t => {
+    topicProgress.forEach((t) => {
       if (!subjectBreakdown[t.subject]) {
         subjectBreakdown[t.subject] = {
           total: 0,
           completed: 0,
           inProgress: 0,
           notStarted: 0,
-          topics: []
+          topics: [],
         }
       }
       subjectBreakdown[t.subject].total++
@@ -477,58 +856,82 @@ function ProgressView({ planData, plan }) {
 
     const weeklyProgress = []
     if (planData.weekly_schedule) {
-      planData.weekly_schedule.slice(0, 7).forEach(day => {
-        const weekTopics = day.topics.map(t => {
-          const found = topicProgress.find(p => 
-            p.topic === t.topic && p.subject === t.subject
-          )
+      planData.weekly_schedule.slice(0, 7).forEach((day) => {
+        const weekTopics = day.topics.map((t) => {
+          const found = topicProgress.find((p) => p.topic === t.topic && p.subject === t.subject)
           return found || { ...t, status: 'not-started', mastery: 0, sessions: 0 }
         })
-        const weekCompleted = weekTopics.filter(t => t.status === 'completed').length
+        const weekCompleted = weekTopics.filter((t) => t.status === 'completed').length
         weeklyProgress.push({
           day: day.day,
           topics: weekTopics,
           completed: weekCompleted,
           total: weekTopics.length,
-          percentage: weekTopics.length > 0 ? Math.round((weekCompleted / weekTopics.length) * 100) : 0
+          percentage:
+            weekTopics.length > 0
+              ? Math.round((weekCompleted / weekTopics.length) * 100)
+              : 0,
         })
       })
     }
 
-    const topicPriorities = topicProgress.map(t => ({
-      ...t,
-      priority: t.mastery < 30 ? 'High' : t.mastery < 50 ? 'Medium' : 'Low'
-    })).sort((a, b) => a.mastery - b.mastery)
+    const topicPriorities = topicProgress
+      .map((t) => ({
+        ...t,
+        priority: t.mastery < 30 ? 'High' : t.mastery < 50 ? 'Medium' : 'Low',
+      }))
+      .sort((a, b) => a.mastery - b.mastery)
 
     const milestones = []
     const totalDays = planData.summary?.days_remaining || 30
-    const milestoneDays = [Math.floor(totalDays * 0.25), Math.floor(totalDays * 0.5), Math.floor(totalDays * 0.75), totalDays]
+    const milestoneDays = [
+      Math.floor(totalDays * 0.25),
+      Math.floor(totalDays * 0.5),
+      Math.floor(totalDays * 0.75),
+      totalDays,
+    ]
     const milestoneTargets = [25, 50, 75, 100]
-    
+
     milestoneDays.forEach((day, idx) => {
       if (day > 0 && day <= totalDays) {
         const targetPercentage = milestoneTargets[idx]
         const isAchieved = overallCompletion >= targetPercentage
         milestones.push({
-          day: day,
+          day,
           percentage: targetPercentage,
           target: `${targetPercentage}% of topics mastered`,
-          reward: isAchieved ? '✅ Achieved!' : `${targetPercentage - overallCompletion}% to go`,
-          icon: isAchieved ? '🏆' : '🎯'
+          reward: isAchieved
+            ? '✅ Achieved!'
+            : `${targetPercentage - overallCompletion}% to go`,
+          icon: isAchieved ? '🏆' : '🎯',
         })
       }
     })
 
-    const weakTopics = topicProgress.filter(t => t.mastery < 50)
+    const weakTopics = topicProgress.filter((t) => t.mastery < 50)
     const recommendations = []
     if (weakTopics.length > 0) {
-      recommendations.push(`Focus on these weak topics: ${weakTopics.map(t => t.topic).join(', ')}`)
+      recommendations.push(
+        `Focus on these weak topics: ${weakTopics.map((t) => t.topic).join(', ')}`
+      )
+    }
+    if (adherence < 50 && completedDailySessions.length >= 2) {
+      recommendations.push(
+        "You're behind on Daily Tutor sessions. Try to complete one lesson per day."
+      )
+    }
+    if (confidencePct > 0 && confidencePct < 40 && reflectionsTotal >= 3) {
+      recommendations.push(
+        'Your recent reflections suggest the material feels confusing. Slow down and revisit fundamentals.'
+      )
     }
     if (overallCompletion < 30) {
       recommendations.push('Increase your study hours to catch up on the plan')
     }
     if (inProgress > 0) {
-      recommendations.push(`You have ${inProgress} topics in progress. Complete them to boost your mastery!`)
+      recommendations.push(
+        `You have ${inProgress} topics in progress. Complete them to boost your mastery!`
+      )
     }
     if (completed > 0) {
       recommendations.push(`Great job! You've mastered ${completed} topics. Keep going!`)
@@ -548,8 +951,16 @@ function ProgressView({ planData, plan }) {
       recommendations,
       weakTopics: weakTopics.length,
       totalHours: topicProgress.reduce((sum, t) => sum + t.hours, 0),
-      sessionsCompleted: sessions.filter(s => s.status === 'completed').length,
-      totalXP: storage.getGamification()?.totalXP || storage.getGamification()?.xp || 0
+      sessionsCompleted: sessions.filter((s) => s.status === 'completed').length,
+      totalXP: gamification.totalXP || gamification.xp || 0,
+
+      // ⭐ New Daily Tutor signals
+      adherence,
+      quizAvg,
+      confidencePct,
+      readiness,
+      dailyTutorCount: completedDailySessions.length,
+      reflectionsTotal,
     })
 
     setLoading(false)
@@ -560,9 +971,7 @@ function ProgressView({ planData, plan }) {
   }, [planData])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      calculateProgress()
-    }, 30000)
+    const interval = setInterval(() => calculateProgress(), 30000)
     return () => clearInterval(interval)
   }, [planData])
 
@@ -576,52 +985,215 @@ function ProgressView({ planData, plan }) {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 style={{ width: '16px', height: '16px', color: 'var(--color-success)' }} />
-      case 'in-progress': return <PlayCircle style={{ width: '16px', height: '16px', color: 'var(--color-warning)' }} />
-      default: return <Clock style={{ width: '16px', height: '16px', color: 'var(--color-text-muted)' }} />
+      case 'completed':
+        return <CheckCircle2 size={16} style={{ color: 'var(--color-success)' }} />
+      case 'in-progress':
+        return <PlayCircle size={16} style={{ color: 'var(--color-warning)' }} />
+      default:
+        return <Clock size={16} style={{ color: 'var(--color-text-muted)' }} />
     }
   }
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'completed': return 'Completed'
-      case 'in-progress': return 'In Progress'
-      default: return 'Not Started'
+      case 'completed':
+        return 'Completed'
+      case 'in-progress':
+        return 'In Progress'
+      default:
+        return 'Not Started'
     }
   }
 
+  // Readiness color
+  const readinessColor =
+    progressData.readiness >= 70
+      ? 'var(--color-success)'
+      : progressData.readiness >= 40
+        ? 'var(--color-warning)'
+        : 'var(--color-danger)'
+
+  const adherenceColor =
+    progressData.adherence >= 70
+      ? 'var(--color-success)'
+      : progressData.adherence >= 40
+        ? 'var(--color-warning)'
+        : 'var(--color-danger)'
+
   return (
     <>
-      <div className="grid-4" style={{ gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
-        <div className="stat-card text-center">
-          <div className="h2" style={{ color: 'var(--color-primary)' }}>{progressData.overallCompletion}%</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Overall Progress</div>
+      {/* ⭐ READINESS — hero card */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 'var(--space-5)',
+          padding: 'var(--space-5)',
+          background:
+            'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-surface) 100%)',
+          border: '1px solid var(--color-primary)',
+        }}
+      >
+        <div className="flex-between" style={{ alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <div>
+            <div
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                color: 'var(--color-primary)',
+                marginBottom: 4,
+              }}
+            >
+              EXAM READINESS
+            </div>
+            <div
+              style={{
+                fontSize: 'var(--font-size-3xl)',
+                fontWeight: 800,
+                color: readinessColor,
+                lineHeight: 1,
+              }}
+            >
+              {progressData.readiness}%
+            </div>
+            <div
+              style={{
+                fontSize: 'var(--font-size-sm)',
+                color: 'var(--color-text-secondary)',
+                marginTop: 6,
+              }}
+            >
+              Adherence {progressData.adherence}% · Quiz avg {progressData.quizAvg}%
+            </div>
+          </div>
+          <div className="flex-center" style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--color-surface)' }}>
+            <TrendingUp size={32} style={{ color: readinessColor }} />
+          </div>
         </div>
-        <div className="stat-card text-center">
-          <div className="h2" style={{ color: 'var(--color-success)' }}>{progressData.completed}</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Completed</div>
-        </div>
-        <div className="stat-card text-center">
-          <div className="h2" style={{ color: 'var(--color-warning)' }}>{progressData.inProgress}</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>In Progress</div>
-        </div>
-        <div className="stat-card text-center">
-          <div className="h2" style={{ color: 'var(--color-text-muted)' }}>{progressData.notStarted}</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Not Started</div>
+        <div className="progress" style={{ height: 8, marginTop: 'var(--space-3)' }}>
+          <div
+            className={`progress-fill ${
+              progressData.readiness >= 70
+                ? 'progress-fill-success'
+                : progressData.readiness >= 40
+                  ? 'progress-fill-warning'
+                  : 'progress-fill-danger'
+            }`}
+            style={{ width: `${progressData.readiness}%` }}
+          />
         </div>
       </div>
 
+      {/* ⭐ DAILY TUTOR STATS — 3 cards */}
+      <div className="grid-3" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+        <div className="stat-card text-center">
+          <div className="h2" style={{ color: adherenceColor }}>
+            {progressData.adherence}%
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            On Schedule
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
+            {progressData.dailyTutorCount} lessons done
+          </div>
+        </div>
+        <div className="stat-card text-center">
+          <div
+            className="h2"
+            style={{
+              color:
+                progressData.quizAvg >= 70
+                  ? 'var(--color-success)'
+                  : progressData.quizAvg >= 40
+                    ? 'var(--color-warning)'
+                    : 'var(--color-danger)',
+            }}
+          >
+            {progressData.quizAvg}%
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Quiz Average
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
+            across all lessons
+          </div>
+        </div>
+        <div className="stat-card text-center">
+          <div
+            className="h2"
+            style={{
+              color:
+                progressData.confidencePct >= 70
+                  ? 'var(--color-success)'
+                  : progressData.confidencePct >= 40
+                    ? 'var(--color-warning)'
+                    : 'var(--color-danger)',
+            }}
+          >
+            {progressData.confidencePct}%
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Confidence
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
+            {progressData.reflectionsTotal} reflections
+          </div>
+        </div>
+      </div>
+
+      {/* EXISTING — Top 4 stats */}
+      <div className="grid-4" style={{ gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+        <div className="stat-card text-center">
+          <div className="h2" style={{ color: 'var(--color-primary)' }}>
+            {progressData.overallCompletion}%
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Overall Progress
+          </div>
+        </div>
+        <div className="stat-card text-center">
+          <div className="h2" style={{ color: 'var(--color-success)' }}>
+            {progressData.completed}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Completed
+          </div>
+        </div>
+        <div className="stat-card text-center">
+          <div className="h2" style={{ color: 'var(--color-warning)' }}>
+            {progressData.inProgress}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            In Progress
+          </div>
+        </div>
+        <div className="stat-card text-center">
+          <div className="h2" style={{ color: 'var(--color-text-muted)' }}>
+            {progressData.notStarted}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Not Started
+          </div>
+        </div>
+      </div>
+
+      {/* Plan progress bar — unchanged */}
       <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
         <div className="flex-between" style={{ marginBottom: 'var(--space-2)' }}>
-          <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>Plan Progress</span>
-          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', color: 'var(--color-primary)' }}>
+          <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+            Plan Progress
+          </span>
+          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary)' }}>
             {progressData.overallCompletion}%
           </span>
         </div>
-        <div className="progress" style={{ height: '8px' }}>
+        <div className="progress" style={{ height: 8 }}>
           <div className="progress-fill progress-fill-primary" style={{ width: `${progressData.overallCompletion}%` }} />
         </div>
-        <div className="flex" style={{ gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+        <div
+          className="flex"
+          style={{ gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}
+        >
           <span>📚 {progressData.total} topics</span>
           <span>⏱️ {progressData.totalHours}h total</span>
           <span>📝 {progressData.sessionsCompleted} sessions</span>
@@ -629,32 +1201,45 @@ function ProgressView({ planData, plan }) {
         </div>
       </div>
 
+      {/* Subject breakdown — unchanged */}
       {Object.keys(progressData.subjectBreakdown).length > 0 && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-            <BarChart3 style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '500' }}>Subject Progress</span>
+            <BarChart3 size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 500 }}>Subject Progress</span>
           </div>
           <div className="stack" style={{ gap: 'var(--space-3)' }}>
             {Object.entries(progressData.subjectBreakdown).map(([subject, data]) => {
-              const subjectProgress = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0
+              const subjectProgress =
+                data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0
               return (
-                <div key={subject} className="card" style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}>
+                <div
+                  key={subject}
+                  className="card"
+                  style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}
+                >
                   <div className="flex-between">
                     <div>
-                      <div style={{ fontWeight: '500', fontSize: 'var(--font-size-sm)' }}>{subject}</div>
+                      <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)' }}>{subject}</div>
                       <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                         {data.completed}/{data.total} completed • {data.inProgress} in progress • {data.notStarted} not started
                       </div>
                     </div>
-                    <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                      <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', color: 'var(--color-primary)' }}>
-                        {subjectProgress}%
-                      </span>
-                    </div>
+                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary)' }}>
+                      {subjectProgress}%
+                    </span>
                   </div>
                   <div className="progress" style={{ marginTop: 'var(--space-1)' }}>
-                    <div className={`progress-fill ${subjectProgress >= 80 ? 'progress-fill-success' : subjectProgress >= 50 ? 'progress-fill-warning' : 'progress-fill-primary'}`} style={{ width: `${subjectProgress}%` }} />
+                    <div
+                      className={`progress-fill ${
+                        subjectProgress >= 80
+                          ? 'progress-fill-success'
+                          : subjectProgress >= 50
+                            ? 'progress-fill-warning'
+                            : 'progress-fill-primary'
+                      }`}
+                      style={{ width: `${subjectProgress}%` }}
+                    />
                   </div>
                 </div>
               )
@@ -663,35 +1248,56 @@ function ProgressView({ planData, plan }) {
         </div>
       )}
 
+      {/* Weekly progress — unchanged */}
       {progressData.weeklyProgress.length > 0 && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <Calendar style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '600' }}>Weekly Progress</span>
+            <Calendar size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 600 }}>Weekly Progress</span>
           </div>
           <div className="stack" style={{ gap: 'var(--space-3)' }}>
             {progressData.weeklyProgress.map((week, idx) => (
-              <div key={idx} className="card" style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}>
+              <div
+                key={idx}
+                className="card"
+                style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-background)' }}
+              >
                 <div className="flex-between">
-                  <div style={{ fontWeight: '500', fontSize: 'var(--font-size-sm)' }}>{week.day}</div>
+                  <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)' }}>{week.day}</div>
                   <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
                     <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
                       {week.completed}/{week.total} done
                     </span>
-                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', color: 'var(--color-primary)' }}>
+                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-primary)' }}>
                       {week.percentage}%
                     </span>
                   </div>
                 </div>
                 <div className="progress" style={{ marginBottom: 'var(--space-2)' }}>
-                  <div className={`progress-fill ${week.percentage >= 80 ? 'progress-fill-success' : week.percentage >= 50 ? 'progress-fill-warning' : 'progress-fill-primary'}`} style={{ width: `${week.percentage}%` }} />
+                  <div
+                    className={`progress-fill ${
+                      week.percentage >= 80
+                        ? 'progress-fill-success'
+                        : week.percentage >= 50
+                          ? 'progress-fill-warning'
+                          : 'progress-fill-primary'
+                    }`}
+                    style={{ width: `${week.percentage}%` }}
+                  />
                 </div>
                 <div className="stack" style={{ gap: 'var(--space-1)', marginTop: 'var(--space-1)' }}>
                   {week.topics.map((topic, i) => (
                     <div key={i} className="flex-between" style={{ fontSize: 'var(--font-size-xs)' }}>
                       <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
                         {getStatusIcon(topic.status)}
-                        <span style={{ color: topic.status === 'completed' ? 'var(--color-success)' : 'var(--color-text)' }}>
+                        <span
+                          style={{
+                            color:
+                              topic.status === 'completed'
+                                ? 'var(--color-success)'
+                                : 'var(--color-text)',
+                          }}
+                        >
                           {topic.subject} — {topic.topic}
                         </span>
                         {topic.mastery > 0 && (
@@ -712,34 +1318,67 @@ function ProgressView({ planData, plan }) {
         </div>
       )}
 
+      {/* Topic mastery — unchanged */}
       {progressData.topicPriorities.length > 0 && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <Target style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '600' }}>Topic Mastery</span>
+            <Target size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 600 }}>Topic Mastery</span>
             <span className="badge badge-muted" style={{ fontSize: 'var(--font-size-xs)' }}>
               {progressData.weakTopics} weak
             </span>
           </div>
-          <div className="stack" style={{ gap: 'var(--space-2)', maxHeight: '300px', overflowY: 'auto' }}>
+          <div className="stack" style={{ gap: 'var(--space-2)', maxHeight: 300, overflowY: 'auto' }}>
             {progressData.topicPriorities.map((topic, i) => (
-              <div key={i} className="flex-between" style={{ 
-                fontSize: 'var(--font-size-sm)', 
-                padding: 'var(--space-2) var(--space-3)', 
-                background: 'var(--color-background)', 
-                borderRadius: 'var(--radius)',
-                borderLeft: `3px solid ${topic.mastery >= 80 ? 'var(--color-success)' : topic.mastery >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'}`
-              }}>
+              <div
+                key={i}
+                className="flex-between"
+                style={{
+                  fontSize: 'var(--font-size-sm)',
+                  padding: 'var(--space-2) var(--space-3)',
+                  background: 'var(--color-background)',
+                  borderRadius: 'var(--radius)',
+                  borderLeft: `3px solid ${
+                    topic.mastery >= 80
+                      ? 'var(--color-success)'
+                      : topic.mastery >= 50
+                        ? 'var(--color-warning)'
+                        : 'var(--color-danger)'
+                  }`,
+                }}
+              >
                 <div>
                   <span style={{ color: 'var(--color-text)' }}>{topic.subject}</span>
                   <span style={{ color: 'var(--color-text-muted)' }}> — {topic.topic}</span>
-                  {topic.mastery < 50 && <span style={{ color: 'var(--color-danger)', marginLeft: 'var(--space-1)' }}>⚠️</span>}
+                  {topic.mastery < 50 && (
+                    <span style={{ color: 'var(--color-danger)', marginLeft: 'var(--space-1)' }}>⚠️</span>
+                  )}
                 </div>
                 <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: '600', color: topic.mastery >= 80 ? 'var(--color-success)' : topic.mastery >= 50 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
+                  <span
+                    style={{
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 600,
+                      color:
+                        topic.mastery >= 80
+                          ? 'var(--color-success)'
+                          : topic.mastery >= 50
+                            ? 'var(--color-warning)'
+                            : 'var(--color-danger)',
+                    }}
+                  >
                     {topic.mastery}%
                   </span>
-                  <span className={`badge ${topic.priority === 'High' ? 'badge-danger' : topic.priority === 'Medium' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: 'var(--font-size-xs)' }}>
+                  <span
+                    className={`badge ${
+                      topic.priority === 'High'
+                        ? 'badge-danger'
+                        : topic.priority === 'Medium'
+                          ? 'badge-warning'
+                          : 'badge-success'
+                    }`}
+                    style={{ fontSize: 'var(--font-size-xs)' }}
+                  >
                     {topic.priority}
                   </span>
                   <span className="badge badge-muted" style={{ fontSize: 'var(--font-size-xs)' }}>
@@ -752,33 +1391,44 @@ function ProgressView({ planData, plan }) {
         </div>
       )}
 
+      {/* Milestones — unchanged */}
       {progressData.milestones.length > 0 && (
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-            <Trophy style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '500' }}>Milestones</span>
+            <Trophy size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 500 }}>Milestones</span>
             <span className="badge badge-success" style={{ fontSize: 'var(--font-size-xs)' }}>
-              {progressData.milestones.filter(m => m.reward.includes('✅')).length} achieved
+              {progressData.milestones.filter((m) => m.reward.includes('✅')).length} achieved
             </span>
           </div>
           <div className="grid-2" style={{ gap: 'var(--space-3)' }}>
             {progressData.milestones.map((milestone, i) => {
               const isAchieved = milestone.reward.includes('✅')
               return (
-                <div key={i} className="card" style={{ 
-                  padding: 'var(--space-3) var(--space-4)', 
-                  background: isAchieved ? 'var(--color-success-light)' : 'var(--color-background)', 
-                  textAlign: 'center',
-                  border: isAchieved ? '1px solid var(--color-success)' : '1px solid var(--color-border)'
-                }}>
-                  <div style={{ fontSize: 'var(--font-size-3xl)' }}>
-                    {isAchieved ? '🏆' : '🎯'}
-                  </div>
-                  <div style={{ fontWeight: '500', fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-1)' }}>
+                <div
+                  key={i}
+                  className="card"
+                  style={{
+                    padding: 'var(--space-3) var(--space-4)',
+                    background: isAchieved ? 'var(--color-success-light)' : 'var(--color-background)',
+                    textAlign: 'center',
+                    border: isAchieved ? '1px solid var(--color-success)' : '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ fontSize: 'var(--font-size-3xl)' }}>{isAchieved ? '🏆' : '🎯'}</div>
+                  <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-1)' }}>
                     Day {milestone.day}: {milestone.percentage}%
                   </div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{milestone.target}</div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: isAchieved ? 'var(--color-success)' : 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                    {milestone.target}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 'var(--font-size-xs)',
+                      color: isAchieved ? 'var(--color-success)' : 'var(--color-text-muted)',
+                      marginTop: 'var(--space-1)',
+                    }}
+                  >
                     {isAchieved ? '✅ Completed!' : `Progress: ${progressData.overallCompletion}%`}
                   </div>
                 </div>
@@ -788,13 +1438,24 @@ function ProgressView({ planData, plan }) {
         </div>
       )}
 
+      {/* Recommendations — unchanged */}
       {progressData.recommendations.length > 0 && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)' }}>
+        <div
+          className="card"
+          style={{
+            marginBottom: 'var(--space-4)',
+            background: 'var(--color-primary-light)',
+            border: '1px solid var(--color-primary)',
+          }}
+        >
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
-            <Lightbulb style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: '500' }}>Recommendations</span>
+            <Lightbulb size={16} style={{ color: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 500 }}>Recommendations</span>
           </div>
-          <ul className="stack" style={{ gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+          <ul
+            className="stack"
+            style={{ gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}
+          >
             {progressData.recommendations.map((rec, i) => (
               <li key={i} className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
                 <span style={{ color: 'var(--color-primary)' }}>•</span>
@@ -826,13 +1487,12 @@ export function StudyPlanPage() {
   const [aiCallsRemaining, setAiCallsRemaining] = useState(AI_LIMITS.daily)
   const [exporting, setExporting] = useState(false)
   const [planEnded, setPlanEnded] = useState(false)
+  const [showDailyTutor, setShowDailyTutor] = useState(false)
 
   const [subscription, setSubscription] = useState(null)
   const [subLoading, setSubLoading] = useState(true)
 
-  // ============================================================
-  // FORM STATE — ALL EMPTY, NO DEFAULTS
-  // ============================================================
+  // FORM STATE
   const [formData, setFormData] = useState({
     goal: '',
     subjects: [],
@@ -841,20 +1501,20 @@ export function StudyPlanPage() {
     target_score: '',
     study_style: '',
     exam_type: '',
-    exam_date: ''
+    exam_date: '',
   })
 
-  const subjectOptions = Object.keys(SUBJECTS).map(key => ({
+  const subjectOptions = Object.keys(SUBJECTS).map((key) => ({
     key,
     label: SUBJECTS[key].label,
-    icon: SUBJECTS[key].icon
+    icon: SUBJECTS[key].icon,
   }))
 
   const studyStyles = [
     { value: 'active', label: 'Active Learning', desc: 'Learn by doing' },
     { value: 'visual', label: 'Visual Learning', desc: 'Images & diagrams' },
     { value: 'reading', label: 'Reading/Writing', desc: 'Read & write notes' },
-    { value: 'balanced', label: 'Balanced', desc: 'All-round approach' }
+    { value: 'balanced', label: 'Balanced', desc: 'All-round approach' },
   ]
 
   const examTypes = [
@@ -862,12 +1522,9 @@ export function StudyPlanPage() {
     { value: 'waec', label: 'WAEC' },
     { value: 'neco', label: 'NECO' },
     { value: 'ssce', label: 'SSCE' },
-    { value: 'pre-university', label: 'Pre-University' }
+    { value: 'pre-university', label: 'Pre-University' },
   ]
 
-  // ============================================================
-  // HELPERS
-  // ============================================================
   const getDefaultExamDate = (examType) => {
     const now = new Date()
     const year = now.getFullYear()
@@ -883,15 +1540,10 @@ export function StudyPlanPage() {
 
   const calculateDaysRemaining = (date) => {
     if (!date) return 0
-    const target = new Date(date)
-    const now = new Date()
-    const diff = target - now
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+    const diff = new Date(date) - new Date()
+    return Math.max(0, Math.ceil(diff / 86400000))
   }
 
-  // ============================================================
-  // LOAD SUBSCRIPTION
-  // ============================================================
   useEffect(() => {
     const loadSubscription = async () => {
       try {
@@ -907,9 +1559,6 @@ export function StudyPlanPage() {
     loadSubscription()
   }, [])
 
-  // ============================================================
-  // LOAD SAVED PLAN — RESTORES EXAM DATE
-  // ============================================================
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]
     const saved = localStorage.getItem('hyelearner_ai_usage')
@@ -937,21 +1586,19 @@ export function StudyPlanPage() {
         setPlan(data)
         setPlanData(data.plan)
         setHasPlan(true)
-        
-        // ✅ Restore exam date from saved plan
-        const savedExamDate = data.exam_date || data.exam_info?.exam_date || data.plan?.exam_date
+
+        const savedExamDate =
+          data.exam_date || data.exam_info?.exam_date || data.plan?.exam_date
         if (savedExamDate) {
           const daysLeft = calculateDaysRemaining(savedExamDate)
-          if (daysLeft <= 0) {
-            setPlanEnded(true)
-          }
-          setFormData(prev => ({
+          if (daysLeft <= 0) setPlanEnded(true)
+          setFormData((prev) => ({
             ...prev,
             exam_date: savedExamDate,
-            exam_type: data.exam_info?.exam_type || prev.exam_type
+            exam_type: data.exam_info?.exam_type || prev.exam_type,
           }))
         }
-        
+
         setLoading(false)
         return
       } catch (e) {}
@@ -960,49 +1607,26 @@ export function StudyPlanPage() {
     setLoading(false)
   }, [user])
 
-  // ============================================================
-  // TOGGLE SUBJECT
-  // ============================================================
   const toggleSubject = (subjectKey) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       subjects: prev.subjects.includes(subjectKey)
-        ? prev.subjects.filter(s => s !== subjectKey)
-        : [...prev.subjects, subjectKey]
+        ? prev.subjects.filter((s) => s !== subjectKey)
+        : [...prev.subjects, subjectKey],
     }))
   }
 
-  // ============================================================
-  // GENERATE PLAN — STORES EXAM DATE IN PLAN
-  // ============================================================
   const generatePlan = async () => {
-    if (formData.subjects.length === 0) {
-      alert('Please select at least one subject.')
-      return
-    }
-
-    if (!formData.goal.trim()) {
-      alert('Please enter your study goal.')
-      return
-    }
-
-    if (!formData.exam_date) {
-      alert('Please select your exam date.')
-      return
-    }
-
-    if (aiLimitReached) {
-      setError('AI limit reached. Please try again tomorrow.')
-      return
-    }
+    if (formData.subjects.length === 0) return alert('Please select at least one subject.')
+    if (!formData.goal.trim()) return alert('Please enter your study goal.')
+    if (!formData.exam_date) return alert('Please select your exam date.')
+    if (aiLimitReached) return setError('AI limit reached. Please try again tomorrow.')
 
     setGenerating(true)
     setError(null)
 
     try {
-      const subjectLabels = formData.subjects.map(key =>
-        SUBJECTS[key]?.label || key
-      )
+      const subjectLabels = formData.subjects.map((key) => SUBJECTS[key]?.label || key)
 
       const result = await ai.studyPlanV2({
         goal: formData.goal,
@@ -1012,14 +1636,14 @@ export function StudyPlanPage() {
         target_score: formData.target_score || '300+',
         study_style: formData.study_style || 'active',
         exam_type: formData.exam_type || 'jamb',
-        exam_date: formData.exam_date
+        exam_date: formData.exam_date,
       })
 
       trackAIUsage()
 
       let totalTopics = 0
       if (result.plan?.weekly_schedule) {
-        result.plan.weekly_schedule.forEach(day => {
+        result.plan.weekly_schedule.forEach((day) => {
           totalTopics += day.topics.length
         })
       }
@@ -1027,19 +1651,18 @@ export function StudyPlanPage() {
         result.plan.summary.total_topics = totalTopics
       }
 
-      // ✅ CRITICAL: Store exam_date in the plan for persistence
       const planWithDate = {
         ...result,
         exam_date: formData.exam_date,
         exam_info: {
           ...(result.exam_info || {}),
           exam_type: formData.exam_type || 'jamb',
-          exam_date: formData.exam_date
+          exam_date: formData.exam_date,
         },
         plan: {
           ...result.plan,
-          exam_date: formData.exam_date
-        }
+          exam_date: formData.exam_date,
+        },
       }
 
       setPlan(planWithDate)
@@ -1047,7 +1670,6 @@ export function StudyPlanPage() {
       setHasPlan(true)
       setPlanEnded(false)
       localStorage.setItem('hyelearner_study_plan_v2', JSON.stringify(planWithDate))
-      
     } catch (err) {
       console.error('Failed to generate study plan:', err)
       setError(err.message || 'Failed to generate study plan. Please try again.')
@@ -1056,15 +1678,8 @@ export function StudyPlanPage() {
     }
   }
 
-  // ============================================================
-  // EXPORT PDF
-  // ============================================================
   const handleExportPDF = () => {
-    if (!planData) {
-      alert('No study plan to export.')
-      return
-    }
-
+    if (!planData) return alert('No study plan to export.')
     setExporting(true)
     try {
       const doc = new jsPDF('p', 'mm', 'a4')
@@ -1094,7 +1709,12 @@ export function StudyPlanPage() {
       const examType = plan?.exam_info?.exam_type || formData.exam_type || 'JAMB'
       doc.text(`Exam: ${examType.toUpperCase()}`, pageWidth / 2, y, { align: 'center' })
       y += 8
-      doc.text(`Target Score: ${planData?.summary?.target_score || formData.target_score}`, pageWidth / 2, y, { align: 'center' })
+      doc.text(
+        `Target Score: ${planData?.summary?.target_score || formData.target_score}`,
+        pageWidth / 2,
+        y,
+        { align: 'center' }
+      )
       y += 10
 
       doc.setDrawColor(200, 200, 200)
@@ -1123,9 +1743,9 @@ export function StudyPlanPage() {
         doc.setTextColor(80, 80, 80)
         for (const day of planData.weekly_schedule.slice(0, 7)) {
           checkPageBreak(20)
-          const topicsText = day.topics.map(t => 
-            `${t.subject} — ${t.topic} (${t.hours}h)`
-          ).join(', ')
+          const topicsText = day.topics
+            .map((t) => `${t.subject} — ${t.topic} (${t.hours}h)`)
+            .join(', ')
           doc.text(`• ${day.day}: ${topicsText}`, margin + 2, y)
           y += 6
         }
@@ -1134,7 +1754,12 @@ export function StudyPlanPage() {
 
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.text('Generated by Hyelearner — AI-powered exam prep', pageWidth / 2, pageHeight - 10, { align: 'center' })
+      doc.text(
+        'Generated by Hyelearner — AI-powered exam prep',
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      )
 
       doc.save(`study-plan-${dateStr}.pdf`)
     } catch (error) {
@@ -1145,16 +1770,8 @@ export function StudyPlanPage() {
     }
   }
 
-  // ============================================================
-  // HANDLE PLAN END
-  // ============================================================
-  const handlePlanEnd = () => {
-    setPlanEnded(true)
-  }
+  const handlePlanEnd = () => setPlanEnded(true)
 
-  // ============================================================
-  // HANDLE RESET
-  // ============================================================
   const handleReset = () => {
     if (confirm('Are you sure you want to reset your study plan?')) {
       localStorage.removeItem('hyelearner_study_plan_v2')
@@ -1165,14 +1782,11 @@ export function StudyPlanPage() {
     }
   }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
+  const handleDailyTutorOpen = () => setShowDailyTutor(true)
+
   const isFreeUser = !subscription?.isActive
 
-  if (loading || subLoading) {
-    return <LoadingScreen />
-  }
+  if (loading || subLoading) return <LoadingScreen />
 
   if (isFreeUser) {
     return (
@@ -1180,46 +1794,55 @@ export function StudyPlanPage() {
         <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
           <div className="card flex-between" style={{ marginBottom: 'var(--space-6)' }}>
             <div className="flex" style={{ gap: 'var(--space-3)' }}>
-              <div className="flex-center" style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-xl)', background: 'var(--color-primary-light)' }}>
-                <Calendar style={{ width: '20px', height: '20px', color: 'var(--color-primary)' }} />
+              <div
+                className="flex-center"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 'var(--radius-xl)',
+                  background: 'var(--color-primary-light)',
+                }}
+              >
+                <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
               </div>
               <div>
                 <h1 className="h2">Study Plan</h1>
-                <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>AI-generated personalized study plan</p>
+                <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
+                  AI-generated personalized study plan
+                </p>
               </div>
             </div>
             <button className="btn btn-ghost" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft style={{ width: '16px', height: '16px' }} /> Back
+              <ArrowLeft size={16} /> Back
             </button>
           </div>
 
-          <div className="card text-center" style={{ padding: 'var(--space-12)', maxWidth: '480px', margin: '0 auto' }}>
-            <div className="flex-center" style={{ 
-              width: '80px', 
-              height: '80px', 
-              borderRadius: '50%', 
-              background: 'var(--color-danger-light)',
-              margin: '0 auto var(--space-6)'
-            }}>
-              <Lock style={{ width: '40px', height: '40px', color: 'var(--color-danger)' }} />
+          <div className="card text-center" style={{ padding: 'var(--space-12)', maxWidth: 480, margin: '0 auto' }}>
+            <div
+              className="flex-center"
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: 'var(--color-danger-light)',
+                margin: '0 auto var(--space-6)',
+              }}
+            >
+              <Lock size={40} style={{ color: 'var(--color-danger)' }} />
             </div>
-            <h2 className="h2" style={{ marginBottom: 'var(--space-2)' }}>Study Plan is for Subscribers</h2>
+            <h2 className="h2" style={{ marginBottom: 'var(--space-2)' }}>
+              Study Plan is for Subscribers
+            </h2>
             <p className="text-muted" style={{ marginBottom: 'var(--space-6)' }}>
-              Get a personalized AI-generated study plan to boost your exam preparation.  
+              Get a personalized AI-generated study plan to boost your exam preparation.
               Upgrade to Foundation plan to unlock this feature.
             </p>
             <div className="flex" style={{ gap: 'var(--space-3)', justifyContent: 'center' }}>
-              <button 
-                onClick={() => navigate('/practice')} 
-                className="btn btn-outline flex-center"
-              >
-                <Target style={{ width: '16px', height: '16px' }} /> Go to Practice
+              <button onClick={() => navigate('/practice')} className="btn btn-outline flex-center">
+                <Target size={16} /> Go to Practice
               </button>
-              <button 
-                onClick={() => navigate('/settings')} 
-                className="btn btn-primary flex-center"
-              >
-                <Crown style={{ width: '16px', height: '16px' }} /> Subscribe Now
+              <button onClick={() => navigate('/settings')} className="btn btn-primary flex-center">
+                <Crown size={16} /> Subscribe Now
               </button>
             </div>
           </div>
@@ -1228,8 +1851,12 @@ export function StudyPlanPage() {
     )
   }
 
-  // ✅ Get exam date from plan (stored in localStorage)
-  const examDate = plan?.exam_date || planData?.exam_date || plan?.exam_info?.exam_date || formData.exam_date || null
+  const examDate =
+    plan?.exam_date ||
+    planData?.exam_date ||
+    plan?.exam_info?.exam_date ||
+    formData.exam_date ||
+    null
 
   return (
     <div style={{ background: 'var(--color-background)', padding: 'var(--space-6)', minHeight: '100vh' }}>
@@ -1237,34 +1864,69 @@ export function StudyPlanPage() {
         {/* Header */}
         <div className="card flex-between" style={{ marginBottom: 'var(--space-4)' }}>
           <div className="flex" style={{ gap: 'var(--space-3)' }}>
-            <div className="flex-center" style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-xl)', background: 'var(--color-primary-light)' }}>
-              <Calendar style={{ width: '20px', height: '20px', color: 'var(--color-primary)' }} />
+            <div
+              className="flex-center"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 'var(--radius-xl)',
+                background: 'var(--color-primary-light)',
+              }}
+            >
+              <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
               <h1 className="h2">Study Plan</h1>
               <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
-                {hasPlan ? (planEnded ? 'Plan Complete! 🎯' : 'Your personalized study plan') : 'Generate your study plan'}
+                {hasPlan
+                  ? planEnded
+                    ? 'Plan Complete! 🎯'
+                    : 'Your personalized study plan'
+                  : 'Generate your study plan'}
               </p>
             </div>
           </div>
           <button className="btn btn-ghost" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft style={{ width: '16px', height: '16px' }} /> Back
+            <ArrowLeft size={16} /> Back
           </button>
         </div>
 
-        {/* ✅ Countdown Timer - Shows if exam date exists (restored from localStorage) */}
+        {/* Countdown */}
         {examDate && !planEnded && (
-          <div className="card" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)' }}>
+          <div
+            className="card"
+            style={{
+              marginBottom: 'var(--space-4)',
+              background: 'var(--color-primary-light)',
+              border: '1px solid var(--color-primary)',
+            }}
+          >
             <CountdownTimer targetDate={examDate} onEnd={handlePlanEnd} />
           </div>
         )}
 
-        {/* Plan Ended Banner */}
+        {/* ⭐ Daily Tutor inline CTA */}
+        {hasPlan && !planEnded && (
+          <DailyTutorCTA onOpen={handleDailyTutorOpen} plan={plan} />
+        )}
+
+        {/* Plan ended banner */}
         {hasPlan && planEnded && (
-          <div className="card" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-success-light)', border: '2px solid var(--color-success)', textAlign: 'center', padding: 'var(--space-4)' }}>
+          <div
+            className="card"
+            style={{
+              marginBottom: 'var(--space-4)',
+              background: 'var(--color-success-light)',
+              border: '2px solid var(--color-success)',
+              textAlign: 'center',
+              padding: 'var(--space-4)',
+            }}
+          >
             <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', justifyContent: 'center' }}>
-              <Trophy style={{ width: '24px', height: '24px', color: 'var(--color-success)' }} />
-              <span style={{ fontWeight: '700', fontSize: 'var(--font-size-lg)', color: 'var(--color-success)' }}>🎉 Plan Complete!</span>
+              <Trophy size={24} style={{ color: 'var(--color-success)' }} />
+              <span style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)', color: 'var(--color-success)' }}>
+                🎉 Plan Complete!
+              </span>
             </div>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: 'var(--space-1)' }}>
               You've successfully completed your study plan. Great job! 🚀
@@ -1272,10 +1934,17 @@ export function StudyPlanPage() {
           </div>
         )}
 
-        {/* AI Limit Banner */}
-        <div className="card flex-between" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
+        {/* AI Limit */}
+        <div
+          className="card flex-between"
+          style={{
+            marginBottom: 'var(--space-4)',
+            background: 'var(--color-background)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-            <Cpu style={{ width: '16px', height: '16px', color: 'var(--color-text-muted)' }} />
+            <Cpu size={16} style={{ color: 'var(--color-text-muted)' }} />
             <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
               AI Calls Remaining: <strong>{aiCallsRemaining}</strong> / {AI_LIMITS.daily}
             </span>
@@ -1286,23 +1955,30 @@ export function StudyPlanPage() {
         {error && (
           <div className="danger-card" style={{ marginBottom: 'var(--space-4)' }}>
             <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-              <AlertCircle style={{ width: '16px', height: '16px' }} />
+              <AlertCircle size={16} />
               <span>{error}</span>
             </div>
           </div>
         )}
 
         {!hasPlan ? (
-          // ===== FORM VIEW =====
+          // FORM
           <div className="card">
-            <form onSubmit={(e) => { e.preventDefault(); generatePlan() }} className="stack" style={{ gap: 'var(--space-5)' }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                generatePlan()
+              }}
+              className="stack"
+              style={{ gap: 'var(--space-5)' }}
+            >
               <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
                 Fill in your details to generate a personalized study plan powered by AI.
               </p>
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <GraduationCap style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <GraduationCap size={16} style={{ color: 'var(--color-primary)' }} />
                   Exam Type
                 </label>
                 <select
@@ -1311,43 +1987,35 @@ export function StudyPlanPage() {
                   onChange={(e) => {
                     const newExam = e.target.value
                     const newDate = getDefaultExamDate(newExam)
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      exam_type: newExam,
-                      exam_date: newDate
-                    }))
+                    setFormData((prev) => ({ ...prev, exam_type: newExam, exam_date: newDate }))
                   }}
                 >
                   <option value="">Select exam type</option>
                   {examTypes.map((exam) => (
-                    <option key={exam.value} value={exam.value}>{exam.label}</option>
+                    <option key={exam.value} value={exam.value}>
+                      {exam.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <Calendar style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <Calendar size={16} style={{ color: 'var(--color-primary)' }} />
                   Exam Date
                 </label>
                 <input
                   type="date"
                   className="input"
                   value={formData.exam_date}
-                  onChange={(e) => {
-                    const newDate = e.target.value
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      exam_date: newDate
-                    }))
-                  }}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, exam_date: e.target.value }))}
                   required
                 />
               </div>
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <Target style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <Target size={16} style={{ color: 'var(--color-primary)' }} />
                   Your Study Goal
                 </label>
                 <input
@@ -1355,14 +2023,14 @@ export function StudyPlanPage() {
                   className="input"
                   placeholder="e.g., Pass JAMB with 300+, Master all topics..."
                   value={formData.goal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, goal: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
                   required
                 />
               </div>
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <BookOpen style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <BookOpen size={16} style={{ color: 'var(--color-primary)' }} />
                   Subjects to Study ({formData.subjects.length} selected)
                 </label>
                 <div className="flex" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
@@ -1382,30 +2050,32 @@ export function StudyPlanPage() {
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <Clock style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <Clock size={16} style={{ color: 'var(--color-primary)' }} />
                   Hours Available per Week
                 </label>
                 <select
                   className="select"
                   value={formData.hours_per_week}
-                  onChange={(e) => setFormData(prev => ({ ...prev, hours_per_week: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, hours_per_week: e.target.value }))}
                 >
                   <option value="">Select hours</option>
                   {[5, 10, 15, 20, 25, 30, 35, 40].map((h) => (
-                    <option key={h} value={h}>{h} hours</option>
+                    <option key={h} value={h}>
+                      {h} hours
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <Award style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <Award size={16} style={{ color: 'var(--color-primary)' }} />
                   Target Score
                 </label>
                 <select
                   className="select"
                   value={formData.target_score}
-                  onChange={(e) => setFormData(prev => ({ ...prev, target_score: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, target_score: e.target.value }))}
                 >
                   <option value="">Select target score</option>
                   <option value="200+">200+</option>
@@ -1418,7 +2088,7 @@ export function StudyPlanPage() {
 
               <div>
                 <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <Brain style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
+                  <Brain size={16} style={{ color: 'var(--color-primary)' }} />
                   Study Style
                 </label>
                 <div className="flex" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -1426,7 +2096,7 @@ export function StudyPlanPage() {
                     <button
                       key={style.value}
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, study_style: style.value }))}
+                      onClick={() => setFormData((prev) => ({ ...prev, study_style: style.value }))}
                       className={`btn ${formData.study_style === style.value ? 'btn-primary' : 'btn-outline'}`}
                       style={{ fontSize: 'var(--font-size-sm)', textTransform: 'capitalize' }}
                     >
@@ -1438,36 +2108,45 @@ export function StudyPlanPage() {
 
               <button
                 type="submit"
-                disabled={generating || formData.subjects.length === 0 || !formData.exam_date || !formData.goal.trim()}
+                disabled={
+                  generating ||
+                  formData.subjects.length === 0 ||
+                  !formData.exam_date ||
+                  !formData.goal.trim()
+                }
                 className="btn btn-primary flex-center"
                 style={{ width: '100%', padding: 'var(--space-3)' }}
               >
                 {generating ? (
-                  <><div className="spinner spinner-sm" style={{ marginRight: 'var(--space-2)' }}></div> Generating...</>
+                  <>
+                    <div className="spinner spinner-sm" style={{ marginRight: 'var(--space-2)' }} />
+                    Generating...
+                  </>
                 ) : (
-                  <><Sparkles style={{ width: '16px', height: '16px' }} /> Generate Study Plan</>
+                  <>
+                    <Sparkles size={16} /> Generate Study Plan
+                  </>
                 )}
               </button>
 
               {formData.subjects.length === 0 && (
                 <p className="flex-center" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-warning)', gap: 'var(--space-1)' }}>
-                  <AlertCircle style={{ width: '16px', height: '16px' }} /> Please select at least one subject
+                  <AlertCircle size={16} /> Please select at least one subject
                 </p>
               )}
               {!formData.exam_date && (
                 <p className="flex-center" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-warning)', gap: 'var(--space-1)' }}>
-                  <AlertCircle style={{ width: '16px', height: '16px' }} /> Please select your exam date
+                  <AlertCircle size={16} /> Please select your exam date
                 </p>
               )}
               {!formData.goal.trim() && (
                 <p className="flex-center" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-warning)', gap: 'var(--space-1)' }}>
-                  <AlertCircle style={{ width: '16px', height: '16px' }} /> Please enter your study goal
+                  <AlertCircle size={16} /> Please enter your study goal
                 </p>
               )}
             </form>
           </div>
         ) : (
-          // ===== PLAN VIEW =====
           <>
             <div className="flex" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
               <button
@@ -1475,7 +2154,7 @@ export function StudyPlanPage() {
                 className={`btn ${viewMode === 'plan' ? 'btn-primary' : 'btn-outline'}`}
                 style={{ flex: 1 }}
               >
-                <FileText style={{ width: '16px', height: '16px' }} /> Plan
+                <FileText size={16} /> Plan
               </button>
               <button
                 onClick={() => setViewMode('progress')}
@@ -1483,14 +2162,14 @@ export function StudyPlanPage() {
                 style={{ flex: 1 }}
                 disabled={planEnded}
               >
-                <TrendingUp style={{ width: '16px', height: '16px' }} /> Progress
+                <TrendingUp size={16} /> Progress
               </button>
               <button
                 onClick={handleReset}
                 className="btn btn-danger"
                 style={{ background: 'var(--color-danger)', color: 'white' }}
               >
-                <Trash2 style={{ width: '16px', height: '16px' }} />
+                <Trash2 size={16} />
               </button>
             </div>
 
@@ -1509,6 +2188,9 @@ export function StudyPlanPage() {
           </>
         )}
       </div>
+
+      {/* Daily Tutor Modal */}
+      <DailyTutorModal isOpen={showDailyTutor} onClose={() => setShowDailyTutor(false)} />
     </div>
   )
 }

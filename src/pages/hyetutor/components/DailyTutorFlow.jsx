@@ -667,7 +667,7 @@ function QuizStep({
         )}
       </div>
 
-       {/* Palette */}
+      {/* Palette */}
       <div
         className="card"
         style={{ padding: 'var(--space-3)' }}
@@ -823,8 +823,9 @@ function ResultStep({ result, topic, subject, onContinue }) {
       </button>
     </div>
   )
-      }
-/ ============================================================
+}
+
+// ============================================================
 // STEP 4 — REFLECTION
 // ============================================================
 function ReflectionStep({ topic, subject, onSubmit, onSkip }) {
@@ -991,4 +992,4 @@ function DoneStep({ session, onClose }) {
       </button>
     </div>
   )
-    }
+}

@@ -5,6 +5,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../../../hooks'
 import { storage } from '../../../storage'
 import { ai } from '../../../services'
 
@@ -55,7 +56,6 @@ const getTodayPlanEntry = (plan) => {
     (d) => d.day?.toLowerCase() === todayName.toLowerCase()
   )
   if (!todayEntry || !todayEntry.topics?.length) return null
-  // Pick highest priority topic if priority exists, else first
   return todayEntry.topics[0]
 }
 
@@ -97,7 +97,6 @@ const getRecentMistakes = (topic, limit = 5) => {
   }
 }
 
-// Reflections from same subject, most recent 5
 const getRecentReflections = (subject, limit = 5) => {
   const cache = readCache()
   const sessions = Object.values(cache.sessions || {})
@@ -123,6 +122,7 @@ const getRecentReflections = (subject, limit = 5) => {
 // ============================================================
 
 export function useDailyTutor() {
+  const { user } = useAuth()
   const [todaySession, setTodaySession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -141,6 +141,12 @@ export function useDailyTutor() {
   // -----------------------------------------------------------
   const startToday = useCallback(async () => {
     setError(null)
+
+    // ✅ Require a real user id (string)
+    if (!user?.id) {
+      setError('Please sign in to use Daily Tutor.')
+      return null
+    }
 
     const cache = readCache()
     const today = getTodayKey()
@@ -174,21 +180,27 @@ export function useDailyTutor() {
       const difficultyPreference =
         plan?.plan?.difficulty || plan?.difficulty || 'balanced'
 
+      // ✅ user_id — always a string from AuthContext
+      const userId = String(user.id)
+
       const weakAreas = getWeakAreas()
       const recentMistakes = getRecentMistakes(topic)
       const reflections = getRecentReflections(subject)
 
       // Build plan context
       const schedule = plan?.plan?.weekly_schedule || []
+      const todayName = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+      })
       const todayIndex = schedule.findIndex(
-        (d) => d.day?.toLowerCase() === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+        (d) => d.day?.toLowerCase() === todayName.toLowerCase()
       )
       const day = todayIndex + 1
       const totalDays = plan?.plan?.summary?.days_remaining || 52
 
       // 1. Generate lesson
       const lessonRes = await ai.dailyTutor.generateLesson({
-        user_id: gamification.userId || null,
+        user_id: userId,
         date: today,
         topic,
         subject,
@@ -214,7 +226,7 @@ export function useDailyTutor() {
 
       // 2. Generate quiz from lesson
       const quizRes = await ai.dailyTutor.generateQuiz({
-        user_id: gamification.userId || null,
+        user_id: userId,
         date: today,
         topic,
         subject,
@@ -253,15 +265,15 @@ export function useDailyTutor() {
       return session
     } catch (err) {
       console.error('Daily tutor start error:', err)
-      setError(err.message || 'Failed to start today’s lesson')
+      setError(err.message || "Failed to start today's lesson")
       return null
     } finally {
       setGenerating(false)
     }
-  }, [])
+  }, [user?.id])
 
   // -----------------------------------------------------------
-  // Update step (lesson / quiz / result / reflection)
+  // Update step
   // -----------------------------------------------------------
   const setStep = useCallback((step) => {
     const today = getTodayKey()
@@ -312,15 +324,6 @@ export function useDailyTutor() {
     }
 
     // ---- Write back to storage ----
-    const scoreData = {
-      score: correct,
-      total,
-      correct,
-      wrong,
-      skipped: 0,
-      accuracy,
-    }
-
     storage.addSession({
       id: `daily_tutor_${today}`,
       subject: entry.subject,
@@ -404,7 +407,7 @@ export function useDailyTutor() {
   }, [])
 
   // -----------------------------------------------------------
-  // Skip reflection (lesson still counts as complete)
+  // Skip reflection
   // -----------------------------------------------------------
   const skipReflection = useCallback(() => {
     const today = getTodayKey()
@@ -436,13 +439,10 @@ export function useDailyTutor() {
   }, [])
 
   return {
-    // state
     todaySession,
     loading,
     generating,
     error,
-
-    // actions
     startToday,
     setStep,
     submitQuiz,
@@ -450,4 +450,4 @@ export function useDailyTutor() {
     skipReflection,
     getHistory,
   }
-  }
+}

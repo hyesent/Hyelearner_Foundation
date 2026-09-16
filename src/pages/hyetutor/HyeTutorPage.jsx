@@ -97,19 +97,32 @@ export default function HyeTutorPage() {
   if (!data) {
     return (
       <div className="flex-center" style={{ minHeight: '400px' }}>
-        <div className="card text-center" style={{ padding: 'var(--space-8)', maxWidth: '480px' }}>
-          <div className="flex-center" style={{
-            width: '64px', height: '64px', borderRadius: '50%',
-            background: 'var(--color-primary-light)',
-            margin: '0 auto var(--space-4)'
-          }}>
-            <Brain style={{ width: '32px', height: '32px', color: 'var(--color-primary)' }} />
+        <div
+          className="card text-center"
+          style={{ padding: 'var(--space-8)', maxWidth: '480px' }}
+        >
+          <div
+            className="flex-center"
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: 'var(--color-primary-light)',
+              margin: '0 auto var(--space-4)',
+            }}
+          >
+            <Brain size={32} style={{ color: 'var(--color-primary)' }} />
           </div>
-          <h3 className="h3" style={{ marginBottom: 'var(--space-2)' }}>No Data Yet</h3>
+          <h3 className="h3" style={{ marginBottom: 'var(--space-2)' }}>
+            No Data Yet
+          </h3>
           <p className="text-muted" style={{ marginBottom: 'var(--space-4)' }}>
             Complete some study sessions to get personalized AI coaching.
           </p>
-          <button className="btn btn-primary" onClick={() => navigate('/practice')}>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/practice')}
+          >
             Start Studying
           </button>
         </div>
@@ -118,47 +131,84 @@ export default function HyeTutorPage() {
   }
 
   return (
-    <div style={{ background: 'var(--color-background)', padding: 'var(--space-6)', minHeight: '100vh' }}>
+    <div
+      style={{
+        background: 'var(--color-background)',
+        padding: 'var(--space-6)',
+        minHeight: '100vh',
+      }}
+    >
       <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
         {/* Header */}
-        <div className="flex-between" style={{ marginBottom: 'var(--space-6)' }}>
-          <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
-            <div className="flex-center" style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-xl)',
-              background: 'var(--color-primary-light)'
-            }}>
-              <Brain style={{ width: '24px', height: '24px', color: 'var(--color-primary)' }} />
+        <div
+          className="flex-between"
+          style={{ marginBottom: 'var(--space-6)' }}
+        >
+          <div
+            className="flex"
+            style={{ gap: 'var(--space-3)', alignItems: 'center' }}
+          >
+            <div
+              className="flex-center"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 'var(--radius-xl)',
+                background: 'var(--color-primary-light)',
+              }}
+            >
+              <Brain size={24} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-                <h1 className="h2" style={{ margin: 0 }}>HyeTutor</h1>
-                <Sparkles style={{ width: '18px', height: '18px', color: 'var(--color-warning)' }} />
+              <div
+                className="flex"
+                style={{ gap: 'var(--space-2)', alignItems: 'center' }}
+              >
+                <h1 className="h2" style={{ margin: 0 }}>
+                  HyeTutor
+                </h1>
+                <Sparkles
+                  size={18}
+                  style={{ color: 'var(--color-warning)' }}
+                />
                 {isStale && (
-                  <span className="badge badge-warning" style={{ fontSize: 'var(--font-size-xs)' }}>
+                  <span
+                    className="badge badge-warning"
+                    style={{ fontSize: 'var(--font-size-xs)' }}
+                  >
                     ⚠️ Stale
                   </span>
                 )}
               </div>
-              <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
+              <p
+                className="text-muted"
+                style={{ fontSize: 'var(--font-size-sm)' }}
+              >
                 Your personal AI coach
                 {data.examDays != null && (
-                  <> • {data.examDays} {data.examDays === 1 ? 'day' : 'days'} until exam</>
+                  <>
+                    {' '}
+                    • {data.examDays}{' '}
+                    {data.examDays === 1 ? 'day' : 'days'} until exam
+                  </>
                 )}
-                {data.examDays == null && (
-                  <> • No exam date set</>
-                )}
+                {data.examDays == null && <> • No exam date set</>}
               </p>
             </div>
           </div>
-          <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+          <div
+            className="flex"
+            style={{ gap: 'var(--space-2)', alignItems: 'center' }}
+          >
             <button
               onClick={() => setShowReflection(true)}
               className="btn btn-ghost"
-              style={{ padding: 'var(--space-1) var(--space-3)', fontSize: 'var(--font-size-sm)' }}
+              style={{
+                padding: 'var(--space-1) var(--space-3)',
+                fontSize: 'var(--font-size-sm)',
+              }}
             >
-              <MessageSquare style={{ width: '16px', height: '16px' }} /> Reflect
+              <MessageSquare size={16} /> Reflect
             </button>
             <button
               onClick={refresh}
@@ -166,24 +216,33 @@ export default function HyeTutorPage() {
               style={{ padding: 'var(--space-1) var(--space-2)' }}
               disabled={refreshing}
             >
-              <RefreshCw style={{ width: '16px', height: '16px' }} />
+              <RefreshCw size={16} />
             </button>
-            <button className="btn btn-ghost" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft style={{ width: '16px', height: '16px' }} /> Back
+            <button
+              className="btn btn-ghost"
+              onClick={() => navigate('/dashboard')}
+            >
+              <ArrowLeft size={16} /> Back
             </button>
           </div>
         </div>
 
         {/* Stale Warning */}
         {isStale && (
-          <div className="warning-card" style={{ marginBottom: 'var(--space-4)' }}>
+          <div
+            className="warning-card"
+            style={{ marginBottom: 'var(--space-4)' }}
+          >
             <span>⚠️ Showing cached data. AI analysis is in progress...</span>
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="danger-card" style={{ marginBottom: 'var(--space-4)' }}>
+          <div
+            className="danger-card"
+            style={{ marginBottom: 'var(--space-4)' }}
+          >
             <span>{error}</span>
           </div>
         )}
@@ -191,49 +250,35 @@ export default function HyeTutorPage() {
         {/* Hero Section */}
         <MissionHero
           missions={data.missions || []}
-          timeBudget={data.timeBudget || { total: 2.75, completed: 1.33, remaining: 1.42 }}
-          xpReward={data.totalXpReward || 120}
-          weeklyGoal={data.weeklyGoal || { total: 24, completed: 18, percentage: 75 }}
+          timeBudget={
+            data.timeBudget || { total: 0, completed: 0, remaining: 0 }
+          }
+          xpReward={data.totalXpReward || 0}
+          weeklyGoal={
+            data.weeklyGoal || { total: 0, completed: 0, percentage: 0 }
+          }
           nextSession={data.nextSession || null}
           onMissionToggle={handleMissionToggle}
           onStartSession={(session) => {
-            navigate('/practice', { state: { subject: session.subject, topic: session.topic } })
+            navigate('/practice', {
+              state: { subject: session.subject, topic: session.topic },
+            })
           }}
         />
 
         {/* Performance Center */}
         <div style={{ marginTop: 'var(--space-4)' }}>
-          <PerformanceCenter metrics={data.performance || {
-            examReadiness: 89,
-            confidence: 91,
-            consistency: 87,
-            focus: 84,
-            burnoutRisk: 'Low'
-          }} />
+          <PerformanceCenter metrics={data.performance} />
         </div>
 
         {/* Two-Column Layout */}
-        <div className="grid-2" style={{ gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
+        <div
+          className="grid-2"
+          style={{ gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}
+        >
           {/* Left Column */}
           <div className="stack" style={{ gap: 'var(--space-4)' }}>
-            <WeeklyMomentum data={data.momentum || {
-              hours: 18.4,
-              average: 2.6,
-              bestDay: 'Tuesday',
-              longestSession: '2h 13m',
-              missedDays: 1,
-              streak: 7,
-              weeklyData: [
-                { day: 'Monday', hours: 3.2 },
-                { day: 'Tuesday', hours: 4.0 },
-                { day: 'Wednesday', hours: 2.4 },
-                { day: 'Thursday', hours: 1.8 },
-                { day: 'Friday', hours: 2.4 },
-                { day: 'Saturday', hours: 1.6 },
-                { day: 'Sunday', hours: 1.6 }
-              ]
-            }} />
-
+            <WeeklyMomentum data={data.momentum} />
             <AIHabits habits={data.habits || []} />
           </div>
 
@@ -301,7 +346,10 @@ export default function HyeTutorPage() {
                   flexShrink: 0,
                 }}
               >
-                <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+                <div
+                  className="flex"
+                  style={{ gap: 'var(--space-2)', alignItems: 'center' }}
+                >
                   <Brain size={18} style={{ color: 'var(--color-primary)' }} />
                   <span
                     style={{
@@ -350,4 +398,4 @@ export default function HyeTutorPage() {
       </div>
     </div>
   )
-  }
+}

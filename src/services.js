@@ -42,7 +42,7 @@ const safeJSONParse = (str, fallback = null) => {
   try { return JSON.parse(str) } catch { return fallback }
 }
 
-// ✅ NEW: read a value from either store (remember-me aware)
+// Read a value from either store (remember-me aware)
 const getSessionValue = (key) =>
   localStorage.getItem(key) || sessionStorage.getItem(key)
 
@@ -236,7 +236,6 @@ const generateMockQuestions = (count = 30, subject = null, topic = null, difficu
 
 const apiCall = async (endpoint, options = {}) => {
   const url = `${API_BASE}${endpoint}`
-  // ✅ Read token from either store (remember-me aware)
   const token = getSessionValue('token')
 
   console.log(`🔍 [API] Calling: ${url}`)
@@ -296,8 +295,6 @@ export const auth = {
       await delay(MOCK_DELAYS.normal)
       if (!email || !password) throw new Error('Email and password required')
       mockToken = `mock_jwt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-      // NOTE: AuthContext handles storage now; only set localStorage here
-      // to keep mock parity. Real flow relies on AuthContext persistence.
       localStorage.setItem('token', mockToken)
       localStorage.setItem('user', JSON.stringify(MOCK_USER))
       return { user: MOCK_USER, token: mockToken }
@@ -352,7 +349,6 @@ export const auth = {
   logout: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      // ✅ Clear both stores
       localStorage.removeItem('token')
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('user')
@@ -363,7 +359,6 @@ export const auth = {
       return { success: true }
     }
     const result = await apiCall('/auth/logout', { method: 'POST' })
-    // ✅ Clear both stores
     localStorage.removeItem('token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user')
@@ -381,7 +376,6 @@ export const auth = {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.normal)
       mockToken = `mock_jwt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-      // Preserve whichever store was in use
       const target = localStorage.getItem('token') ? localStorage : sessionStorage
       target.setItem('token', mockToken)
       return { token: mockToken }
@@ -393,12 +387,8 @@ export const auth = {
     })
 
     const target = localStorage.getItem('token') ? localStorage : sessionStorage
-    if (result.access_token) {
-      target.setItem('token', result.access_token)
-    }
-    if (result.refresh_token) {
-      target.setItem('refresh_token', result.refresh_token)
-    }
+    if (result.access_token) target.setItem('token', result.access_token)
+    if (result.refresh_token) target.setItem('refresh_token', result.refresh_token)
 
     return result
   },
@@ -425,7 +415,6 @@ export const auth = {
   getMe: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      // ✅ Read token + user from either store
       const token = getSessionValue('token')
       if (!token) throw new Error('Not authenticated')
       const user = safeJSONParse(getSessionValue('user'), MOCK_USER)
@@ -433,15 +422,8 @@ export const auth = {
     }
 
     const result = await apiCall('/auth/me')
-
-    if (result && result.user) {
-      return result
-    }
-
-    if (result && result.id) {
-      return { user: result }
-    }
-
+    if (result && result.user) return result
+    if (result && result.id) return { user: result }
     return { user: null }
   },
 
@@ -450,7 +432,6 @@ export const auth = {
       await delay(MOCK_DELAYS.normal)
       const current = safeJSONParse(getSessionValue('user'), MOCK_USER)
       const updated = { ...current, ...data, updatedAt: new Date().toISOString() }
-      // Write back to whichever store has the token
       const target = localStorage.getItem('token') ? localStorage : sessionStorage
       target.setItem('user', JSON.stringify(updated))
       return { user: updated }
@@ -511,6 +492,72 @@ export const auth = {
       return { subjects }
     }
     return apiCall('/user/subjects', { method: 'PUT', body: JSON.stringify({ subjects }) })
+  },
+}
+
+// ============================================================
+// ⭐ NEW — USER SERVICE (hydrate, ai usage, stats sync)
+// ============================================================
+
+export const user = {
+  /**
+   * Big hydration call — called on login + refresh.
+   * Returns everything the frontend needs to render the whole app.
+   */
+  hydrate: async () => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.normal)
+      const authUser = safeJSONParse(getSessionValue('user'), MOCK_USER)
+      return {
+        user: authUser,
+        ai_usage: { used: 0, limit: 10, failed: 0, reset_at: new Date().toISOString() },
+        study_plan: null,
+        daily_tutor_today: null,
+        daily_tutor_recent: [],
+        hyetutor_cache: null,
+        gamification: {
+          xp: authUser.xp || 0,
+          total_xp: authUser.xp || 0,
+          level: authUser.level || 1,
+          streak: authUser.streak || 0,
+          longest_streak: authUser.streak || 0,
+          badges: [],
+        },
+        mistakes_count: 0,
+        favorites: [],
+        subscription: {
+          is_active: authUser.tier === 'foundation' || authUser.tier === 'pro',
+          plan: 'Free',
+          expires_at: null,
+          days_remaining: 0,
+        },
+      }
+    }
+    return apiCall('/user/hydrate', { method: 'GET' })
+  },
+
+  /** Read-only AI usage snapshot. */
+  getAiUsage: async () => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { used: 0, limit: 10, failed: 0, reset_at: new Date().toISOString() }
+    }
+    return apiCall('/user/ai-usage', { method: 'GET' })
+  },
+
+  /**
+   * Fire-and-forget sync of local stats to backend.
+   * Called by useProgress after local writes.
+   */
+  syncStats: async (stats) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { success: true, synced: true }
+    }
+    return apiCall('/user/stats', {
+      method: 'POST',
+      body: JSON.stringify(stats),
+    })
   },
 }
 
@@ -733,6 +780,21 @@ export const mistakes = {
     }
     return apiCall(`/mistakes/export?format=${format}`)
   },
+
+  /**
+   * ⭐ NEW — Batch fetch cached AI explanations for a list of mistake IDs.
+   * Backend returns explanations that already exist; missing ones stay out.
+   */
+  getExplanations: async (mistakeIds = []) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { explanations: {} }
+    }
+    return apiCall('/mistakes/explanations', {
+      method: 'POST',
+      body: JSON.stringify({ mistake_ids: mistakeIds }),
+    })
+  },
 }
 
 // ============================================================
@@ -903,7 +965,7 @@ export const ai = {
           nextSession: { time: '7:00 PM', subject: 'Mathematics', topic: 'Quadratic Equations', duration: 45, difficulty: 'Medium' },
           timeBudget: { total: 2.75, completed: 1.33, remaining: 1.42 },
           weeklyGoal: { total: 24, completed: 18, percentage: 75 },
-          performance: { examReadiness: 89, confidence: 91, consistency: 87, focus: 84, burnoutRisk: 'Low' },
+          performance: { examReadiness: 0, confidence: 0, consistency: 0, focus: 0, burnoutRisk: 'Low' },
           subjects: [
             { name: 'Mathematics', mastery: 78, confidence: 92, status: 'in_progress', trend: 'down' },
             { name: 'Physics', mastery: 45, confidence: 48, status: 'danger', trend: 'down' },
@@ -911,10 +973,10 @@ export const ai = {
           ],
           insights: [],
           habits: [],
-          momentum: { hours: 18.4, average_per_day: 2.6, bestDay: 'Tuesday', longestSession: '2h 13m', missedDays: 1, streak: 7 },
+          momentum: { hours: 0, average_per_day: 0, bestDay: 'N/A', longestSession: '0h 0m', missedDays: 0, streak: 0 },
           revisionQueue: [],
           quickStats: { topicsRemaining: 34, lessonsRemaining: 12, questionsRemaining: 486, daysAhead: 11 },
-          motivation: "Yesterday you studied 3h 18m — that's 42 mins more than your average. Great work!"
+          motivation: "Let's build your streak today."
         }
       }
       return apiCall('/hyetutor/analyze', { method: 'POST', body: JSON.stringify(data) })
@@ -953,6 +1015,17 @@ export const ai = {
         return { cached: true, date: new Date().toISOString().split('T')[0] }
       }
       return apiCall('/hyetutor/cached', { method: 'GET' })
+    },
+
+    /**
+     * ⭐ NEW — Fetch chat history for the current user.
+     */
+    getChatHistory: async (limit = 50) => {
+      if (USE_MOCK) {
+        await delay(MOCK_DELAYS.fast)
+        return { messages: [] }
+      }
+      return apiCall(`/hyetutor/chat/history?limit=${limit}`, { method: 'GET' })
     },
   },
 
@@ -998,6 +1071,7 @@ export const ai = {
               `Generated for level ${payload.user_level} with ${payload.study_style} study style`,
             ],
           },
+          from_cache: false,
         }
       }
 
@@ -1033,6 +1107,7 @@ export const ai = {
           success: true,
           generated_at: new Date().toISOString(),
           quiz: { questions, personalization_notes: [] },
+          from_cache: false,
         }
       }
 
@@ -1041,11 +1116,123 @@ export const ai = {
         body: JSON.stringify(payload),
       })
     },
+
+    /**
+     * ⭐ NEW — Fetch today's Daily Tutor session from backend.
+     * Backend generates if missing, otherwise returns cached.
+     */
+    getToday: async () => {
+      if (USE_MOCK) {
+        await delay(MOCK_DELAYS.fast)
+        return { session: null }
+      }
+      return apiCall('/daily-tutor/today', { method: 'GET' })
+    },
+
+    /**
+     * ⭐ NEW — Full history for the Daily Tutor history page.
+     */
+    getHistory: async (limit = 60) => {
+      if (USE_MOCK) {
+        await delay(MOCK_DELAYS.fast)
+        return { sessions: [] }
+      }
+      return apiCall(`/daily-tutor/history?limit=${limit}`, { method: 'GET' })
+    },
+
+    /**
+     * ⭐ NEW — Get a single past session (read-only).
+     */
+    getSession: async (dateKey) => {
+      if (USE_MOCK) {
+        await delay(MOCK_DELAYS.fast)
+        return { session: null }
+      }
+      return apiCall(`/daily-tutor/session/${dateKey}`, { method: 'GET' })
+    },
+
+    /**
+     * ⭐ NEW — Submit quiz answers for today's session.
+     */
+    submitQuiz: async (dateKey, answers) => {
+      if (USE_MOCK) {
+        await delay(MOCK_DELAYS.normal)
+        return { success: true, result: null }
+      }
+      return apiCall(`/daily-tutor/session/${dateKey}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ answers }),
+      })
+    },
+
+    /**
+     * ⭐ NEW — Submit reflection for today's session.
+     */
+    submitReflection: async (dateKey, feeling, note = '') => {
+      if (USE_MOCK) {
+        await delay(MOCK_DELAYS.fast)
+        return { success: true }
+      }
+      return apiCall(`/daily-tutor/session/${dateKey}/reflection`, {
+        method: 'POST',
+        body: JSON.stringify({ feeling, note }),
+      })
+    },
   },
 }
 
 // ============================================================
-// SUBSCRIPTIONS SERVICE (with Hardcoded Account)
+// ⭐ NEW — STUDY PLAN SERVICE
+// ============================================================
+
+export const studyPlan = {
+  /** Fetch current active plan. */
+  getCurrent: async () => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      const saved = localStorage.getItem('hyelearner_study_plan_v2')
+      return { plan: saved ? JSON.parse(saved) : null }
+    }
+    return apiCall('/study-plan/current', { method: 'GET' })
+  },
+
+  /** Mark current active plan as cancelled. */
+  reset: async () => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      localStorage.removeItem('hyelearner_study_plan_v2')
+      return { success: true }
+    }
+    return apiCall('/study-plan/reset', { method: 'POST' })
+  },
+}
+
+// ============================================================
+// ⭐ NEW — WEAKNESS SERVICE
+// ============================================================
+
+export const weakness = {
+  /** Latest weakness snapshot (if within ~24h). */
+  getLatest: async () => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { snapshot: null }
+    }
+    return apiCall('/weakness/latest', { method: 'GET' })
+  },
+
+  /** Full history for trends. */
+  getHistory: async (limit = 20) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { snapshots: [] }
+    }
+    return apiCall(`/weakness/history?limit=${limit}`, { method: 'GET' })
+  },
+}
+
+// ============================================================
+// SUBSCRIPTIONS SERVICE
 // ============================================================
 
 const HARDCODED_EMAIL = 'hyesent@example.com'
@@ -1124,7 +1311,6 @@ export const subscriptions = {
   status: async () => {
     const user = safeCurrentUser()
 
-    // Hardcoded account bypass
     if (isHardcodedAccount(user)) {
       return {
         isActive: true,
@@ -1137,7 +1323,6 @@ export const subscriptions = {
       }
     }
 
-    // Mock mode
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
       return {
@@ -1150,7 +1335,6 @@ export const subscriptions = {
       }
     }
 
-    // Real flow — call HyeSpace verify endpoint
     const hyeSpaceId = getLinkedHyeSpaceId()
     const userEmail = user?.email || ''
 
@@ -1361,12 +1545,8 @@ export const parent = {
   },
 
   approve: async (studentId, action) => {
-    if (!studentId) {
-      throw new Error('Student ID is required')
-    }
-    if (!action) {
-      throw new Error('Action is required')
-    }
+    if (!studentId) throw new Error('Student ID is required')
+    if (!action) throw new Error('Action is required')
     const response = await apiCall(`/parent/approve/${studentId}`, {
       method: 'POST',
       body: JSON.stringify({ action })
@@ -1978,6 +2158,28 @@ export const career = {
   checkAdmission: async (data) => {
     return apiCall('/career/check', { method: 'POST', body: JSON.stringify(data) })
   },
+
+  /**
+   * ⭐ NEW — Fetch past admission checks for the user.
+   */
+  getHistory: async (limit = 30) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { checks: [] }
+    }
+    return apiCall(`/career/history?limit=${limit}`, { method: 'GET' })
+  },
+
+  /**
+   * ⭐ NEW — Fetch a single past check by ID (read-only).
+   */
+  getCheck: async (id) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return { check: null }
+    }
+    return apiCall(`/career/check/${id}`, { method: 'GET' })
+  },
 }
 
 // ============================================================
@@ -2055,11 +2257,14 @@ export const ping = {
 
 export default {
   auth,
-  user: auth,
+  user,
+  userStats,
   sessions,
   mistakes,
   bookmarks,
   ai,
+  studyPlan,
+  weakness,
   subscriptions,
   parent,
   duels,
@@ -2072,7 +2277,6 @@ export default {
   ping,
   social,
   voice,
-  userStats,
   feedback,
   cutoffContributions,
   handleSubscribeClick,

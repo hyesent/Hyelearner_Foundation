@@ -588,10 +588,29 @@ export function WeaknessFinderPage() {
     setUseAI(false)
     setShowAI(false)
 
-    // ─── Backend already generated today's snapshot → use it ───
+    // ─── Backend already generated today's snapshot → MERGE with local logic ───
     if (todaySnapshot?.generatedAt) {
-      const logicResults = analyzeWithLogic()
-      setWeakTopics(logicResults)
+      const localTopics = analyzeWithLogic()
+
+      const snapshotTopics = (todaySnapshot.weakTopics || []).map((t) => ({
+        topic: t.topic,
+        accuracy: t.accuracy || 0,
+        priority: t.priority || 'Medium',
+        mistakeCount: t.mistakeCount || 0,
+        attempts: t.attempts || 0,
+        recommendations: t.recommendations || null,
+        source: 'snapshot',
+      }))
+
+      // Merge by topic name; snapshot wins on overlap
+      const merged = [...snapshotTopics]
+      localTopics.forEach((local) => {
+        if (!merged.find((m) => m.topic === local.topic)) {
+          merged.push({ ...local, source: 'local' })
+        }
+      })
+
+      setWeakTopics(merged)
       setAiAnalysis({
         weakTopics: todaySnapshot.weakTopics || [],
         summary: todaySnapshot.summary || '',
@@ -919,7 +938,11 @@ export function WeaknessFinderPage() {
                         </span>
                       </div>
                       <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                        {generateRecommendations(item.topic, item.accuracy, item.mistakeCount).map((rec, i) => (
+                        {/* Use snapshot recommendations if present, else generate locally */}
+                        {(item.recommendations
+                          ? [item.recommendations]
+                          : generateRecommendations(item.topic, item.accuracy, item.mistakeCount)
+                        ).map((rec, i) => (
                           <div key={i} className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}>
                             <span style={{ color: 'var(--color-primary)' }}>•</span>
                             <span>{rec}</span>

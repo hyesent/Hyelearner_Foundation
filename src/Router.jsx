@@ -6,6 +6,7 @@ import { LoadingScreen } from './components/LoadingScreen'
 
 // SHOWCASE
 import { PreviewProvider } from './pages/showcase/PreviewContext'
+import { ShowcaseLayout } from './pages/showcase/ShowcaseLayout'
 
 // ============================================================
 // ROUTER
@@ -24,9 +25,11 @@ export default function Router() {
           path="/showcase"
           element={
             <PreviewProvider>
-              <div style={{ padding: 40 }}>
-                PreviewProvider loaded
-              </div>
+              <ShowcaseLayout pageName="Hyelearner">
+                <div style={{ padding: 40 }}>
+                  ShowcaseLayout loaded
+                </div>
+              </ShowcaseLayout>
             </PreviewProvider>
           }
         />

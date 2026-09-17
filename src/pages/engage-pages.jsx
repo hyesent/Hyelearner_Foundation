@@ -8,15 +8,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks'
 import { storage } from '../storage'
-import { ai, leaderboard, subscriptions } from '../services'
+import { ai, leaderboard, subscriptions, social } from '../services'
 import { getLevel, calculateXP, checkBadgeUnlock, shuffleArray, trackAIUsage } from '../utils'
 import { SUBJECTS, BADGE_DEFINITIONS, XP_TABLE, AI_LIMITS } from '../constants'
 import { LoadingScreen } from '../components/LoadingScreen'
-import { 
-  Flame, 
-  Brain, 
-  Gamepad2, 
-  Trophy, 
+import {
+  Flame,
+  Brain,
+  Gamepad2,
+  Trophy,
   Target,
   ArrowLeft,
   Sparkles,
@@ -36,7 +36,9 @@ import {
   Cpu,
   RefreshCw,
   Lock,
-  BookOpen
+  BookOpen,
+  UserPlus,
+  Clock,
 } from 'lucide-react'
 
 // ============================================================
@@ -44,16 +46,16 @@ import {
 // ============================================================
 function FreeUserLockScreen({ featureName, navigate }) {
   return (
-    <div className="card text-center" style={{ 
-      padding: 'var(--space-12)', 
-      maxWidth: '480px', 
+    <div className="card text-center" style={{
+      padding: 'var(--space-12)',
+      maxWidth: '480px',
       margin: '0 auto',
       border: '2px dashed var(--color-border)'
     }}>
-      <div className="flex-center" style={{ 
-        width: '80px', 
-        height: '80px', 
-        borderRadius: '50%', 
+      <div className="flex-center" style={{
+        width: '80px',
+        height: '80px',
+        borderRadius: '50%',
         background: 'var(--color-danger-light)',
         margin: '0 auto var(--space-6)'
       }}>
@@ -64,13 +66,13 @@ function FreeUserLockScreen({ featureName, navigate }) {
         Upgrade to Foundation plan to unlock this feature and get full access to all tools.
       </p>
       <div className="flex" style={{ gap: 'var(--space-3)', justifyContent: 'center' }}>
-        <button 
-          onClick={() => navigate('/practice')} 
+        <button
+          onClick={() => navigate('/practice')}
           className="btn btn-outline flex-center"
         >
           Go to Practice
         </button>
-        <button 
+        <button
           onClick={() => {
             const linkedId = localStorage.getItem('hyespace-store-id')
             if (linkedId) {
@@ -78,7 +80,7 @@ function FreeUserLockScreen({ featureName, navigate }) {
               return
             }
             window.open('https://hyespace.vercel.app', '_blank', 'noopener,noreferrer')
-          }} 
+          }}
           className="btn btn-primary flex-center"
         >
           Subscribe on HyeSpace
@@ -167,7 +169,7 @@ export function HeatmapPage() {
   }
 
   const allTopics = Object.keys(masteryData)
-  
+
   const strongCount = allTopics.filter(t => masteryData[t]?.accuracy >= 80).length
   const avgCount = allTopics.filter(t => masteryData[t]?.accuracy >= 50 && masteryData[t]?.accuracy < 80).length
   const weakCount = allTopics.filter(t => masteryData[t]?.accuracy > 0 && masteryData[t]?.accuracy < 50).length
@@ -334,9 +336,31 @@ export function WeaknessFinderPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [isFreeUser, setIsFreeUser] = useState(false)
   const [subLoading, setSubLoading] = useState(true)
+  const [todaySnapshot, setTodaySnapshot] = useState(null)
 
   const CACHE_KEY = 'weakness_finder_cache'
   const CACHE_EXPIRY_HOURS = 12
+
+  // ─── Read today's backend snapshot ───
+  useEffect(() => {
+    const load = () => {
+      try {
+        const raw = localStorage.getItem('hyelearner_weakness_today')
+        setTodaySnapshot(raw ? JSON.parse(raw) : null)
+      } catch {
+        setTodaySnapshot(null)
+      }
+    }
+    load()
+    window.addEventListener('hydration:done', load)
+    window.addEventListener('storage', load)
+    return () => {
+      window.removeEventListener('hydration:done', load)
+      window.removeEventListener('storage', load)
+    }
+  }, [])
+
+  const alreadyDoneToday = !!todaySnapshot?.generatedAt
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -450,7 +474,7 @@ export function WeaknessFinderPage() {
         let weaknessScore = 100 - value
         const mistakeCount = topicMistakes[topic] || 0
         weaknessScore += mistakeCount * 2
-        
+
         if (mistakeCount >= 3) weaknessScore += 10
         if (mistakeCount >= 5) weaknessScore += 15
 
@@ -474,6 +498,20 @@ export function WeaknessFinderPage() {
   }
 
   const analyzeWithAI = async (logicResults) => {
+    // ─── Already done today — just show cached snapshot ───
+    if (alreadyDoneToday) {
+      if (todaySnapshot) {
+        setAiAnalysis({
+          weakTopics: todaySnapshot.weakTopics || [],
+          summary: todaySnapshot.summary || '',
+          generatedAt: todaySnapshot.generatedAt,
+        })
+        setUseAI(true)
+        setShowAI(true)
+      }
+      return
+    }
+
     if (aiLimitReached) {
       setError('AI limit reached. Using logic-based results.')
       return
@@ -483,69 +521,44 @@ export function WeaknessFinderPage() {
     setError(null)
 
     try {
-      const mistakes = storage.getMistakes()
-      const mastery = storage.getMastery()
-      
-      const payload = {
-        mistakes: mistakes.slice(0, 50),
-        mastery: mastery,
-        limit: 5
-      }
+      const result = await ai.weakness({ limit: 5 })
 
-      console.log('📤 Sending to AI weakness:', {
-        mistakesCount: payload.mistakes.length,
-        masteryTopics: Object.keys(payload.mastery).length
-      })
-
-      const result = await ai.weakness(payload)
-      
-      // ✅ TRACK AI USAGE
       trackAIUsage()
 
-      let weakTopics = []
+      let weakTopicsList = []
       let summary = result.summary || 'Based on your performance, focus on these areas for maximum improvement.'
 
-      if (result.weakTopics && Array.isArray(result.weakTopics)) {
-        weakTopics = result.weakTopics.map(item => ({
+      const source = result.weakTopics || result.weak_topics || (Array.isArray(result) ? result : null)
+
+      if (source && Array.isArray(source)) {
+        weakTopicsList = source.map(item => ({
           topic: item.topic,
           accuracy: item.accuracy || 50,
           priority: item.priority || 'Medium',
-          recommendations: item.recommendations || `Practice more in ${item.topic}`
-        }))
-      } else if (result.weak_topics && Array.isArray(result.weak_topics)) {
-        weakTopics = result.weak_topics.map(item => ({
-          topic: item.topic,
-          accuracy: item.accuracy || 50,
-          priority: item.priority || 'Medium',
-          recommendations: item.recommendations || `Practice more in ${item.topic}`
-        }))
-      } else if (Array.isArray(result)) {
-        weakTopics = result.map(item => ({
-          topic: item.topic,
-          accuracy: item.accuracy || 50,
-          priority: item.priority || 'Medium',
-          recommendations: item.recommendations || `Practice more in ${item.topic}`
+          recommendations: item.recommendations || `Practice more in ${item.topic}`,
         }))
       } else {
-        weakTopics = logicResults.slice(0, 5).map(w => ({
+        weakTopicsList = logicResults.slice(0, 5).map(w => ({
           topic: w.topic,
           accuracy: w.accuracy,
           priority: w.priority,
-          recommendations: generateRecommendations(w.topic, w.accuracy, w.mistakeCount)[0] || `Practice ${w.topic} more`
+          recommendations: generateRecommendations(w.topic, w.accuracy, w.mistakeCount)[0] || `Practice ${w.topic} more`,
         }))
       }
 
       const aiData = {
-        weakTopics: weakTopics.slice(0, 5),
+        weakTopics: weakTopicsList.slice(0, 5),
         summary: summary,
-        generatedAt: result.created_at || new Date().toISOString()
+        generatedAt: result.createdAt || result.created_at || new Date().toISOString(),
       }
 
       setAiAnalysis(aiData)
       setUseAI(true)
       setShowAI(true)
-      
-      // Update AI calls remaining after tracking
+
+      // Force hydrate so todaySnapshot becomes current
+      window.dispatchEvent(new Event('hydration:done'))
+
       const today = new Date().toISOString().split('T')[0]
       const saved = localStorage.getItem('hyelearner_ai_usage')
       if (saved) {
@@ -556,7 +569,7 @@ export function WeaknessFinderPage() {
           setAiLimitReached(remaining <= 0)
         }
       }
-      
+
       return aiData
     } catch (err) {
       console.error('AI analysis failed:', err)
@@ -574,6 +587,21 @@ export function WeaknessFinderPage() {
     setAiAnalysis(null)
     setUseAI(false)
     setShowAI(false)
+
+    // ─── Backend already generated today's snapshot → use it ───
+    if (todaySnapshot?.generatedAt) {
+      const logicResults = analyzeWithLogic()
+      setWeakTopics(logicResults)
+      setAiAnalysis({
+        weakTopics: todaySnapshot.weakTopics || [],
+        summary: todaySnapshot.summary || '',
+        generatedAt: todaySnapshot.generatedAt,
+      })
+      setUseAI(true)
+      setShowAI(true)
+      setLoading(false)
+      return
+    }
 
     const logicResults = analyzeWithLogic()
     setWeakTopics(logicResults)
@@ -608,7 +636,7 @@ export function WeaknessFinderPage() {
 
   const generateRecommendations = (topic, accuracy, mistakeCount) => {
     const recs = []
-    
+
     if (accuracy < 30) {
       recs.push(`Master the fundamentals of ${topic} first`)
       recs.push(`Watch video tutorials on ${topic}`)
@@ -616,15 +644,15 @@ export function WeaknessFinderPage() {
       recs.push(`Practice ${topic} questions daily (10-15 per session)`)
       recs.push(`Review your mistakes in ${topic}`)
     }
-    
+
     if (mistakeCount >= 3) {
       recs.push(`Focus on ${topic} concepts you keep getting wrong`)
     }
-    
+
     if (recs.length === 0) {
       recs.push(`Continue practicing ${topic} to improve further`)
     }
-    
+
     return recs
   }
 
@@ -690,9 +718,9 @@ export function WeaknessFinderPage() {
             </div>
           </div>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-            <button 
-              onClick={handleRefresh} 
-              className="btn btn-ghost" 
+            <button
+              onClick={handleRefresh}
+              className="btn btn-ghost"
               style={{ padding: 'var(--space-1) var(--space-2)' }}
               disabled={refreshing}
             >
@@ -704,10 +732,53 @@ export function WeaknessFinderPage() {
           </div>
         </div>
 
-        <div className="card flex-between" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-primary-light)' }}>
+        {/* ⭐ Weakness status banner */}
+        <div
+          style={{
+            padding: 'var(--space-3) var(--space-4)',
+            borderRadius: 'var(--radius-xl)',
+            background: alreadyDoneToday
+              ? 'var(--color-success-light)'
+              : 'var(--color-primary-light)',
+            border: `1px solid ${
+              alreadyDoneToday ? 'var(--color-success)' : 'var(--color-primary)'
+            }`,
+            marginBottom: 'var(--space-4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+          }}
+        >
+          {alreadyDoneToday ? (
+            <CheckCircle2 size={20} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
+          ) : (
+            <Sparkles size={20} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+              {alreadyDoneToday
+                ? 'Daily weakness check complete'
+                : 'Weakness analysis ready'}
+            </div>
+            <div
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--color-text-muted)',
+                marginTop: 2,
+              }}
+            >
+              {alreadyDoneToday
+                ? `Checked at ${new Date(todaySnapshot.generatedAt).toLocaleTimeString()}`
+                : 'Tap below to run AI analysis (once per day)'}
+            </div>
+          </div>
+        </div>
+
+        {/* AI call limit */}
+        <div className="card flex-between" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-            <Cpu style={{ width: '16px', height: '16px', color: 'var(--color-primary)' }} />
-            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text)' }}>
+            <Cpu style={{ width: '16px', height: '16px', color: 'var(--color-text-muted)' }} />
+            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
               AI Calls Remaining: <strong>{aiCallsRemaining}</strong> / {AI_LIMITS.daily}
             </span>
           </div>
@@ -749,10 +820,14 @@ export function WeaknessFinderPage() {
               </div>
             </div>
 
-            {!aiLimitReached && (
+            {(!aiLimitReached || alreadyDoneToday) && (
               <div className="flex" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
                 <button
                   onClick={() => {
+                    if (alreadyDoneToday) {
+                      setShowAI(!showAI)
+                      return
+                    }
                     if (!useAI) {
                       setAiLoading(true)
                       analyzeWithAI(weakTopics).finally(() => setAiLoading(false))
@@ -760,14 +835,25 @@ export function WeaknessFinderPage() {
                       setShowAI(!showAI)
                     }
                   }}
-                  className={`btn ${useAI ? 'btn-primary' : 'btn-outline'}`}
+                  className={`btn ${useAI || alreadyDoneToday ? 'btn-primary' : 'btn-outline'}`}
                   disabled={aiLoading}
                   style={{ fontSize: 'var(--font-size-sm)' }}
                 >
                   {aiLoading ? (
-                    <><div className="spinner spinner-sm" style={{ marginRight: 'var(--space-2)' }}></div> Analyzing...</>
+                    <>
+                      <div className="spinner spinner-sm" style={{ marginRight: 'var(--space-2)' }} />
+                      Analyzing...
+                    </>
+                  ) : alreadyDoneToday ? (
+                    <>
+                      <CheckCircle2 size={16} />
+                      {showAI ? 'Hide AI Insights' : '✓ Checked today — view'}
+                    </>
                   ) : (
-                    <><Cpu style={{ width: '16px', height: '16px' }} /> {useAI ? 'AI Insights' : 'Get AI Insights'}</>
+                    <>
+                      <Cpu size={16} />
+                      {useAI ? 'AI Insights' : 'Get AI Insights'}
+                    </>
                   )}
                 </button>
               </div>
@@ -780,7 +866,7 @@ export function WeaknessFinderPage() {
                   <span style={{ fontWeight: '600', fontSize: 'var(--font-size-lg)' }}>AI Insights</span>
                   <span className="badge badge-primary" style={{ fontSize: 'var(--font-size-xs)' }}>Powered by AI</span>
                 </div>
-                
+
                 <div style={{ marginBottom: 'var(--space-3)' }}>
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                     {aiAnalysis.summary || 'Based on your performance, focus on these areas for maximum improvement.'}
@@ -851,36 +937,36 @@ export function WeaknessFinderPage() {
               ))}
             </div>
 
-            <div className="card text-center" style={{ 
-              marginTop: 'var(--space-6)', 
+            <div className="card text-center" style={{
+              marginTop: 'var(--space-6)',
               padding: 'var(--space-6)',
               background: 'var(--color-primary-light)',
               border: '2px dashed var(--color-primary)'
             }}>
-              <div className="flex" style={{ 
-                flexDirection: 'column', 
-                alignItems: 'center', 
+              <div className="flex" style={{
+                flexDirection: 'column',
+                alignItems: 'center',
                 gap: 'var(--space-3)'
               }}>
-                <BookOpen style={{ 
-                  width: '48px', 
-                  height: '48px', 
-                  color: 'var(--color-primary)' 
+                <BookOpen style={{
+                  width: '48px',
+                  height: '48px',
+                  color: 'var(--color-primary)'
                 }} />
                 <h3 className="h3" style={{ color: 'var(--color-text)' }}>
                   Ready to improve?
                 </h3>
-                <p style={{ 
-                  fontSize: 'var(--font-size-md)', 
+                <p style={{
+                  fontSize: 'var(--font-size-md)',
                   color: 'var(--color-text-secondary)',
                   maxWidth: '400px',
                   margin: '0 auto'
                 }}>
-                  Go to the <strong>Dashboard</strong> and practice your weak subjects. 
+                  Go to the <strong>Dashboard</strong> and practice your weak subjects.
                   Focus on the topics listed above to boost your mastery.
                 </p>
-                <button 
-                  onClick={() => navigate('/dashboard')} 
+                <button
+                  onClick={() => navigate('/dashboard')}
                   className="btn btn-primary btn-lg flex-center"
                   style={{ marginTop: 'var(--space-2)' }}
                 >
@@ -1048,7 +1134,7 @@ export function GamificationPage() {
                 <div
                   key={badge.id}
                   className={`card text-center ${unlocked ? 'success-card' : ''}`}
-                  style={{ 
+                  style={{
                     padding: 'var(--space-3)',
                     opacity: unlocked ? 1 : 0.5,
                     transition: 'all var(--transition)'
@@ -1068,7 +1154,7 @@ export function GamificationPage() {
 }
 
 // ============================================================
-// LEADERBOARDS PAGE — LOCKED FOR FREE USERS
+// LEADERBOARDS PAGE — tap row → friend modal
 // ============================================================
 export function LeaderboardsPage() {
   const navigate = useNavigate()
@@ -1078,6 +1164,12 @@ export function LeaderboardsPage() {
   const [error, setError] = useState(null)
   const [isFreeUser, setIsFreeUser] = useState(false)
   const [subLoading, setSubLoading] = useState(true)
+
+  // ─── Friend modal state ───
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(false)
+  const [userStatus, setUserStatus] = useState(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -1110,18 +1202,7 @@ export function LeaderboardsPage() {
     } catch (err) {
       console.error('Failed to fetch leaderboard:', err)
       setError(err.message || 'Failed to load leaderboard')
-      setLeaderboardData([
-        { rank: 1, name: 'John Doe', xp: 12450, level: 25, school: 'UNILAG' },
-        { rank: 2, name: 'Mary Smith', xp: 10230, level: 22, school: 'UI' },
-        { rank: 3, name: 'Alex Johnson', xp: 8900, level: 20, school: 'UNILAG' },
-        { rank: 4, name: 'David Lee', xp: 7650, level: 18, school: 'UNIBEN' },
-        { rank: 5, name: 'Sarah Jones', xp: 6200, level: 15, school: 'UNILAG' },
-        { rank: 6, name: 'Michael Brown', xp: 5800, level: 14, school: 'UI' },
-        { rank: 7, name: 'Emily Davis', xp: 5200, level: 13, school: 'UNILORIN' },
-        { rank: 8, name: 'James Wilson', xp: 4800, level: 12, school: 'UNILAG' },
-        { rank: 9, name: 'Jessica Taylor', xp: 4500, level: 11, school: 'UNIBEN' },
-        { rank: 10, name: 'Robert Martinez', xp: 4200, level: 10, school: 'UI' },
-      ])
+      setLeaderboardData([])
     } finally {
       setLoading(false)
     }
@@ -1136,6 +1217,67 @@ export function LeaderboardsPage() {
 
   const handleRefresh = () => {
     fetchLeaderboard()
+  }
+
+  // ─── Friend modal logic ───
+  const openUser = async (userId) => {
+    if (!userId) return
+    setSelectedUser(userId)
+    setUserStatus(null)
+    setStatusLoading(true)
+    try {
+      const res = await social.getFriendStatus(userId)
+      setUserStatus(res)
+    } catch (err) {
+      console.error('Failed to load user status:', err)
+      setUserStatus(null)
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
+  const closeUserModal = () => {
+    setSelectedUser(null)
+    setUserStatus(null)
+  }
+
+  const sendFriendRequest = async () => {
+    if (!selectedUser) return
+    setActionLoading(true)
+    try {
+      await social.sendFriendRequest(selectedUser)
+      setUserStatus((prev) => ({ ...prev, outgoingRequestId: 'pending' }))
+    } catch (err) {
+      console.error('Send friend request failed:', err)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const acceptIncoming = async () => {
+    if (!userStatus?.incomingRequestId) return
+    setActionLoading(true)
+    try {
+      await social.acceptFriendRequest(userStatus.incomingRequestId)
+      setUserStatus((prev) => ({ ...prev, isFriend: true, incomingRequestId: null }))
+    } catch (err) {
+      console.error('Accept failed:', err)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const rejectIncoming = async () => {
+    if (!userStatus?.incomingRequestId) return
+    setActionLoading(true)
+    try {
+      await social.rejectFriendRequest(userStatus.incomingRequestId)
+      setUserStatus((prev) => ({ ...prev, incomingRequestId: null }))
+    } catch (err) {
+      console.error('Reject failed:', err)
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   if (subLoading || loading) {
@@ -1210,7 +1352,7 @@ export function LeaderboardsPage() {
         </div>
 
         <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
-          <div className="grid" style={{ 
+          <div className="grid" style={{
             gridTemplateColumns: '1fr 3fr 1fr 1fr',
             gap: 'var(--space-2)',
             padding: 'var(--space-3) var(--space-4)',
@@ -1226,30 +1368,54 @@ export function LeaderboardsPage() {
             <div style={{ textAlign: 'right' }}>Level</div>
           </div>
 
-          {leaderboardData.map((item) => (
-            <div key={item.rank || item.id} className="grid" style={{ 
-              gridTemplateColumns: '1fr 3fr 1fr 1fr',
-              gap: 'var(--space-2)',
-              padding: 'var(--space-3) var(--space-4)',
-              borderBottom: '1px solid var(--color-border-light)',
-              transition: 'background var(--transition)',
-              alignItems: 'center'
-            }}>
-              <div className="flex" style={{ alignItems: 'center', gap: 'var(--space-1)' }}>
-                {getMedal(item.rank)}
-              </div>
-              <div>
-                <div style={{ fontWeight: '500', color: 'var(--color-text)' }}>{item.name}</div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{item.school}</div>
-              </div>
-              <div style={{ textAlign: 'right', fontWeight: '700', color: 'var(--color-primary)' }}>
-                {item.xp.toLocaleString()}
-              </div>
-              <div style={{ textAlign: 'right', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-                Lv.{item.level}
-              </div>
+          {leaderboardData.length === 0 ? (
+            <div className="text-center" style={{ padding: 'var(--space-8)' }}>
+              <p className="text-muted">No rankings yet. Start practicing to appear here!</p>
             </div>
-          ))}
+          ) : (
+            leaderboardData.map((item) => (
+              <button
+                key={item.user_id || item.rank || item.id}
+                onClick={() => openUser(item.user_id || item.id)}
+                className="grid"
+                style={{
+                  gridTemplateColumns: '1fr 3fr 1fr 1fr',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-3) var(--space-4)',
+                  borderBottom: '1px solid var(--color-border-light)',
+                  transition: 'background var(--transition)',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  border: 'none',
+                  width: '100%',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-background)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+              >
+                <div className="flex" style={{ alignItems: 'center', gap: 'var(--space-1)' }}>
+                  {getMedal(item.rank)}
+                </div>
+                <div>
+                  <div style={{ fontWeight: '500', color: 'var(--color-text)' }}>
+                    {item.name || item.username || 'Anonymous'}
+                  </div>
+                  {item.school && (
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                      {item.school}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right', fontWeight: '700', color: 'var(--color-primary)' }}>
+                  {(item.xp || 0).toLocaleString()}
+                </div>
+                <div style={{ textAlign: 'right', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+                  Lv.{item.level || 1}
+                </div>
+              </button>
+            ))
+          )}
         </div>
 
         <div className="card flex-between" style={{ marginTop: 'var(--space-4)' }}>
@@ -1259,10 +1425,138 @@ export function LeaderboardsPage() {
           </div>
           <div>
             <span style={{ color: 'var(--color-text-muted)' }}>Top XP</span>
-            <span style={{ marginLeft: 'var(--space-2)', fontWeight: '600', color: 'var(--color-primary)' }}>{leaderboardData[0]?.xp.toLocaleString()}</span>
+            <span style={{ marginLeft: 'var(--space-2)', fontWeight: '600', color: 'var(--color-primary)' }}>
+              {leaderboardData[0]?.xp?.toLocaleString() || 0}
+            </span>
           </div>
         </div>
       </div>
+
+      {/* ─── FRIEND MODAL ─── */}
+      {selectedUser && (
+        <div
+          className="modal-overlay"
+          onClick={closeUserModal}
+          style={{ zIndex: 200 }}
+        >
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '360px', width: '100%', padding: 'var(--space-5)' }}
+          >
+            {statusLoading ? (
+              <div className="flex-center" style={{ padding: 'var(--space-6)' }}>
+                <Loader2 className="animate-spin" size={24} />
+              </div>
+            ) : userStatus?.user ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
+                  <div
+                    className="flex-center"
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      margin: '0 auto var(--space-3)',
+                      borderRadius: '50%',
+                      background: 'var(--color-primary-light)',
+                      fontWeight: 700,
+                      fontSize: 'var(--font-size-xl)',
+                      color: 'var(--color-primary)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {userStatus.user.avatar ? (
+                      <img
+                        src={userStatus.user.avatar}
+                        alt={userStatus.user.username}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      (userStatus.user.firstName?.[0] || userStatus.user.username?.[0] || 'U').toUpperCase()
+                    )}
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
+                    {userStatus.user.firstName} {userStatus.user.lastName}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
+                    @{userStatus.user.username}
+                  </div>
+                  {userStatus.user.school && (
+                    <div className="text-muted" style={{ fontSize: 'var(--font-size-xs)', marginTop: 2 }}>
+                      {userStatus.user.school}
+                    </div>
+                  )}
+                </div>
+
+                {userStatus.isFriend ? (
+                  <button
+                    className="btn btn-outline flex-center"
+                    style={{ width: '100%' }}
+                    disabled
+                  >
+                    <CheckCircle2 size={16} /> Friends
+                  </button>
+                ) : userStatus.outgoingRequestId ? (
+                  <button
+                    className="btn btn-ghost flex-center"
+                    style={{ width: '100%' }}
+                    disabled
+                  >
+                    <Clock size={16} /> Request sent
+                  </button>
+                ) : userStatus.incomingRequestId ? (
+                  <div className="flex" style={{ gap: 'var(--space-2)' }}>
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 1 }}
+                      onClick={acceptIncoming}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? <Loader2 size={14} className="animate-spin" /> : 'Accept'}
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      style={{ flex: 1 }}
+                      onClick={rejectIncoming}
+                      disabled={actionLoading}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-primary flex-center"
+                    style={{ width: '100%' }}
+                    onClick={sendFriendRequest}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <>
+                        <UserPlus size={16} /> Add Friend
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: '100%', marginTop: 'var(--space-2)' }}
+                  onClick={closeUserModal}
+                >
+                  Close
+                </button>
+              </>
+            ) : (
+              <div className="text-center" style={{ padding: 'var(--space-4)' }}>
+                <p className="text-muted">Could not load user info.</p>
+                <button className="btn btn-outline" onClick={closeUserModal}>Close</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

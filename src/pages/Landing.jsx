@@ -40,6 +40,7 @@ import {
   Lightbulb,
   ChevronRight,
   RotateCw,
+  X,
 } from 'lucide-react'
 import Footer from '../Footer'
 
@@ -90,9 +91,7 @@ export default function Landing() {
 
   return (
     <div style={styles.page}>
-      {/* ============================================== */}
-      {/* HELP LINK (top-left) */}
-      {/* ============================================== */}
+      {/* HELP LINK */}
       <button
         onClick={() => navigate('/help')}
         style={styles.helpLink}
@@ -109,9 +108,7 @@ export default function Landing() {
         <span>Help</span>
       </button>
 
-      {/* ============================================== */}
       {/* HERO */}
-      {/* ============================================== */}
       <section style={styles.hero}>
         <div style={styles.glowOuter} aria-hidden="true">
           <div style={styles.glowInner} />
@@ -191,9 +188,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============================================== */}
-      {/* FEATURE — STUDY PLAN */}
-      {/* ============================================== */}
+      {/* STUDY PLAN */}
       <FeatureSection
         icon={Calendar}
         eyebrow="Study Plan"
@@ -203,9 +198,7 @@ export default function Landing() {
         <MockStudyPlan />
       </FeatureSection>
 
-      {/* ============================================== */}
-      {/* FEATURE — COURSE FINDER */}
-      {/* ============================================== */}
+      {/* COURSE FINDER */}
       <FeatureSection
         icon={Search}
         eyebrow="Course Finder"
@@ -216,9 +209,7 @@ export default function Landing() {
         <MockCourseFinder />
       </FeatureSection>
 
-      {/* ============================================== */}
-      {/* FEATURE — CUT-OFF TRACKER */}
-      {/* ============================================== */}
+      {/* CUT-OFF TRACKER */}
       <FeatureSection
         icon={LineChart}
         eyebrow="Cut-off Tracker"
@@ -228,9 +219,7 @@ export default function Landing() {
         <MockCutoffTracker />
       </FeatureSection>
 
-      {/* ============================================== */}
-      {/* FEATURE — FORMULA SOLVER */}
-      {/* ============================================== */}
+      {/* FORMULA SOLVER */}
       <FeatureSection
         icon={Calculator}
         eyebrow="Formula Solver"
@@ -241,9 +230,7 @@ export default function Landing() {
         <MockFormulaSolver />
       </FeatureSection>
 
-      {/* ============================================== */}
-      {/* FEATURE — SOCIAL */}
-      {/* ============================================== */}
+      {/* SOCIAL */}
       <FeatureSection
         icon={MessageSquare}
         eyebrow="Social"
@@ -253,9 +240,7 @@ export default function Landing() {
         <MockSocial />
       </FeatureSection>
 
-      {/* ============================================== */}
-      {/* FEATURE — PARENT VIEW */}
-      {/* ============================================== */}
+      {/* PARENT VIEW */}
       <FeatureSection
         icon={Eye}
         eyebrow="Parent View"
@@ -338,13 +323,15 @@ function MockStudyPlan() {
 }
 
 // ============================================================
-// MOCK — COURSE FINDER (matches CourseFinderPage)
+// MOCK — COURSE FINDER (better presentation)
+// Shows: search bar with dropdown, selected uni, course, score,
+//        result card with status, score comparison, recommendations
 // ============================================================
 function MockCourseFinder() {
   return (
-    <div style={mock.frame}>
+    <div style={{ ...mock.frame, maxWidth: 520 }}>
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 'var(--space-4)' }}>
+      <div style={mock.tabRow}>
         <div style={mock.tabActive}>
           <Search size={13} />
           <span>New Check</span>
@@ -355,52 +342,106 @@ function MockCourseFinder() {
         </div>
       </div>
 
-      {/* Selected university */}
-      <div style={mock.selectedBox}>
-        <Building2 size={14} color="var(--color-primary)" />
-        <span style={mock.selectedName}>University of Lagos</span>
-        <CheckCircle2 size={14} color="var(--color-success)" style={{ marginLeft: 'auto' }} />
+      {/* University search — showing dropdown state */}
+      <div style={mock.fieldGroup}>
+        <div style={mock.fieldHeader}>
+          <Building2 size={13} color="var(--color-primary)" />
+          <span style={mock.fieldHeaderText}>University</span>
+        </div>
+
+        <div style={mock.searchInput}>
+          <Search size={14} color="var(--color-text-muted)" />
+          <span style={mock.searchInputText}>University of Lagos</span>
+          <X size={14} color="var(--color-text-muted)" style={{ marginLeft: 'auto' }} />
+        </div>
+
+        {/* Dropdown peek */}
+        <div style={mock.dropdown}>
+          <div style={{ ...mock.dropdownItem, background: 'var(--color-primary-light)' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={mock.dropdownName}>University of Lagos</div>
+              <div style={mock.dropdownMeta}>
+                <MapPin size={11} style={{ display: 'inline' }} /> Nigeria
+              </div>
+            </div>
+            <CheckCircle2 size={14} color="var(--color-primary)" />
+          </div>
+          <div style={mock.dropdownItem}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={mock.dropdownName}>University of Ibadan</div>
+              <div style={mock.dropdownMeta}>
+                <MapPin size={11} style={{ display: 'inline' }} /> Nigeria
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Course + score fields */}
-      <div style={mock.fieldRow}>
-        <div style={mock.fieldLabel}>Course</div>
-        <div style={mock.fieldValue}>Computer Science</div>
-      </div>
-      <div style={mock.fieldRow}>
-        <div style={mock.fieldLabel}>Score (JAMB)</div>
-        <div style={mock.fieldValue}>278</div>
+      {/* Course + Score row */}
+      <div style={mock.fieldPairRow}>
+        <div style={mock.fieldHalf}>
+          <div style={mock.fieldHeader}>
+            <BookOpen size={13} color="var(--color-primary)" />
+            <span style={mock.fieldHeaderText}>Course</span>
+          </div>
+          <div style={mock.smallInput}>Computer Science</div>
+        </div>
+        <div style={mock.fieldHalf}>
+          <div style={mock.fieldHeader}>
+            <Target size={13} color="var(--color-primary)" />
+            <span style={mock.fieldHeaderText}>Score (JAMB)</span>
+          </div>
+          <div style={mock.smallInputMono}>278</div>
+        </div>
       </div>
 
-      {/* Result — qualified */}
-      <div style={mock.resultGood}>
-        <div style={mock.resultIconGood}>
-          <CheckCircle2 size={20} color="var(--color-success)" />
+      {/* Result card */}
+      <div style={mock.resultCard}>
+        <div style={mock.resultIconWrap}>
+          <CheckCircle2 size={22} color="var(--color-success)" />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>
-            Qualified
+          <div style={mock.resultTitle}>Qualified</div>
+          <div style={mock.resultSub}>
+            Your score meets the requirement
           </div>
-          <div style={{ fontSize: 'var(--font-size-xs)', opacity: 0.85, marginTop: 2 }}>
-            Score needed: 265 · 82% chance
+
+          {/* Score vs cutoff row */}
+          <div style={mock.compareRow}>
+            <div style={mock.compareBlock}>
+              <div style={mock.compareLabel}>Your score</div>
+              <div style={{ ...mock.compareValue, color: 'var(--color-success)' }}>278</div>
+            </div>
+            <div style={mock.compareDivider} />
+            <div style={mock.compareBlock}>
+              <div style={mock.compareLabel}>Cutoff</div>
+              <div style={mock.compareValue}>265</div>
+            </div>
+            <div style={mock.compareDivider} />
+            <div style={mock.compareBlock}>
+              <div style={mock.compareLabel}>Chance</div>
+              <div style={{ ...mock.compareValue, color: 'var(--color-success)' }}>82%</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recommendations */}
-      <div style={mock.recoBox}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+      {/* Recommendation pill */}
+      <div style={mock.recoRow}>
+        <div style={mock.recoIcon}>
           <Lightbulb size={13} color="var(--color-primary)" />
-          <span style={mock.recoLabel}>Recommendations</span>
         </div>
-        <div style={mock.recoRow}>Practice harder questions to lock in your score</div>
+        <div style={mock.recoText}>
+          Practice harder questions to lock in your score
+        </div>
+        <ChevronRight size={14} color="var(--color-text-muted)" />
       </div>
     </div>
   )
 }
 
 // ============================================================
-// MOCK — CUT-OFF TRACKER (matches CutoffTrackerPage)
+// MOCK — CUT-OFF TRACKER
 // ============================================================
 function MockCutoffTracker() {
   const years = [
@@ -447,7 +488,6 @@ function MockCutoffTracker() {
         })}
       </div>
 
-      {/* Prediction */}
       <div style={mock.predictionBox}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <TrendingUp size={14} color="var(--color-warning)" />
@@ -908,11 +948,16 @@ const mock = {
   },
 
   // Course Finder
+  tabRow: {
+    display: 'flex',
+    gap: 6,
+    marginBottom: 'var(--space-4)',
+  },
   tabActive: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    padding: '6px 12px',
+    padding: '7px 14px',
     background: 'var(--color-primary)',
     color: 'white',
     borderRadius: 'var(--radius-lg)',
@@ -923,7 +968,7 @@ const mock = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    padding: '6px 12px',
+    padding: '7px 14px',
     background: 'transparent',
     color: 'var(--color-text-muted)',
     border: '1px solid var(--color-border)',
@@ -931,54 +976,107 @@ const mock = {
     fontSize: 'var(--font-size-xs)',
     fontWeight: 500,
   },
-  selectedBox: {
+  fieldGroup: {
+    marginBottom: 'var(--space-3)',
+    position: 'relative',
+  },
+  fieldHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  fieldHeaderText: {
+    fontSize: '10px',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: 'var(--color-text-muted)',
+  },
+  searchInput: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '10px 12px',
-    background: 'var(--color-primary-light)',
+    padding: '9px 12px',
+    background: 'var(--color-background)',
+    border: '2px solid var(--color-primary)',
     borderRadius: 'var(--radius-lg)',
-    marginBottom: 'var(--space-3)',
-  },
-  selectedName: {
     fontSize: 'var(--font-size-sm)',
-    fontWeight: 600,
-    color: 'var(--color-primary)',
+  },
+  searchInputText: {
+    color: 'var(--color-text)',
+    fontWeight: 500,
     flex: 1,
     minWidth: 0,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  fieldRow: {
+  dropdown: {
+    marginTop: 6,
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    overflow: 'hidden',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+  },
+  dropdownItem: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '10px 0',
+    gap: 8,
+    padding: '8px 12px',
     borderBottom: '1px solid var(--color-border-light)',
   },
-  fieldLabel: {
+  dropdownName: {
     fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-muted)',
-  },
-  fieldValue: {
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 600,
+    fontWeight: 500,
     color: 'var(--color-text)',
   },
-  resultGood: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-    marginTop: 'var(--space-4)',
-    padding: '12px 14px',
-    background: 'var(--color-success-light)',
-    color: 'var(--color-success)',
-    borderRadius: 'var(--radius-lg)',
+  dropdownMeta: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-text-muted)',
+    marginTop: 1,
   },
-  resultIconGood: {
-    width: 40,
-    height: 40,
+  fieldPairRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 'var(--space-3)',
+    marginBottom: 'var(--space-4)',
+  },
+  fieldHalf: {},
+  smallInput: {
+    padding: '8px 11px',
+    background: 'var(--color-background)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-text)',
+    fontWeight: 500,
+  },
+  smallInputMono: {
+    padding: '8px 11px',
+    background: 'var(--color-background)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-text)',
+    fontWeight: 700,
+    fontFamily: 'var(--font-mono)',
+  },
+
+  // Result card
+  resultCard: {
+    display: 'flex',
+    gap: 'var(--space-3)',
+    padding: '14px',
+    background: 'var(--color-success-light)',
+    border: '2px solid var(--color-success)',
+    borderRadius: 'var(--radius-xl)',
+    marginBottom: 'var(--space-3)',
+  },
+  resultIconWrap: {
+    width: 44,
+    height: 44,
     borderRadius: '50%',
     background: 'white',
     display: 'flex',
@@ -986,21 +1084,75 @@ const mock = {
     justifyContent: 'center',
     flexShrink: 0,
   },
-  recoBox: {
-    marginTop: 'var(--space-3)',
+  resultTitle: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 700,
+    color: 'var(--color-success)',
+    lineHeight: 1.2,
+  },
+  resultSub: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-text-secondary)',
+    marginTop: 2,
+  },
+  compareRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+    marginTop: 10,
+    padding: '8px 10px',
+    background: 'rgba(255,255,255,0.7)',
+    borderRadius: 'var(--radius-lg)',
+  },
+  compareBlock: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  compareLabel: {
+    fontSize: '10px',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+    color: 'var(--color-text-muted)',
+  },
+  compareValue: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 700,
+    color: 'var(--color-text)',
+    fontFamily: 'var(--font-mono)',
+    marginTop: 2,
+  },
+  compareDivider: {
+    width: 1,
+    height: 24,
+    background: 'rgba(0,0,0,0.08)',
+  },
+
+  // Recommendation row
+  recoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
     padding: '10px 12px',
     background: 'var(--color-primary-light)',
     borderRadius: 'var(--radius-lg)',
   },
-  recoLabel: {
-    fontSize: 'var(--font-size-xs)',
-    fontWeight: 700,
-    color: 'var(--color-primary)',
+  recoIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: '50%',
+    background: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  recoRow: {
+  recoText: {
     fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-text-secondary)',
-    lineHeight: 1.5,
+    color: 'var(--color-primary)',
+    fontWeight: 500,
+    lineHeight: 1.4,
+    flex: 1,
+    minWidth: 0,
   },
 
   // Cut-off Tracker

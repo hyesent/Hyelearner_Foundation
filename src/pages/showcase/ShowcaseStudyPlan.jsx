@@ -1,21 +1,21 @@
 // ============================================================
 // HYELEARNER: FOUNDATION — STUDY PLAN (SHOWCASE / PREVIEW)
 // Static replica of StudyPlanPage. Read-only + preview-aware.
+// Navigation is local: onNavigate('pageKey') — no router.
 // Built by Hyesent.dev
 // ============================================================
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { ViewOnly } from './ViewOnly'
 import {
-  ArrowLeft, Calendar, Trash2, Loader2, Sparkles, Target, Clock,
-  CheckCircle2, AlertCircle, Zap, Download, RefreshCw, Cpu, Brain,
+  ArrowLeft, Calendar, Trash2, Sparkles, Target, Clock,
+  CheckCircle2, Download, RefreshCw, Cpu, Brain,
   Award, BookOpen, TrendingUp, BarChart3, Lightbulb, Trophy, Crown,
-  Lock, FileText, PlayCircle, StopCircle, Timer, Star,
+  FileText, PlayCircle, StopCircle, Timer, Star,
 } from 'lucide-react'
 
 // ============================================================
-// STATIC DATA — what a real subscriber would see
+// STATIC DATA
 // ============================================================
 const PLAN = {
   exam_date: '2026-06-15',
@@ -30,30 +30,30 @@ const PLAN = {
       weak_areas: ['Organic Chemistry', 'Trigonometry', 'Comprehension'],
     },
     subject_breakdown: {
-      Mathematics: { topics: new Array(8), hours_per_week: 6, weak_count: 1, priority: 'High', weak_topics: ['Trigonometry'] },
+      Mathematics: { topics: new Array(8), hours_per_week: 6, weak_count: 1, priority: 'High',   weak_topics: ['Trigonometry'] },
       Physics:     { topics: new Array(6), hours_per_week: 5, weak_count: 0, priority: 'Normal' },
-      Chemistry:   { topics: new Array(5), hours_per_week: 4, weak_count: 1, priority: 'High', weak_topics: ['Organic Chemistry'] },
+      Chemistry:   { topics: new Array(5), hours_per_week: 4, weak_count: 1, priority: 'High',   weak_topics: ['Organic Chemistry'] },
       English:     { topics: new Array(5), hours_per_week: 4, weak_count: 1, priority: 'Normal', weak_topics: ['Comprehension'] },
       Biology:     { topics: new Array(4), hours_per_week: 3, weak_count: 0, priority: 'Low' },
     },
     weekly_schedule: [
-      { day: 'Monday',    total_hours: 2.5, focus: 'Algebra & Mechanics', topics: [
+      { day: 'Monday',    total_hours: 2.5, focus: 'Algebra & Mechanics',    topics: [
         { subject: 'Mathematics', topic: 'Quadratic Equations', hours: 1.5 },
         { subject: 'Physics',     topic: "Newton's Laws",       hours: 1.0 },
       ]},
       { day: 'Tuesday',   total_hours: 2.0, focus: 'Chemistry fundamentals', topics: [
-        { subject: 'Chemistry', topic: 'Atomic Structure', hours: 1.0 },
+        { subject: 'Chemistry', topic: 'Atomic Structure',    hours: 1.0 },
         { subject: 'English',   topic: 'Argumentative Essay', hours: 1.0 },
       ]},
       { day: 'Wednesday', total_hours: 2.5, focus: 'Biology & Comprehension', topics: [
         { subject: 'Biology', topic: 'Cell Division', hours: 1.5 },
-        { subject: 'English', topic: 'Comprehension',  hours: 1.0 },
+        { subject: 'English', topic: 'Comprehension', hours: 1.0 },
       ]},
       { day: 'Thursday',  total_hours: 2.0, focus: 'Physics intensive', topics: [
         { subject: 'Physics', topic: 'Work, Energy & Power', hours: 2.0 },
       ]},
       { day: 'Friday',    total_hours: 2.5, focus: 'Math & Chemistry', topics: [
-        { subject: 'Mathematics', topic: 'Trigonometry', hours: 1.5 },
+        { subject: 'Mathematics', topic: 'Trigonometry',      hours: 1.5 },
         { subject: 'Chemistry',   topic: 'Organic Chemistry', hours: 1.0 },
       ]},
       { day: 'Saturday',  total_hours: 3.0, focus: 'Practice tests', topics: [
@@ -65,14 +65,14 @@ const PLAN = {
       ]},
     ],
     topic_priorities: [
-      { subject: 'Chemistry',   topic: 'Organic Chemistry',  priority: 'High' },
-      { subject: 'Mathematics', topic: 'Trigonometry',       priority: 'High' },
-      { subject: 'English',     topic: 'Comprehension',      priority: 'High' },
-      { subject: 'Physics',     topic: 'Projectile Motion',  priority: 'Medium' },
-      { subject: 'Mathematics', topic: 'Logarithms',         priority: 'Medium' },
-      { subject: 'Biology',     topic: 'Genetics',           priority: 'Medium' },
-      { subject: 'English',     topic: 'Synonyms',           priority: 'Low' },
-      { subject: 'Physics',     topic: 'Waves',              priority: 'Low' },
+      { subject: 'Chemistry',   topic: 'Organic Chemistry', priority: 'High' },
+      { subject: 'Mathematics', topic: 'Trigonometry',      priority: 'High' },
+      { subject: 'English',     topic: 'Comprehension',     priority: 'High' },
+      { subject: 'Physics',     topic: 'Projectile Motion', priority: 'Medium' },
+      { subject: 'Mathematics', topic: 'Logarithms',        priority: 'Medium' },
+      { subject: 'Biology',     topic: 'Genetics',          priority: 'Medium' },
+      { subject: 'English',     topic: 'Synonyms',          priority: 'Low' },
+      { subject: 'Physics',     topic: 'Waves',             priority: 'Low' },
     ],
     recommendations: [
       'Spend 30 extra minutes daily on Organic Chemistry — your weakest area.',
@@ -133,9 +133,9 @@ function CountdownTimer({ targetDate }) {
 }
 
 // ============================================================
-// DAILY TUTOR CTA (static = "not started" state)
+// DAILY TUTOR CTA
 // ============================================================
-function DailyTutorCTA() {
+function DailyTutorCTA({ onNavigate }) {
   const todayTopic = { subject: 'Mathematics', topic: 'Quadratic Equations', hours: 1.5 }
 
   return (
@@ -154,7 +154,11 @@ function DailyTutorCTA() {
           </div>
         </div>
         <ViewOnly tooltip="Sign up to start Daily Tutor">
-          <button className="btn btn-primary btn-lg" style={{ flexShrink: 0, padding: 'var(--space-3) var(--space-6)', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)' }}>
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={() => onNavigate?.('dailyTutor')}
+            style={{ flexShrink: 0, padding: 'var(--space-3) var(--space-6)', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)' }}
+          >
             <PlayCircle size={18} /> Start Daily Tutor
           </button>
         </ViewOnly>
@@ -339,7 +343,7 @@ function PlanView() {
 }
 
 // ============================================================
-// PROGRESS VIEW — static values only (no storage reads)
+// PROGRESS VIEW — static
 // ============================================================
 function ProgressView() {
   const progressData = {
@@ -371,8 +375,8 @@ function ProgressView() {
         { subject: 'English',   topic: 'Argumentative Essay', status: 'in-progress', mastery: 40 },
       ]},
       { day: 'Wednesday', completed: 1, total: 2, percentage: 50, topics: [
-        { subject: 'Biology', topic: 'Cell Division',  status: 'completed',   mastery: 81 },
-        { subject: 'English', topic: 'Comprehension',  status: 'in-progress', mastery: 35 },
+        { subject: 'Biology', topic: 'Cell Division', status: 'completed',   mastery: 81 },
+        { subject: 'English', topic: 'Comprehension', status: 'in-progress', mastery: 35 },
       ]},
       { day: 'Thursday',  completed: 1, total: 1, percentage: 100, topics: [
         { subject: 'Physics', topic: 'Work, Energy & Power', status: 'completed', mastery: 79 },
@@ -602,8 +606,7 @@ function ProgressView() {
 // ============================================================
 // MAIN SHOWCASE — Study Plan
 // ============================================================
-export default function ShowcaseStudyPlan() {
-  const navigate = useNavigate()
+export default function ShowcaseStudyPlan({ onNavigate }) {
   const [viewMode, setViewMode] = useState('plan')
 
   const examDate = PLAN.exam_date
@@ -622,8 +625,10 @@ export default function ShowcaseStudyPlan() {
               <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>Your personalized study plan</p>
             </div>
           </div>
-          <ViewOnly tooltip="Sign up to navigate">
-            <button className="btn btn-ghost" onClick={() => navigate('/dashboard')}><ArrowLeft size={16} /> Back</button>
+          <ViewOnly tooltip="Sign up to go back">
+            <button className="btn btn-ghost" onClick={() => onNavigate?.('dashboard')}>
+              <ArrowLeft size={16} /> Back
+            </button>
           </ViewOnly>
         </div>
 
@@ -631,7 +636,7 @@ export default function ShowcaseStudyPlan() {
           <CountdownTimer targetDate={examDate} />
         </div>
 
-        <DailyTutorCTA />
+        <DailyTutorCTA onNavigate={onNavigate} />
 
         <div className="card flex-between" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>

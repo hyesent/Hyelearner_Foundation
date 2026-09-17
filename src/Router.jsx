@@ -1,75 +1,32 @@
 // ============================================================
-// HYELEARNER: FOUNDATION — ROUTER
+// HYELEARNER: FOUNDATION — ROUTER (WITH DAILY TUTOR HISTORY)
 // Built by Hyesent.dev
 // ============================================================
 
-import { Suspense } from 'react'
+import { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
 import { LoadingScreen } from './components/LoadingScreen'
 
-// ===== AUTH PAGES =====
 import Login from './pages/auth'
 import { Register, ForgotPassword } from './pages/auth'
-
-// ===== HOME (NEW — tabbed shell) =====
 import Home from './pages/Home'
-
-// ===== DASHBOARD =====
 import Dashboard from './pages/dashboard'
-
-// ===== HYETUTOR =====
 import { HyeTutorPage, HyeTutorChatPage } from './pages/hyetutor'
-
-// ===== LEARN PAGES =====
-import { 
-  CBTPracticePage, 
-  ResultsPage, 
-  TopicModePage 
-} from './pages/learn-pages'
-
-// ===== LESSON PAGES (NEW) =====
+import DailyTutorPage from './pages/hyetutor/DailyTutorPage'
+import { CBTPracticePage, ResultsPage, TopicModePage } from './pages/learn-pages'
 import { LessonsPage } from './pages/lesson-pages'
-
-// ===== ENGAGE PAGES =====
-import { 
-  HeatmapPage, 
-  WeaknessFinderPage, 
-  GamificationPage, 
-  LeaderboardsPage 
-} from './pages/engage-pages'
-
-// ===== EXTEND PAGES =====
-import { 
-  MistakeBookPage, 
-  RevisionPlannerPage, 
-  DuoBattlePage 
-} from './pages/extend-pages'
-
-// ===== EXTRA PAGES =====
-import { 
-  ParentDashboardPage, 
-  CourseFinderPage, 
-  CutoffTrackerPage, 
-  BookmarksPage, 
-  SettingsPage, 
-  ProfilePage, 
-  OfflinePage 
+import { HeatmapPage, WeaknessFinderPage, GamificationPage, LeaderboardsPage } from './pages/engage-pages'
+import { MistakeBookPage, RevisionPlannerPage, DuoBattlePage } from './pages/extend-pages'
+import {
+  ParentDashboardPage, CourseFinderPage, CutoffTrackerPage,
+  BookmarksPage, SettingsPage, ProfilePage, OfflinePage,
+  EditProfilePage,
 } from './pages/extra-pages'
-
-// ===== STUDY PLAN PAGE =====
 import { StudyPlanPage } from './pages/study-plan'
-
-// ===== ANALYTICS PAGE =====
 import { AnalyticsPage } from './pages/analytics'
-
-// ===== MOCK EXAMS PAGE =====
 import { MockExamsPage } from './pages/mock-exams'
-
-// ===== SOCIAL PAGE =====
 import SocialPage from './pages/social/SocialPage'
-
-// ===== NEW PAGES =====
 import { DictionaryPage } from './pages/dictionary'
 import { FormulaExplorerPage } from './pages/formulapage'
 import { AdminPage } from './pages/AdminPage'
@@ -79,22 +36,21 @@ export default function Router() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        {/* ===== PUBLIC ROUTES ===== */}
+        {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* ===== PROTECTED ROUTES ===== */}
+        {/* PROTECTED */}
         <Route element={<ProtectedRoute />}>
-          {/* Home (tabbed shell: Home / Study / Duel) */}
+          {/* Home shell */}
           <Route path="/" element={<Home />} />
-
-          {/* Dashboard (opened via 4-dot nav button) */}
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* HyeTutor */}
           <Route path="/hyetutor" element={<HyeTutorPage />} />
           <Route path="/hyetutor/chat" element={<HyeTutorChatPage />} />
+          <Route path="/daily-tutor/history" element={<DailyTutorPage />} />
 
           {/* Learn */}
           <Route path="/lessons" element={<LessonsPage />} />
@@ -120,29 +76,24 @@ export default function Router() {
           <Route path="/bookmarks" element={<BookmarksPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/offline" element={<OfflinePage />} />
 
           {/* Study Plan */}
           <Route path="/study-plan" element={<StudyPlanPage />} />
 
-          {/* Analytics */}
+          {/* Other */}
           <Route path="/analytics" element={<AnalyticsPage />} />
-
-          {/* Mock Exams */}
           <Route path="/mock-exams" element={<MockExamsPage />} />
-
-          {/* Social */}
           <Route path="/social" element={<SocialPage />} />
           <Route path="/social/chat" element={<SocialPage />} />
-
-          {/* NEW */}
           <Route path="/feedback" element={<FeedbackContributionsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/dictionary" element={<DictionaryPage />} />
           <Route path="/formulas" element={<FormulaExplorerPage />} />
         </Route>
 
-        {/* ===== 404 ===== */}
+        {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

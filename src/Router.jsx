@@ -41,6 +41,11 @@ import ParentLogin from './pages/parent/ParentLogin'
 import ParentDashboard from './pages/parent/ParentDashboard'
 import Help from './pages/help/Help'
 
+// ── SHOWCASE ─────────────────────────────────────────────
+import { PreviewProvider } from './pages/showcase/PreviewContext'
+import { ShowcaseLayout } from './pages/showcase/ShowcaseLayout'
+import { ShowcaseShell } from './pages/showcase/ShowcaseShell'
+
 // ============================================================
 // ROUTE WRAPPERS
 // ============================================================
@@ -112,6 +117,18 @@ export default function Router() {
 
         {/* HELP — public */}
         <Route path="/help" element={<Help />} />
+
+        {/* ── SHOWCASE — public, no auth, no protection ── */}
+        <Route
+          path="/showcase"
+          element={
+            <PreviewProvider>
+              <ShowcaseLayout pageName="Hyelearner">
+                <ShowcaseShell />
+              </ShowcaseLayout>
+            </PreviewProvider>
+          }
+        />
 
         {/* ONBOARDING */}
         <Route path="/slideshow/student" element={<StudentSlideshowRoute />} />

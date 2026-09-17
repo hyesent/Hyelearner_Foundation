@@ -9,7 +9,7 @@ import { ThemeProvider } from './context'
 import { NotificationProvider } from './context'
 import { SubscriptionProvider } from './context'
 import { LoadingScreen } from './components/LoadingScreen'
-
+import { HydrationProvider } from './context'
 export function Providers({ children }) {
   const [loading, setLoading] = useState(true)
 
@@ -26,14 +26,16 @@ export function Providers({ children }) {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <SubscriptionProvider>
-          <NotificationProvider>
-            {children}
-          </NotificationProvider>
-        </SubscriptionProvider>
-      </AuthProvider>
-    </ThemeProvider>
+<ThemeProvider>
+  <AuthProvider>
+    <SubscriptionProvider>
+      <NotificationProvider>
+        <HydrationProvider>
+          {children}
+        </HydrationProvider>
+      </NotificationProvider>
+    </SubscriptionProvider>
+  </AuthProvider>
+</ThemeProvider>
   )
 }

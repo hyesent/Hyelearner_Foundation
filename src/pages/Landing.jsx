@@ -33,6 +33,13 @@ import {
   UserPlus,
   Globe,
   Trophy,
+  Building2,
+  MapPin,
+  LineChart,
+  History,
+  Lightbulb,
+  ChevronRight,
+  RotateCw,
 } from 'lucide-react'
 import Footer from '../Footer'
 
@@ -71,20 +78,14 @@ export default function Landing() {
 
   const handleStudent = () => {
     const seen = localStorage.getItem('hyelearner_slideshow_seen') === 'true'
-    if (seen) {
-      navigate('/login')
-    } else {
-      navigate('/slideshow/student')
-    }
+    if (seen) navigate('/login')
+    else navigate('/slideshow/student')
   }
 
   const handleParent = () => {
     const seen = localStorage.getItem('hyelearner_parent_slideshow_seen') === 'true'
-    if (seen) {
-      navigate('/parent/login')
-    } else {
-      navigate('/slideshow/parent')
-    }
+    if (seen) navigate('/parent/login')
+    else navigate('/slideshow/parent')
   }
 
   return (
@@ -112,37 +113,28 @@ export default function Landing() {
       {/* HERO */}
       {/* ============================================== */}
       <section style={styles.hero}>
-        {/* Pulsing glow behind the logo */}
         <div style={styles.glowOuter} aria-hidden="true">
           <div style={styles.glowInner} />
         </div>
 
-        {/* Solid pulsing logo */}
         <div style={styles.logoWrap}>
           <HyelearnerLogo size={180} />
         </div>
 
-        {/* Wordmark */}
-        <div style={styles.wordmark}>
-          Hyelearner:Foundation
-        </div>
+        <div style={styles.wordmark}>Hyelearner:Foundation</div>
 
-        {/* Headline */}
         <h1 style={styles.headline}>
           Built for the exam
           <br />
           you actually sit.
         </h1>
 
-        {/* Subtitle */}
         <p style={styles.subhead}>
           30,000+ questions, structured lessons, and AI coaching — for
           secondary school, pre-university, and college entrance exams.
         </p>
 
-        {/* Two vertical cards */}
         <div style={styles.cardsWrap}>
-          {/* STUDENT */}
           <button
             onClick={handleStudent}
             style={styles.card}
@@ -170,7 +162,6 @@ export default function Landing() {
             </div>
           </button>
 
-          {/* PARENT */}
           <button
             onClick={handleParent}
             style={styles.card}
@@ -219,10 +210,22 @@ export default function Landing() {
         icon={Search}
         eyebrow="Course Finder"
         title="Know your real chances."
-        body="Enter your score, subjects, and target course. Hyelearner compares against real cutoff data and tells you whether you're on track, borderline, or need to adjust your choices."
+        body="Search a university, enter your course, score, and subjects. Hyelearner checks against real admission data and tells you whether you're qualified, borderline, or need a different plan."
         alt
       >
         <MockCourseFinder />
+      </FeatureSection>
+
+      {/* ============================================== */}
+      {/* FEATURE — CUT-OFF TRACKER */}
+      {/* ============================================== */}
+      <FeatureSection
+        icon={LineChart}
+        eyebrow="Cut-off Tracker"
+        title="Five years of data, one graph."
+        body="Track how cut-off marks have moved for any university and course over the last five years. See the trend, get a prediction for this year, and know whether a course is safe or highly competitive."
+      >
+        <MockCutoffTracker />
       </FeatureSection>
 
       {/* ============================================== */}
@@ -233,6 +236,7 @@ export default function Landing() {
         eyebrow="Formula Solver"
         title="Every formula, solved for any variable."
         body="Browse 100+ formulas across all subjects. Enter the values you know, leave one blank, and Hyelearner solves for the unknown — then verifies the answer by plugging it back in."
+        alt
       >
         <MockFormulaSolver />
       </FeatureSection>
@@ -245,7 +249,6 @@ export default function Landing() {
         eyebrow="Social"
         title="Study together, not alone."
         body="Add friends, message them, join study groups, and see who's online. Learning is easier when someone's in it with you."
-        alt
       >
         <MockSocial />
       </FeatureSection>
@@ -258,13 +261,11 @@ export default function Landing() {
         eyebrow="Parent View"
         title="For the parents paying attention."
         body="One code gives a parent a read-only view of their child's progress — subject readiness, recent activity, study time, and where they need help. No spying, no personal data."
+        alt
       >
         <MockParentView />
       </FeatureSection>
 
-      {/* ============================================== */}
-      {/* FOOTER */}
-      {/* ============================================== */}
       <Footer />
     </div>
   )
@@ -277,7 +278,6 @@ function FeatureSection({ icon: Icon, eyebrow, title, body, children, alt = fals
   return (
     <section style={{ ...styles.feature, ...(alt ? styles.featureAlt : {}) }}>
       <div style={styles.featureInner}>
-        {/* TEXT UP */}
         <div style={styles.featureText}>
           <div style={styles.featureEyebrow}>
             <Icon size={14} />
@@ -287,10 +287,7 @@ function FeatureSection({ icon: Icon, eyebrow, title, body, children, alt = fals
           <p style={styles.featureBody}>{body}</p>
         </div>
 
-        {/* MOCK DOWN */}
-        <div style={styles.featureMock}>
-          {children}
-        </div>
+        <div style={styles.featureMock}>{children}</div>
       </div>
     </section>
   )
@@ -341,40 +338,126 @@ function MockStudyPlan() {
 }
 
 // ============================================================
-// MOCK — COURSE FINDER
+// MOCK — COURSE FINDER (matches CourseFinderPage)
 // ============================================================
 function MockCourseFinder() {
   return (
     <div style={mock.frame}>
-      <div style={mock.header}>
-        <div style={mock.headerLeft}>
-          <Search size={16} color="var(--color-primary)" />
-          <span style={mock.headerTitle}>University of Lagos</span>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 'var(--space-4)' }}>
+        <div style={mock.tabActive}>
+          <Search size={13} />
+          <span>New Check</span>
+        </div>
+        <div style={mock.tabInactive}>
+          <History size={13} />
+          <span>History</span>
         </div>
       </div>
 
+      {/* Selected university */}
+      <div style={mock.selectedBox}>
+        <Building2 size={14} color="var(--color-primary)" />
+        <span style={mock.selectedName}>University of Lagos</span>
+        <CheckCircle2 size={14} color="var(--color-success)" style={{ marginLeft: 'auto' }} />
+      </div>
+
+      {/* Course + score fields */}
       <div style={mock.fieldRow}>
         <div style={mock.fieldLabel}>Course</div>
         <div style={mock.fieldValue}>Computer Science</div>
       </div>
       <div style={mock.fieldRow}>
-        <div style={mock.fieldLabel}>Your score</div>
-        <div style={mock.fieldValue}>278 / 400</div>
-      </div>
-      <div style={mock.fieldRow}>
-        <div style={mock.fieldLabel}>Last cutoff</div>
-        <div style={mock.fieldValue}>265</div>
+        <div style={mock.fieldLabel}>Score (JAMB)</div>
+        <div style={mock.fieldValue}>278</div>
       </div>
 
+      {/* Result — qualified */}
       <div style={mock.resultGood}>
-        <CheckCircle2 size={16} />
-        <div>
+        <div style={mock.resultIconGood}>
+          <CheckCircle2 size={20} color="var(--color-success)" />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>
-            Strong chance
+            Qualified
           </div>
           <div style={{ fontSize: 'var(--font-size-xs)', opacity: 0.85, marginTop: 2 }}>
-            13 points above last year&rsquo;s cutoff
+            Score needed: 265 · 82% chance
           </div>
+        </div>
+      </div>
+
+      {/* Recommendations */}
+      <div style={mock.recoBox}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <Lightbulb size={13} color="var(--color-primary)" />
+          <span style={mock.recoLabel}>Recommendations</span>
+        </div>
+        <div style={mock.recoRow}>Practice harder questions to lock in your score</div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// MOCK — CUT-OFF TRACKER (matches CutoffTrackerPage)
+// ============================================================
+function MockCutoffTracker() {
+  const years = [
+    { year: 2020, value: 245 },
+    { year: 2021, value: 251 },
+    { year: 2022, value: 258 },
+    { year: 2023, value: 262 },
+    { year: 2024, value: 265 },
+  ]
+
+  const max = 280
+
+  return (
+    <div style={mock.frame}>
+      <div style={mock.header}>
+        <div style={mock.headerLeft}>
+          <LineChart size={16} color="var(--color-warning)" />
+          <span style={mock.headerTitle}>UNILAG — Computer Science</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+        {years.map((y) => {
+          const isLatest = y.year === 2024
+          const pct = (y.value / max) * 100
+          return (
+            <div key={y.year} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={mock.yearLabel}>{y.year}</span>
+              <div style={mock.track}>
+                <div
+                  style={{
+                    width: `${pct}%`,
+                    height: '100%',
+                    background: isLatest ? 'var(--color-primary)' : 'var(--color-primary-light)',
+                    borderRadius: 3,
+                  }}
+                />
+              </div>
+              <span style={{ ...mock.yearValue, color: isLatest ? 'var(--color-primary)' : 'var(--color-text)' }}>
+                {y.value}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Prediction */}
+      <div style={mock.predictionBox}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <TrendingUp size={14} color="var(--color-warning)" />
+          <span style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)', color: 'var(--color-warning)' }}>
+            Prediction: 270
+          </span>
+        </div>
+        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertTriangle size={11} />
+          <span>Highly Competitive</span>
         </div>
       </div>
     </div>
@@ -394,9 +477,7 @@ function MockFormulaSolver() {
         </div>
       </div>
 
-      <div style={mock.formulaBig}>
-        x = (-b ± √(b² - 4ac)) / 2a
-      </div>
+      <div style={mock.formulaBig}>x = (-b ± √(b² - 4ac)) / 2a</div>
 
       <div style={mock.inputRow}>
         <span style={mock.inputKey}>a</span>
@@ -773,6 +854,7 @@ const mock = {
     color: 'var(--color-primary)',
   },
 
+  // Study Plan rows
   row: {
     display: 'flex',
     alignItems: 'center',
@@ -825,6 +907,49 @@ const mock = {
     color: 'var(--color-text-muted)',
   },
 
+  // Course Finder
+  tabActive: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 12px',
+    background: 'var(--color-primary)',
+    color: 'white',
+    borderRadius: 'var(--radius-lg)',
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 600,
+  },
+  tabInactive: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 12px',
+    background: 'transparent',
+    color: 'var(--color-text-muted)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 500,
+  },
+  selectedBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 12px',
+    background: 'var(--color-primary-light)',
+    borderRadius: 'var(--radius-lg)',
+    marginBottom: 'var(--space-3)',
+  },
+  selectedName: {
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
   fieldRow: {
     display: 'flex',
     alignItems: 'center',
@@ -841,7 +966,6 @@ const mock = {
     fontWeight: 600,
     color: 'var(--color-text)',
   },
-
   resultGood: {
     display: 'flex',
     alignItems: 'center',
@@ -852,7 +976,64 @@ const mock = {
     color: 'var(--color-success)',
     borderRadius: 'var(--radius-lg)',
   },
+  resultIconGood: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    background: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  recoBox: {
+    marginTop: 'var(--space-3)',
+    padding: '10px 12px',
+    background: 'var(--color-primary-light)',
+    borderRadius: 'var(--radius-lg)',
+  },
+  recoLabel: {
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 700,
+    color: 'var(--color-primary)',
+  },
+  recoRow: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-text-secondary)',
+    lineHeight: 1.5,
+  },
 
+  // Cut-off Tracker
+  yearLabel: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-text-muted)',
+    fontFamily: 'var(--font-mono)',
+    width: 34,
+    flexShrink: 0,
+  },
+  track: {
+    flex: 1,
+    height: 10,
+    background: 'var(--color-background)',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  yearValue: {
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 700,
+    fontFamily: 'var(--font-mono)',
+    width: 34,
+    textAlign: 'right',
+    flexShrink: 0,
+  },
+  predictionBox: {
+    marginTop: 'var(--space-4)',
+    padding: '12px 14px',
+    background: 'var(--color-warning-light)',
+    borderRadius: 'var(--radius-lg)',
+  },
+
+  // Formula Solver
   formulaBig: {
     fontFamily: 'var(--font-mono)',
     fontSize: 'var(--font-size-lg)',
@@ -864,7 +1045,6 @@ const mock = {
     textAlign: 'center',
     marginBottom: 'var(--space-4)',
   },
-
   inputRow: {
     display: 'flex',
     alignItems: 'center',
@@ -885,7 +1065,6 @@ const mock = {
     fontSize: 'var(--font-size-sm)',
     color: 'var(--color-text-secondary)',
   },
-
   solveRow: {
     display: 'flex',
     alignItems: 'center',
@@ -907,6 +1086,7 @@ const mock = {
     color: 'var(--color-warning)',
   },
 
+  // Social
   friendRow: {
     display: 'flex',
     alignItems: 'center',
@@ -953,6 +1133,7 @@ const mock = {
     marginTop: 2,
   },
 
+  // Parent view
   statMini: {
     display: 'flex',
     flexDirection: 'column',
@@ -973,7 +1154,6 @@ const mock = {
     textTransform: 'uppercase',
     color: 'var(--color-text-muted)',
   },
-
   subjLabel: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -987,7 +1167,6 @@ const mock = {
     borderRadius: 3,
     overflow: 'hidden',
   },
-
   alertRow: {
     display: 'flex',
     alignItems: 'center',

@@ -364,19 +364,21 @@ export function WeaknessFinderPage() {
       }
     }
     load()
-    window.addEventListener('hydration:done', () => {
+    const onHydrate = () => {
       log('🟢 [snapshot-effect] hydration:done fired')
       load()
-    })
-    window.addEventListener('storage', (e) => {
+    }
+    const onStorage = (e) => {
       if (e.key === 'hyelearner_weakness_today') {
         log('🟢 [snapshot-effect] storage event for weakness key')
         load()
       }
-    })
+    }
+    window.addEventListener('hydration:done', onHydrate)
+    window.addEventListener('storage', onStorage)
     return () => {
-      window.removeEventListener('hydration:done', load)
-      window.removeEventListener('storage', load)
+      window.removeEventListener('hydration:done', onHydrate)
+      window.removeEventListener('storage', onStorage)
     }
   }, [])
 
@@ -424,7 +426,15 @@ export function WeaknessFinderPage() {
       setLoading(false)
       return
     }
+
     const checkCacheAndAnalyze = async () => {
+      // ⭐ Snapshot takes priority — never trust the local cache when we have one
+      if (todaySnapshot?.generatedAt) {
+        log('⭐ [init-effect] Snapshot present — running merge path')
+        await analyzeWeaknesses(false)
+        return
+      }
+
       const cached = localStorage.getItem(CACHE_KEY)
       const now = Date.now()
 
@@ -456,11 +466,9 @@ export function WeaknessFinderPage() {
       await analyzeWeaknesses(false)
     }
 
-    if (!isFreeUser) {
-      checkCacheAndAnalyze()
-    }
+    checkCacheAndAnalyze()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFreeUser])
+  }, [isFreeUser, todaySnapshot?.generatedAt])
 
   const saveToCache = (logicResults, aiData = null) => {
     const cacheData = {
@@ -528,7 +536,6 @@ export function WeaknessFinderPage() {
   const analyzeWithAI = async (logicResults) => {
     log('🤖 [analyzeWithAI] Called. alreadyDoneToday:', alreadyDoneToday, '| logicResults:', logicResults.length)
 
-    // ─── Already done today — just show cached snapshot ───
     if (alreadyDoneToday) {
       if (todaySnapshot) {
         log('🤖 [analyzeWithAI] Snapshot exists — using it')
@@ -591,7 +598,6 @@ export function WeaknessFinderPage() {
       setUseAI(true)
       setShowAI(true)
 
-      // Force hydrate so todaySnapshot becomes current
       window.dispatchEvent(new Event('hydration:done'))
 
       const today = new Date().toISOString().split('T')[0]
@@ -628,7 +634,6 @@ export function WeaknessFinderPage() {
     setUseAI(false)
     setShowAI(false)
 
-    // ─── Backend already generated today's snapshot → MERGE with local logic ───
     if (todaySnapshot?.generatedAt) {
       log('✅ [analyzeWeaknesses] SNAPSHOT EXISTS — merging with local logic')
 
@@ -646,7 +651,6 @@ export function WeaknessFinderPage() {
       }))
       log('✅ [analyzeWeaknesses] Snapshot topics:', snapshotTopics.length)
 
-      // Merge by topic name; snapshot wins on overlap
       const merged = [...snapshotTopics]
       localTopics.forEach((local) => {
         if (!merged.find((m) => m.topic === local.topic)) {
@@ -803,7 +807,6 @@ export function WeaknessFinderPage() {
           </div>
         </div>
 
-        {/* ⭐ Weakness status banner */}
         <div
           style={{
             padding: 'var(--space-3) var(--space-4)',
@@ -845,7 +848,6 @@ export function WeaknessFinderPage() {
           </div>
         </div>
 
-        {/* AI call limit */}
         <div className="card flex-between" style={{ marginBottom: 'var(--space-4)', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
             <Cpu style={{ width: '16px', height: '16px', color: 'var(--color-text-muted)' }} />
@@ -997,7 +999,6 @@ export function WeaknessFinderPage() {
                         </span>
                       </div>
                       <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                        {/* Use snapshot recommendations if present, else generate locally */}
                         {(item.recommendations
                           ? [item.recommendations]
                           : generateRecommendations(item.topic, item.accuracy, item.mistakeCount)
@@ -1247,7 +1248,6 @@ export function LeaderboardsPage() {
   const [isFreeUser, setIsFreeUser] = useState(false)
   const [subLoading, setSubLoading] = useState(true)
 
-  // ─── Friend modal state ───
   const [selectedUser, setSelectedUser] = useState(null)
   const [statusLoading, setStatusLoading] = useState(false)
   const [userStatus, setUserStatus] = useState(null)
@@ -1301,7 +1301,6 @@ export function LeaderboardsPage() {
     fetchLeaderboard()
   }
 
-  // ─── Friend modal logic ───
   const openUser = async (userId) => {
     if (!userId) return
     setSelectedUser(userId)
@@ -1514,7 +1513,6 @@ export function LeaderboardsPage() {
         </div>
       </div>
 
-      {/* ─── FRIEND MODAL ─── */}
       {selectedUser && (
         <div
           className="modal-overlay"

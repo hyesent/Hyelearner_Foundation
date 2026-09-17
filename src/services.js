@@ -496,7 +496,7 @@ export const auth = {
 }
 
 // ============================================================
-// ⭐ NEW — USER SERVICE (hydrate, ai usage, stats sync)
+// ⭐ USER SERVICE (hydrate, ai usage, stats sync)
 // ============================================================
 
 export const user = {
@@ -525,12 +525,7 @@ export const user = {
         },
         mistakes_count: 0,
         favorites: [],
-        subscription: {
-          is_active: authUser.tier === 'foundation' || authUser.tier === 'pro',
-          plan: 'Free',
-          expires_at: null,
-          days_remaining: 0,
-        },
+        weakness_today: null,
       }
     }
     return apiCall('/user/hydrate', { method: 'GET' })
@@ -547,12 +542,16 @@ export const user = {
 
   /**
    * Fire-and-forget sync of local stats to backend.
-   * Called by useProgress after local writes.
+   * Accepts EITHER delta form (preferred) or absolute form.
+   *
+   *   Delta form:  { xp_delta, sessions_delta, questions_delta,
+   *                  correct_delta, wrong_delta, minutes_delta, streak }
+   *   Absolute:    { xp, level, streak, accuracy, sessions, ... }
    */
   syncStats: async (stats) => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
-      return { success: true, synced: true }
+      return { success: true, synced: true, mode: stats?.xp_delta !== undefined ? 'delta' : 'absolute' }
     }
     return apiCall('/user/stats', {
       method: 'POST',
@@ -781,10 +780,6 @@ export const mistakes = {
     return apiCall(`/mistakes/export?format=${format}`)
   },
 
-  /**
-   * ⭐ NEW — Batch fetch cached AI explanations for a list of mistake IDs.
-   * Backend returns explanations that already exist; missing ones stay out.
-   */
   getExplanations: async (mistakeIds = []) => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
@@ -1017,9 +1012,6 @@ export const ai = {
       return apiCall('/hyetutor/cached', { method: 'GET' })
     },
 
-    /**
-     * ⭐ NEW — Fetch chat history for the current user.
-     */
     getChatHistory: async (limit = 50) => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.fast)
@@ -1117,10 +1109,6 @@ export const ai = {
       })
     },
 
-    /**
-     * ⭐ NEW — Fetch today's Daily Tutor session from backend.
-     * Backend generates if missing, otherwise returns cached.
-     */
     getToday: async () => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.fast)
@@ -1129,9 +1117,6 @@ export const ai = {
       return apiCall('/daily-tutor/today', { method: 'GET' })
     },
 
-    /**
-     * ⭐ NEW — Full history for the Daily Tutor history page.
-     */
     getHistory: async (limit = 60) => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.fast)
@@ -1140,9 +1125,6 @@ export const ai = {
       return apiCall(`/daily-tutor/history?limit=${limit}`, { method: 'GET' })
     },
 
-    /**
-     * ⭐ NEW — Get a single past session (read-only).
-     */
     getSession: async (dateKey) => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.fast)
@@ -1151,9 +1133,6 @@ export const ai = {
       return apiCall(`/daily-tutor/session/${dateKey}`, { method: 'GET' })
     },
 
-    /**
-     * ⭐ NEW — Submit quiz answers for today's session.
-     */
     submitQuiz: async (dateKey, answers) => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.normal)
@@ -1165,9 +1144,6 @@ export const ai = {
       })
     },
 
-    /**
-     * ⭐ NEW — Submit reflection for today's session.
-     */
     submitReflection: async (dateKey, feeling, note = '') => {
       if (USE_MOCK) {
         await delay(MOCK_DELAYS.fast)
@@ -1182,11 +1158,10 @@ export const ai = {
 }
 
 // ============================================================
-// ⭐ NEW — STUDY PLAN SERVICE
+// ⭐ STUDY PLAN SERVICE
 // ============================================================
 
 export const studyPlan = {
-  /** Fetch current active plan. */
   getCurrent: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
@@ -1196,7 +1171,6 @@ export const studyPlan = {
     return apiCall('/study-plan/current', { method: 'GET' })
   },
 
-  /** Mark current active plan as cancelled. */
   reset: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
@@ -1208,7 +1182,7 @@ export const studyPlan = {
 }
 
 // ============================================================
-// ⭐ NEW — WEAKNESS SERVICE
+// ⭐ WEAKNESS SERVICE
 // ============================================================
 
 export const weakness = {
@@ -1228,6 +1202,27 @@ export const weakness = {
       return { snapshots: [] }
     }
     return apiCall(`/weakness/history?limit=${limit}`, { method: 'GET' })
+  },
+
+  /**
+   * ⭐ NEW — Run AI weakness analysis (1/day, backend caches).
+   * On success, backend saves a WeaknessSnapshot.
+   * Caller should `dispatchEvent(new Event('hydration:done'))` afterward
+   * to sync `hyelearner_weakness_today` via hydrate.
+   */
+  requestAnalysis: async (payload = { limit: 5 }) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.slow)
+      return {
+        weakTopics: [
+          { topic: 'Trigonometry', accuracy: 38, priority: 'High', recommendations: 'Practice basic trigonometric ratios' },
+        ],
+        summary: 'Focus on high-priority topics for maximum improvement.',
+        createdAt: new Date().toISOString(),
+        from_cache: false,
+      }
+    }
+    return apiCall('/ai/weakness', { method: 'POST', body: JSON.stringify(payload) })
   },
 }
 
@@ -1719,6 +1714,30 @@ export const social = {
     return apiCall(`/social/users/search?q=${encodeURIComponent(q)}&limit=${limit}`)
   },
 
+  /**
+   * ⭐ NEW — Relationship status between current user and target.
+   * Used by leaderboard tap-modal to decide which action button to show.
+   */
+  getFriendStatus: async (userId) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return {
+        user: {
+          id: userId,
+          username: 'mock_user',
+          firstName: 'Mock',
+          lastName: 'User',
+          avatar: null,
+          school: 'UNILAG',
+        },
+        isFriend: false,
+        outgoingRequestId: null,
+        incomingRequestId: null,
+      }
+    }
+    return apiCall(`/social/users/status/${userId}`)
+  },
+
   getFriends: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
@@ -2159,9 +2178,6 @@ export const career = {
     return apiCall('/career/check', { method: 'POST', body: JSON.stringify(data) })
   },
 
-  /**
-   * ⭐ NEW — Fetch past admission checks for the user.
-   */
   getHistory: async (limit = 30) => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
@@ -2170,9 +2186,6 @@ export const career = {
     return apiCall(`/career/history?limit=${limit}`, { method: 'GET' })
   },
 
-  /**
-   * ⭐ NEW — Fetch a single past check by ID (read-only).
-   */
   getCheck: async (id) => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
@@ -2190,9 +2203,42 @@ export const userStats = {
   getToday: async () => {
     return apiCall('/user/stats', { method: 'GET' })
   },
+
+  /**
+   * Save stats. Accepts EITHER delta form (preferred) or absolute form.
+   * Delta:  { xp_delta, sessions_delta, questions_delta, correct_delta,
+   *           wrong_delta, minutes_delta, streak }
+   * Absolute: { xp, level, streak, accuracy, sessions, ... }
+   */
   save: async (stats) => {
     return apiCall('/user/stats', { method: 'POST', body: JSON.stringify(stats) })
   },
+
+  /**
+   * ⭐ Explicit delta-form helper — preferred path from useProgress / useDailyTutor.
+   * Backend will increment UserStats + UserDailyStats.
+   */
+  saveDeltas: async ({
+    xp = 0,
+    sessions = 0,
+    questions = 0,
+    correct = 0,
+    wrong = 0,
+    minutes = 0,
+    streak = null,
+  } = {}) => {
+    const payload = {
+      xp_delta: xp,
+      sessions_delta: sessions,
+      questions_delta: questions,
+      correct_delta: correct,
+      wrong_delta: wrong,
+      minutes_delta: minutes,
+    }
+    if (streak !== null && streak !== undefined) payload.streak = streak
+    return apiCall('/user/stats', { method: 'POST', body: JSON.stringify(payload) })
+  },
+
   getTodayProgress: async () => {
     return apiCall('/user/stats/today', { method: 'GET' })
   },

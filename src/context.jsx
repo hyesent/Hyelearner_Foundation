@@ -1,11 +1,17 @@
 // ============================================================
 // HYELEARNER: FOUNDATION — CONTEXT
-// Auth, Theme, Notification, Subscription Contexts
+// Auth, Theme, Notification, Subscription, Hydration Contexts
 // Built by Hyesent.dev
 // ============================================================
 
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'
-import { auth as authService, subscriptions } from './services'
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from 'react'
+import { auth as authService, subscriptions, user as userService } from './services'
 import { storage } from './storage'
 
 // ============================================================
@@ -21,8 +27,7 @@ const getStoredToken = () =>
   localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
 
 const getStoredUser = () => {
-  const raw =
-    localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY)
+  const raw = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY)
   if (!raw) return null
   try {
     return JSON.parse(raw)
@@ -34,12 +39,9 @@ const getStoredUser = () => {
 const persistSession = (token, user, remember = true) => {
   const target = remember ? localStorage : sessionStorage
   const other = remember ? sessionStorage : localStorage
-
-  // clear the other store so we don't have stale data
   other.removeItem(TOKEN_KEY)
   other.removeItem(REFRESH_KEY)
   other.removeItem(USER_KEY)
-
   target.setItem(TOKEN_KEY, token)
   target.setItem(USER_KEY, JSON.stringify(user))
 }
@@ -61,18 +63,15 @@ const clearSession = () => {
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  // ✅ Rehydrate immediately from storage so no flash of null
   const [user, setUser] = useState(() => getStoredUser())
   const [token, setToken] = useState(() => getStoredToken())
-  // ✅ If we have a token, don't show loading skeleton — we already have user
   const [loading, setLoading] = useState(() => !getStoredToken())
   const [error, setError] = useState(null)
 
-  // Load user on mount — validate token with backend, but DON'T wipe on network errors
   useEffect(() => {
     const loadUser = async () => {
       const storedToken = getStoredToken()
-      console.log('🟣 [AUTH-1] AuthProvider mounted, loading user...')
+      console.log('🟣 [AUTH-1] AuthProvider mounted')
       console.log('🟣 [AUTH-1] Token:', storedToken ? '✅ Present' : '❌ Missing')
 
       if (!storedToken) {
@@ -81,81 +80,56 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        console.log('🟣 [AUTH-3] Calling authService.getMe()...')
         const response = await authService.getMe()
-        console.log('🟣 [AUTH-4] getMe response:', response)
-
         let userData = null
         if (response && response.user) userData = response.user
         else if (response && response.id) userData = response
 
         if (userData) {
           setUser(userData)
-          // refresh stored user in whichever store has the token
-          const target = localStorage.getItem(TOKEN_KEY)
-            ? localStorage
-            : sessionStorage
+          const target = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage
           target.setItem(USER_KEY, JSON.stringify(userData))
         }
         setToken(storedToken)
       } catch (err) {
         console.error('🟣 [AUTH-ERROR] getMe failed:', err)
-
-        // ✅ Only clear session if token is definitely invalid (401 / 403)
         const status = err?.response?.status || err?.status
         const isAuthError = status === 401 || status === 403
 
         if (isAuthError) {
-          console.warn('🟣 [AUTH] Token invalid — clearing session')
           clearSession()
           setUser(null)
           setToken(null)
         } else {
-          // Network / server error → KEEP user logged in with cached data
-          console.warn('🟣 [AUTH] Network/backend error — keeping cached session')
           const cachedUser = getStoredUser()
           if (cachedUser) setUser(cachedUser)
           setToken(storedToken)
         }
       } finally {
         setLoading(false)
-        console.log('🟣 [AUTH-6] AuthProvider loading complete')
       }
     }
 
     loadUser()
   }, [])
 
-  // ✅ Login — accepts remember flag from the login form
   const login = useCallback(async (email, password, remember = true) => {
-    console.log('🟢 [LOGIN-1] AuthContext.login called')
-    console.log('🟢 [LOGIN-1] Email:', email, '| Remember:', remember)
-
     setLoading(true)
     setError(null)
-
     try {
       const response = await authService.login(email, password)
-      console.log('🟢 [LOGIN-3] authService.login response:', response)
-
       const newToken = response.access_token || response.token
       const newUser = response.user
 
       if (!newToken) throw new Error('Login response missing token')
       if (!newUser) throw new Error('Login response missing user data')
 
-      // ✅ Persist to localStorage or sessionStorage based on remember
       persistSession(newToken, newUser, remember)
-      console.log('🟢 [LOGIN-6] Session stored in', remember ? 'localStorage' : 'sessionStorage')
-
       setUser(newUser)
       setToken(newToken)
-
       storage.updateStreak()
-
       return { user: newUser, token: newToken }
     } catch (err) {
-      console.error('🟢 [LOGIN-ERROR]', err)
       setError(err.message || 'Login failed')
       throw err
     } finally {
@@ -163,29 +137,21 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Register — always remembers (new user)
   const register = useCallback(async (data) => {
-    console.log('🟢 [REGISTER-1] AuthContext.register called')
-
     setLoading(true)
     setError(null)
-
     try {
       const response = await authService.register(data)
       const newToken = response.access_token || response.token
       const newUser = response.user
-
       if (!newToken) throw new Error('Registration response missing token')
       if (!newUser) throw new Error('Registration response missing user data')
 
       persistSession(newToken, newUser, true)
-
       setUser(newUser)
       setToken(newToken)
-
       return { user: newUser, token: newToken }
     } catch (err) {
-      console.error('🟢 [REGISTER-ERROR]', err)
       setError(err.message || 'Registration failed')
       throw err
     } finally {
@@ -193,9 +159,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Logout
   const logout = useCallback(async () => {
-    console.log('🟢 [LOGOUT] Logging out...')
     setLoading(true)
     try {
       await authService.logout()
@@ -206,11 +170,9 @@ export function AuthProvider({ children }) {
       setUser(null)
       setToken(null)
       setLoading(false)
-      console.log('🟢 [LOGOUT] Logout complete')
     }
   }, [])
 
-  // Forgot Password
   const forgotPassword = useCallback(async (email) => {
     setLoading(true)
     setError(null)
@@ -224,7 +186,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Reset Password
   const resetPassword = useCallback(async (resetToken, password) => {
     setLoading(true)
     setError(null)
@@ -238,7 +199,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Update Profile
   const updateProfile = useCallback(async (data) => {
     setLoading(true)
     setError(null)
@@ -246,10 +206,7 @@ export function AuthProvider({ children }) {
       const response = await authService.updateProfile(data)
       if (response.user) {
         setUser(response.user)
-        // update whichever store has the session
-        const target = localStorage.getItem(TOKEN_KEY)
-          ? localStorage
-          : sessionStorage
+        const target = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage
         target.setItem(USER_KEY, JSON.stringify(response.user))
       }
       return response
@@ -261,7 +218,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Update Password
   const updatePassword = useCallback(async (data) => {
     setLoading(true)
     setError(null)
@@ -295,24 +251,163 @@ export function AuthProvider({ children }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider')
   return context
 }
 
 // ============================================================
-// SUBSCRIPTION CONTEXT — SINGLE SOURCE OF TRUTH
+// HYDRATION CONTEXT — sync backend → localStorage
+// ============================================================
+
+const HydrationContext = createContext(null)
+
+const computeLevelFromXp = (xp) => {
+  if (xp < 1000) return Math.floor(xp / 100) + 1
+  return 10 + Math.floor((xp - 1000) / 200)
+}
+
+export function HydrationProvider({ children }) {
+  const { user, token } = useAuth()
+  const [hydration, setHydration] = useState(null)
+  const [isHydrating, setIsHydrating] = useState(false)
+  const [error, setError] = useState(null)
+
+  const applyHydration = useCallback((res) => {
+    if (!res) return
+
+    // ─── Backend-authoritative (overwrite local) ───
+    if (res.user) {
+      const target = localStorage.getItem('token') ? localStorage : sessionStorage
+      target.setItem('user', JSON.stringify(res.user))
+    }
+
+    if (res.ai_usage) {
+      localStorage.setItem('hyelearner_ai_usage', JSON.stringify({
+        date: new Date().toISOString().split('T')[0],
+        count: res.ai_usage.used || 0,
+        limit: res.ai_usage.limit || 10,
+        resetAt: res.ai_usage.reset_at || null,
+      }))
+    }
+
+    if (res.study_plan) {
+      localStorage.setItem('hyelearner_study_plan_v2', JSON.stringify(res.study_plan))
+    } else {
+      localStorage.removeItem('hyelearner_study_plan_v2')
+    }
+
+    if (res.daily_tutor_today) {
+      const today = new Date().toISOString().split('T')[0]
+      const existing = JSON.parse(localStorage.getItem('hyelearner_daily_tutor_v1') || '{"sessions":{}}')
+      existing.sessions = existing.sessions || {}
+      existing.sessions[today] = res.daily_tutor_today
+      localStorage.setItem('hyelearner_daily_tutor_v1', JSON.stringify(existing))
+    }
+
+    if (res.hyetutor_cache) {
+      const today = new Date().toISOString().split('T')[0]
+      const key = `hyetutor_${res.user?.id || user?.id || 'anonymous'}_${today}`
+      localStorage.setItem(key, JSON.stringify({
+        data: res.hyetutor_cache,
+        date: today,
+        timestamp: new Date().toISOString(),
+      }))
+    }
+
+    // ─── Merge (max / union) ───
+    if (res.gamification) {
+      const localGam = JSON.parse(localStorage.getItem('hyelearner_gamification') || '{}')
+      const backendXp = res.gamification.xp || 0
+      const localXp = localGam.xp || 0
+      const mergedXp = Math.max(backendXp, localXp)
+      const mergedTotalXp = Math.max(res.gamification.total_xp || 0, localGam.totalXP || 0, mergedXp)
+
+      localStorage.setItem('hyelearner_gamification', JSON.stringify({
+        ...localGam,
+        xp: mergedXp,
+        totalXP: mergedTotalXp,
+        level: computeLevelFromXp(mergedXp),
+        streak: res.gamification.streak ?? localGam.streak ?? 0,
+        badges: res.gamification.badges || localGam.badges || [],
+      }))
+    }
+
+    if (Array.isArray(res.favorites)) {
+      const localFavs = JSON.parse(localStorage.getItem('dictionary_favorites') || '[]')
+      const merged = Array.from(new Set([...localFavs, ...res.favorites]))
+      localStorage.setItem('dictionary_favorites', JSON.stringify(merged))
+    }
+
+    setHydration(res)
+  }, [user?.id])
+
+  const hydrate = useCallback(async () => {
+    if (!token) {
+      setHydration(null)
+      return null
+    }
+    setIsHydrating(true)
+    setError(null)
+    try {
+      const res = await userService.hydrate()
+      applyHydration(res)
+      return res
+    } catch (err) {
+      console.error('❌ Hydration failed:', err)
+      setError(err.message || 'Failed to load data')
+      return null
+    } finally {
+      setIsHydrating(false)
+    }
+  }, [token, applyHydration])
+
+  useEffect(() => {
+    if (token && user) hydrate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user?.id])
+
+  const value = {
+    hydration,
+    isHydrating,
+    error,
+    hydrate,
+    refreshHydration: hydrate,
+
+    // Convenience reads
+    aiUsage: hydration?.ai_usage || null,
+    studyPlan: hydration?.study_plan || null,
+    dailyTutorToday: hydration?.daily_tutor_today || null,
+    dailyTutorRecent: hydration?.daily_tutor_recent || [],
+    hyetutorCache: hydration?.hyetutor_cache || null,
+    gamification: hydration?.gamification || null,
+    mistakesCount: hydration?.mistakes_count || 0,
+    favorites: hydration?.favorites || [],
+    subscription: hydration?.subscription || null,
+  }
+
+  return (
+    <HydrationContext.Provider value={value}>
+      {children}
+    </HydrationContext.Provider>
+  )
+}
+
+export const useHydration = () => {
+  const context = useContext(HydrationContext)
+  if (!context) throw new Error('useHydration must be used within HydrationProvider')
+  return context
+}
+
+// ============================================================
+// SUBSCRIPTION CONTEXT
 // ============================================================
 
 const SubscriptionContext = createContext(null)
-
 const SUB_CACHE_KEY = 'hyelearner_subscription_cache'
 
 export function SubscriptionProvider({ children }) {
   const { user } = useAuth()
   const [subscription, setSubscription] = useState(() => {
-    // ✅ Rehydrate from cache immediately so paid users don't flash free
     try {
       const cached = localStorage.getItem(SUB_CACHE_KEY)
       if (cached) return JSON.parse(cached)
@@ -326,23 +421,17 @@ export function SubscriptionProvider({ children }) {
     try {
       const status = await subscriptions.status()
       setSubscription(status)
-      // cache the result
       try {
         localStorage.setItem(SUB_CACHE_KEY, JSON.stringify(status))
       } catch {}
     } catch (error) {
       console.error('Failed to load subscription:', error)
-      // ✅ On failure, keep whatever we have (cached or previous) — don't downgrade
-      setSubscription((prev) => {
-        if (prev) return prev
-        return { isActive: false, tier: 'free', plan: 'Free' }
-      })
+      setSubscription((prev) => prev || { isActive: false, tier: 'free', plan: 'Free' })
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Re-run when user changes
   useEffect(() => {
     if (!user) {
       setSubscription({ isActive: false, tier: 'free', plan: 'Free' })
@@ -353,7 +442,6 @@ export function SubscriptionProvider({ children }) {
     refreshSubscription()
   }, [user?.id, refreshSubscription])
 
-  // Periodic refresh (every 4 hours)
   useEffect(() => {
     if (!user) return
     const interval = setInterval(() => {
@@ -362,12 +450,9 @@ export function SubscriptionProvider({ children }) {
     return () => clearInterval(interval)
   }, [user?.id, refreshSubscription])
 
-  // Sync across tabs
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === STORE_ID_KEY) {
-        refreshSubscription()
-      }
+      if (e.key === STORE_ID_KEY) refreshSubscription()
     }
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
@@ -389,9 +474,7 @@ export function SubscriptionProvider({ children }) {
 
 export const useSubscription = () => {
   const context = useContext(SubscriptionContext)
-  if (!context) {
-    throw new Error('useSubscription must be used within SubscriptionProvider')
-  }
+  if (!context) throw new Error('useSubscription must be used within SubscriptionProvider')
   return context
 }
 
@@ -428,9 +511,7 @@ export function ThemeProvider({ children }) {
 
 export const useTheme = () => {
   const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider')
-  }
+  if (!context) throw new Error('useTheme must be used within ThemeProvider')
   return context
 }
 
@@ -454,10 +535,7 @@ export function NotificationProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(
-      'hyelearner_notifications',
-      JSON.stringify(notifications),
-    )
+    localStorage.setItem('hyelearner_notifications', JSON.stringify(notifications))
   }, [notifications])
 
   const addNotification = useCallback((notification) => {
@@ -472,9 +550,7 @@ export function NotificationProvider({ children }) {
   }, [])
 
   const markRead = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    )
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
   }, [])
 
   const markAllRead = useCallback(() => {
@@ -499,22 +575,10 @@ export function NotificationProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const success = useCallback(
-    (message, duration) => showToast(message, 'success', duration),
-    [showToast],
-  )
-  const error = useCallback(
-    (message, duration) => showToast(message, 'error', duration),
-    [showToast],
-  )
-  const warning = useCallback(
-    (message, duration) => showToast(message, 'warning', duration),
-    [showToast],
-  )
-  const info = useCallback(
-    (message, duration) => showToast(message, 'info', duration),
-    [showToast],
-  )
+  const success = useCallback((message, duration) => showToast(message, 'success', duration), [showToast])
+  const error = useCallback((message, duration) => showToast(message, 'error', duration), [showToast])
+  const warning = useCallback((message, duration) => showToast(message, 'warning', duration), [showToast])
+  const info = useCallback((message, duration) => showToast(message, 'info', duration), [showToast])
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -544,9 +608,7 @@ export function NotificationProvider({ children }) {
 
 export const useNotifications = () => {
   const context = useContext(NotificationContext)
-  if (!context) {
-    throw new Error('useNotifications must be used within NotificationProvider')
-  }
+  if (!context) throw new Error('useNotifications must be used within NotificationProvider')
   return context
 }
 
@@ -559,4 +621,5 @@ export {
   ThemeContext,
   NotificationContext,
   SubscriptionContext,
+  HydrationContext,
 }

@@ -1,12 +1,13 @@
 // ============================================================
-// HYELEARNER: FOUNDATION — ROUTER (WITH DAILY TUTOR HISTORY)
+// HYELEARNER: FOUNDATION — ROUTER
 // Built by Hyesent.dev
 // ============================================================
 
 import { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
 import { LoadingScreen } from './components/LoadingScreen'
+import { useAuth } from './hooks'
 
 import Login from './pages/auth'
 import { Register, ForgotPassword } from './pages/auth'
@@ -32,19 +33,120 @@ import { FormulaExplorerPage } from './pages/formulapage'
 import { AdminPage } from './pages/AdminPage'
 import FeedbackContributionsPage from './pages/FeedbackContributionsPage'
 
+// NEW
+import Landing from './pages/Landing'
+import { Slideshow } from './Slideshow'
+import { ParentSlideshow } from './pages/parent/ParentSlideshow'
+import ParentLogin from './pages/parent/ParentLogin'
+import ParentDashboard from './pages/parent/ParentDashboard'
+
+// ============================================================
+// ROUTE WRAPPERS
+// ============================================================
+
+/**
+ * Root route. Renders Landing when logged out.
+ * Redirects to Home when logged in (student).
+ * Redirects to parent dashboard if a parent code exists.
+ */
+function LandingOrRedirect() {
+  const { user, loading } = useAuth()
+
+  if (loading) return <LoadingScreen />
+
+  // Parent: has a code stored → straight to dashboard
+  const parentCode =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('hyelearner_parent_code')
+      : null
+  if (parentCode) {
+    return <Navigate to="/parent/dashboard" replace />
+  }
+
+  // Logged-in student → Home
+  if (user) {
+    return <Navigate to="/home" replace />
+  }
+
+  // Logged out → Landing
+  return <Landing />
+}
+
+/**
+ * Student slideshow route.
+ * On complete → /login
+ * If slideshow already seen → skip to /login
+ */
+function StudentSlideshowRoute() {
+  if (typeof window !== 'undefined') {
+    const seen = localStorage.getItem('hyelearner_slideshow_seen') === 'true'
+    if (seen) return <Navigate to="/login" replace />
+  }
+
+  return (
+    <Slideshow
+      onComplete={() => {
+        localStorage.setItem('hyelearner_slideshow_seen', 'true')
+        window.location.replace('/login')
+      }}
+    />
+  )
+}
+
+/**
+ * Parent slideshow route.
+ * On complete → /parent/login
+ * If already seen → skip to /parent/login
+ */
+function ParentSlideshowRoute() {
+  if (typeof window !== 'undefined') {
+    const seen = localStorage.getItem('hyelearner_parent_slideshow_seen') === 'true'
+    if (seen) return <Navigate to="/parent/login" replace />
+  }
+
+  return (
+    <ParentSlideshow
+      onComplete={() => {
+        localStorage.setItem('hyelearner_parent_slideshow_seen', 'true')
+        window.location.replace('/parent/login')
+      }}
+    />
+  )
+}
+
+// ============================================================
+// ROUTER
+// ============================================================
 export default function Router() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        {/* PUBLIC */}
+        {/* ============================================ */}
+        {/* PUBLIC — always available */}
+        {/* ============================================ */}
+        <Route path="/" element={<LandingOrRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* PROTECTED */}
+        {/* ============================================ */}
+        {/* ONBOARDING — outside protected */}
+        {/* ============================================ */}
+        <Route path="/slideshow/student" element={<StudentSlideshowRoute />} />
+        <Route path="/slideshow/parent" element={<ParentSlideshowRoute />} />
+
+        {/* ============================================ */}
+        {/* PARENT — outside protected (code is auth) */}
+        {/* ============================================ */}
+        <Route path="/parent/login" element={<ParentLogin />} />
+        <Route path="/parent/dashboard" element={<ParentDashboard />} />
+
+        {/* ============================================ */}
+        {/* PROTECTED — student shell */}
+        {/* ============================================ */}
         <Route element={<ProtectedRoute />}>
-          {/* Home shell */}
-          <Route path="/" element={<Home />} />
+          {/* Home */}
+          <Route path="/home" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* HyeTutor */}
@@ -93,7 +195,9 @@ export default function Router() {
           <Route path="/formulas" element={<FormulaExplorerPage />} />
         </Route>
 
-        {/* 404 */}
+        {/* ============================================ */}
+        {/* 404 → Landing */}
+        {/* ============================================ */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

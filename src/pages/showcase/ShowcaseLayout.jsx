@@ -1,33 +1,29 @@
-// src/showcase/ShowcaseLayout.jsx
+// ============================================================
+// HYELEARNER: FOUNDATION — SHOWCASE LAYOUT
+// Sticky banner reminds users this is a preview.
+// Has an exit button to return to the landing page.
+// Built by Hyesent.dev
+// ============================================================
+
 import { useNavigate } from 'react-router-dom'
 import { Eye, X } from 'lucide-react'
-import { usePreview } from './PreviewContext'
 
 export function ShowcaseLayout({ children, pageName = 'this page' }) {
   const navigate = useNavigate()
-  const { previewMode, exitPreview, interactions, nudgeAfter } = usePreview()
 
-  const handleExit = () => {
-    exitPreview()        // turn off preview mode
-    navigate('/')        // leave /showcase
-  }
+  const handleExit = () => navigate('/')
 
   return (
     <>
-      {previewMode && (
-        <div style={banner}>
-          <Eye size={16} />
-          <span style={bannerText}>
-            <strong>Preview mode</strong> — exploring {pageName}. Sample data.
-          </span>
-          <span style={counter}>
-            {Math.min(interactions, nudgeAfter)}/{nudgeAfter} free actions
-          </span>
-          <button onClick={handleExit} style={bannerClose} aria-label="Exit preview">
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      <div style={banner}>
+        <Eye size={16} />
+        <span style={bannerText}>
+          <strong>Preview mode</strong> — exploring {pageName}. Sample data.
+        </span>
+        <button onClick={handleExit} style={exitBtn} aria-label="Exit preview">
+          Exit preview <X size={14} />
+        </button>
+      </div>
       {children}
     </>
   )
@@ -49,18 +45,19 @@ const banner = {
 
 const bannerText = { flex: 1, minWidth: 0 }
 
-const counter = {
-  fontSize: 'var(--font-size-xs)',
-  opacity: 0.85,
-  whiteSpace: 'nowrap',
-}
-
-const bannerClose = {
-  background: 'transparent',
-  border: 'none',
-  color: 'white',
-  cursor: 'pointer',
-  display: 'flex',
+const exitBtn = {
+  display: 'inline-flex',
   alignItems: 'center',
-  padding: 4,
+  gap: 6,
+  padding: '6px 12px',
+  background: 'rgba(255, 255, 255, 0.15)',
+  color: 'white',
+  border: '1px solid rgba(255, 255, 255, 0.35)',
+  borderRadius: 'var(--radius-full)',
+  fontFamily: 'inherit',
+  fontSize: 'var(--font-size-xs)',
+  fontWeight: 600,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  transition: 'background 200ms',
 }

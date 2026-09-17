@@ -1674,6 +1674,23 @@ export const duels = {
     }
     return apiCall(`/duel/join-public/${duelId}`, { method: 'POST' })
   },
+    getStats: async () => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.fast)
+      return {
+        total_duels: 8,
+        wins: 5,
+        losses: 2,
+        draws: 1,
+        win_rate: 62.5,
+        xp: 1850,
+        level: 19,
+        streak: 3,
+        longest_streak: 7,
+      }
+    }
+    return apiCall('/duel/stats', { method: 'GET' })
+  },
 }
 
 // ============================================================

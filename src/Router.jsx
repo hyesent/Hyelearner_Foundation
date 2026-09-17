@@ -8,9 +8,8 @@ export default function Router() {
       <Route path="/" element={<Landing />} />
 
       <Route
-        path="/showcase"
-        element={<div style={{ padding: 40 }}>Showcase works</div>}
-      />
-    </Routes>
+  path="/showcase"
+  element={<PreviewProvider />}
+ />
   )
 }

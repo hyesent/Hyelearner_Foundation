@@ -8,9 +8,9 @@ import { useState, useEffect, useContext, useRef, useCallback } from 'react'
 import { AuthContext, ThemeContext, NotificationContext, SubscriptionContext } from './context'
 import { storage } from './storage'
 import { userStats } from './services'
-import { 
-  calculateScore, 
-  calculateXP, 
+import {
+  calculateScore,
+  calculateXP,
   getLevel,
   calculateMastery,
   checkBadgeUnlock,
@@ -77,13 +77,13 @@ export function useAI() {
   // Load usage on mount
   useEffect(() => {
     loadUsage()
-    
+
     // Listen for updates from other tabs/components
     const handleUpdate = () => {
       loadUsage()
     }
     window.addEventListener('ai:usage-updated', handleUpdate)
-    
+
     return () => {
       window.removeEventListener('ai:usage-updated', handleUpdate)
     }
@@ -126,13 +126,16 @@ export function useAI() {
 // ============================================================
 // useProgress — CENTRAL PROGRESS HOOK (ONE BRAIN)
 // All features call this to update XP, Streak, Sessions, Results, Mistakes, Mastery
+//
+// ⭐ GROUP 4 FIX: backend sync now sends DELTAS instead of absolutes,
+// so multiple devices can't clobber each other's XP.
 // ============================================================
 export function useProgress() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   const updateProgress = useCallback((data) => {
-    // data = { 
+    // data = {
     //   type: 'practice' | 'topic_mode' | 'mock_exam' | 'lesson',
     //   subject: string,
     //   topic: string (optional),
@@ -243,8 +246,8 @@ export function useProgress() {
         const today = new Date().toISOString().split('T')[0]
         if (!planner.progress) planner.progress = {}
         if (!planner.progress[today]) {
-          planner.progress[today] = { 
-            completed: 0, 
+          planner.progress[today] = {
+            completed: 0,
             total: 0,
             sessions: 0,
             xp: 0,
@@ -267,38 +270,51 @@ export function useProgress() {
       // 11. UPDATE HEATMAP (via mastery)
       // Heatmap reads from storage directly, so data is already there
 
-      // ✅ 12. SAVE DAILY STATS TO BACKEND (Fire and forget) - FROM V1
+      // ============================================================
+      // ✅ 12. SYNC TO BACKEND — DELTAS ONLY (GROUP 4 FIX)
+      // ============================================================
+      // Backend is the source of truth for leaderboard XP.
+      // We send deltas so multi-device use can't clobber each other.
+      // Streak is sent as a value (overwrite) since it's idempotent.
       const today = new Date().toISOString().split('T')[0]
+
+      // Local cache (still used by QuickStats banner and useUserStats fallback)
       const cachedStats = JSON.parse(localStorage.getItem('hyelearner_daily_stats') || '{}')
-      
-      if (cachedStats.date === today) {
-        const updatedStats = {
-          xp: (cachedStats.xp || 0) + xp,
-          level: gamification.level || 1,
-          streak: gamification.streak || 0,
-          accuracy: scoreData.accuracy,
-          sessions: (cachedStats.sessions || 0) + 1,
-          totalQuestions: (cachedStats.totalQuestions || 0) + data.questions.length,
-          correct: (cachedStats.correct || 0) + scoreData.correct,
-          wrong: (cachedStats.wrong || 0) + scoreData.wrong,
-          studyTime: (cachedStats.studyTime || 0) + Math.floor((data.timeTaken || 0) / 60)
-        }
-        
-        // Recalculate accuracy
-        const total = updatedStats.totalQuestions
-        updatedStats.accuracy = total > 0 ? Math.round((updatedStats.correct / total) * 100) : 0
-        
-        // Save to cache
-        localStorage.setItem('hyelearner_daily_stats', JSON.stringify({
-          ...updatedStats,
-          date: today
-        }))
-        
-        // ✅ Save to backend (fire and forget) - FROM V1
-        userStats.save(updatedStats).catch(err => {
-          console.error('Failed to save stats to backend:', err)
-        })
+      const baseStats = cachedStats.date === today ? cachedStats : {}
+
+      const updatedLocalStats = {
+        xp: (baseStats.xp || 0) + xp,
+        level: gamification.level || 1,
+        streak: gamification.streak || 0,
+        sessions: (baseStats.sessions || 0) + 1,
+        totalQuestions: (baseStats.totalQuestions || 0) + data.questions.length,
+        correct: (baseStats.correct || 0) + scoreData.correct,
+        wrong: (baseStats.wrong || 0) + scoreData.wrong,
+        studyTime: (baseStats.studyTime || 0) + Math.floor((data.timeTaken || 0) / 60),
       }
+      const totalQ = updatedLocalStats.totalQuestions
+      updatedLocalStats.accuracy = totalQ > 0
+        ? Math.round((updatedLocalStats.correct / totalQ) * 100)
+        : 0
+
+      localStorage.setItem('hyelearner_daily_stats', JSON.stringify({
+        ...updatedLocalStats,
+        date: today,
+        cachedAt: new Date().toISOString(),
+      }))
+
+      // Fire-and-forget delta sync
+      userStats.saveDeltas({
+        xp: xp,
+        sessions: 1,
+        questions: data.questions.length,
+        correct: scoreData.correct,
+        wrong: scoreData.wrong,
+        minutes: Math.floor((data.timeTaken || 0) / 60),
+        streak: gamification.streak || 0,
+      }).catch((err) => {
+        console.error('Failed to sync delta stats to backend:', err)
+      })
 
       // 13. RETURN RESULTS
       const result = {
@@ -376,7 +392,7 @@ export function useCBT() {
       session.accuracy = score.accuracy
       session.completedAt = new Date().toISOString()
 
-      const updatedSessions = sessions.map(s => 
+      const updatedSessions = sessions.map(s =>
         s.id === sessionId ? session : s
       )
       storage.saveSessions(updatedSessions)
@@ -808,7 +824,7 @@ export function useUserStats() {
 
     try {
       const today = getToday()
-      
+
       // Check cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = localStorage.getItem(STATS_CACHE_KEY)
@@ -824,25 +840,25 @@ export function useUserStats() {
 
       // Fetch from backend
       const result = await userStats.getToday()
-      
+
       // Save to cache
       localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({
         ...result,
         date: today,
         cachedAt: new Date().toISOString()
       }))
-      
+
       setStats(result)
       return result
 
     } catch (err) {
       console.error('Failed to load stats:', err)
       setError(err.message)
-      
+
       // Fallback to localStorage
       const gamification = storage.getGamification()
       const sessions = storage.getSessions()
-      
+
       const fallbackStats = {
         xp: gamification.xp || 0,
         level: gamification.level || 1,
@@ -856,10 +872,10 @@ export function useUserStats() {
         date: getToday(),
         fromCache: true
       }
-      
+
       setStats(fallbackStats)
       return fallbackStats
-      
+
     } finally {
       setLoading(false)
     }
@@ -868,13 +884,13 @@ export function useUserStats() {
   // Save stats to backend
   const saveStats = useCallback(async (statsData) => {
     if (saving) return
-    
+
     setSaving(true)
     setError(null)
-    
+
     try {
       const result = await userStats.save(statsData)
-      
+
       // Update cache
       const today = getToday()
       localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({
@@ -882,14 +898,14 @@ export function useUserStats() {
         date: today,
         cachedAt: new Date().toISOString()
       }))
-      
+
       return result
-      
+
     } catch (err) {
       console.error('Failed to save stats:', err)
       setError(err.message)
       return null
-      
+
     } finally {
       setSaving(false)
     }
@@ -936,12 +952,12 @@ export function useUserStats() {
   // Auto-save on interval and cleanup
   useEffect(() => {
     if (!stats || stats.fromCache) return
-    
+
     // Save on interval (every 5 minutes)
     const saveInterval = setInterval(() => {
       saveStats(stats)
     }, 300000)
-    
+
     // Save on page unload
     const handleBeforeUnload = () => {
       if (stats) {
@@ -949,7 +965,7 @@ export function useUserStats() {
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
-    
+
     return () => {
       clearInterval(saveInterval)
       window.removeEventListener('beforeunload', handleBeforeUnload)

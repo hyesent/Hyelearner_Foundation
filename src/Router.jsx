@@ -11,7 +11,7 @@ import { useAuth } from './hooks'
 
 import Login from './pages/auth'
 import { Register, ForgotPassword } from './pages/auth'
-import Home from './pages/Home'
+import Home from './pages/home/Home'
 import Dashboard from './pages/dashboard'
 import { HyeTutorPage, HyeTutorChatPage } from './pages/hyetutor'
 import DailyTutorPage from './pages/hyetutor/DailyTutorPage'

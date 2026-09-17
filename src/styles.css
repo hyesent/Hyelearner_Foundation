@@ -2501,3 +2501,96 @@ img.rounded-full {
     font-size: 9px;
   }
 }
+
+/* ============================================================
+   25. AI USAGE ORB
+   ============================================================ */
+
+.ai-usage-orb {
+  position: fixed;
+  right: 16px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 16px);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: none;
+  cursor: pointer;
+  z-index: var(--z-sticky);
+  color: white;
+  box-shadow:
+    0 6px 16px rgba(79, 70, 229, 0.35),
+    0 0 0 3px var(--color-surface);
+  transition: transform var(--transition), box-shadow var(--transition);
+  font-family: var(--font-family);
+}
+
+.ai-usage-orb:hover {
+  transform: scale(1.05);
+}
+
+.ai-usage-orb:active {
+  transform: scale(0.95);
+}
+
+.ai-usage-orb-icon {
+  margin-bottom: -2px;
+  opacity: 0.95;
+}
+
+.ai-usage-orb-text {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Tones */
+.ai-usage-orb-normal {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 60%, #4338CA 100%);
+}
+
+.ai-usage-orb-warning {
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 60%, #D97706 100%);
+  box-shadow:
+    0 6px 16px rgba(245, 158, 11, 0.4),
+    0 0 0 3px var(--color-surface);
+}
+
+.ai-usage-orb-danger {
+  background: linear-gradient(135deg, #F87171 0%, #EF4444 60%, #DC2626 100%);
+  box-shadow:
+    0 6px 16px rgba(239, 68, 68, 0.4),
+    0 0 0 3px var(--color-surface);
+  animation: ai-orb-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ai-orb-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Popover */
+.ai-usage-popover {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: transparent;
+}
+
+.ai-usage-popover-inner {
+  position: fixed;
+  right: 16px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 76px);
+  width: 240px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-xl);
+  animation: slideUp var(--transition-fast);
+}

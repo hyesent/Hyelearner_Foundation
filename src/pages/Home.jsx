@@ -145,7 +145,7 @@ export default function Home() {
 function HomeTab({ navigate, refreshing }) {
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <QuickStats />
+      <QuickStats refreshing={refreshing} />
       <HyeTutorChatCard navigate={navigate} />
       <WordOfTheDayCard navigate={navigate} />
       <StudyPlanCard navigate={navigate} refreshing={refreshing} />
@@ -155,63 +155,131 @@ function HomeTab({ navigate, refreshing }) {
 }
 
 // ============================================================
-// 1. QUICK STATS
+// 1. QUICK STATS — 2×2 grid (reads from localStorage)
 // ============================================================
-function QuickStats() {
-  const [stats, setStats] = useState({ xp: 0, level: 1, streak: 0, accuracy: 0, sessions: 0 })
+function QuickStats({ refreshing }) {
+  const [gam, setGam] = useState({ xp: 0, level: 1, streak: 0 })
+  const [daily, setDaily] = useState({ accuracy: 0, sessions: 0, studyTime: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true)
+    const load = () => {
       try {
-        const response = await userStats.getToday()
-        if (response && response.xp !== undefined) {
-          setStats({ xp: response.xp || 0, level: response.level || 1, streak: response.streak || 0, accuracy: response.accuracy || 0, sessions: response.sessions || 0 })
-          setLoading(false)
-          return
+        const rawGam = localStorage.getItem('hyelearner_gamification')
+        setGam(rawGam ? JSON.parse(rawGam) : { xp: 0, level: 1, streak: 0 })
+      } catch {
+        setGam({ xp: 0, level: 1, streak: 0 })
+      }
+
+      try {
+        const rawDaily = localStorage.getItem('hyelearner_daily_stats')
+        const parsed = rawDaily ? JSON.parse(rawDaily) : null
+        const today = new Date().toISOString().split('T')[0]
+        if (parsed && parsed.date === today) {
+          setDaily({
+            accuracy: parsed.accuracy || 0,
+            sessions: parsed.sessions || 0,
+            studyTime: parsed.studyTime || 0,
+          })
+        } else {
+          setDaily({ accuracy: 0, sessions: 0, studyTime: 0 })
         }
-      } catch {}
-      try {
-        const gamification = storage.getGamification()
-        const sessions = storage.getSessions()
-        let tq = 0, c = 0, cs = 0
-        sessions.forEach((s) => {
-          if (s.status === 'completed') {
-            cs++
-            tq += s.totalQuestions || s.total || 0
-            c += s.correctAnswers || s.correct || 0
-          }
-        })
-        const accuracy = tq > 0 ? Math.round((c / tq) * 100) : 0
-        setStats({ xp: gamification.xp || 0, level: gamification.level || 1, streak: gamification.streak || 0, accuracy, sessions: cs })
-      } catch (e) { console.error(e) }
-      finally { setLoading(false) }
+      } catch {
+        setDaily({ accuracy: 0, sessions: 0, studyTime: 0 })
+      }
+
+      setLoading(false)
     }
+
     load()
-  }, [])
+
+    window.addEventListener('hydration:done', load)
+    window.addEventListener('storage', load)
+    return () => {
+      window.removeEventListener('hydration:done', load)
+      window.removeEventListener('storage', load)
+    }
+  }, [refreshing])
 
   const statsConfig = [
-    { key: 'xp', icon: Zap, label: 'Total XP', value: stats.xp.toLocaleString(), color: 'var(--color-primary)', bg: 'var(--color-primary-light)' },
-    { key: 'streak', icon: Flame, label: 'Streak', value: stats.streak, color: 'var(--color-warning)', bg: 'var(--color-warning-light)' },
-    { key: 'sessions', icon: PenTool, label: 'Sessions', value: stats.sessions, color: 'var(--color-success)', bg: 'var(--color-success-light)' },
-    { key: 'accuracy', icon: Target, label: 'Accuracy', value: `${stats.accuracy}%`, color: stats.accuracy >= 70 ? 'var(--color-success)' : stats.accuracy >= 40 ? 'var(--color-warning)' : 'var(--color-danger)', bg: stats.accuracy >= 70 ? 'var(--color-success-light)' : stats.accuracy >= 40 ? 'var(--color-warning-light)' : 'var(--color-danger-light)' },
+    {
+      key: 'xp',
+      icon: Zap,
+      label: 'Total XP',
+      value: (gam.xp || 0).toLocaleString(),
+      color: 'var(--color-primary)',
+      bg: 'var(--color-primary-light)',
+    },
+    {
+      key: 'streak',
+      icon: Flame,
+      label: 'Streak',
+      value: gam.streak || 0,
+      color: 'var(--color-warning)',
+      bg: 'var(--color-warning-light)',
+    },
+    {
+      key: 'sessions',
+      icon: PenTool,
+      label: 'Sessions',
+      value: daily.sessions || 0,
+      color: 'var(--color-success)',
+      bg: 'var(--color-success-light)',
+    },
+    {
+      key: 'accuracy',
+      icon: Target,
+      label: 'Accuracy',
+      value: `${daily.accuracy || 0}%`,
+      color:
+        (daily.accuracy || 0) >= 70
+          ? 'var(--color-success)'
+          : (daily.accuracy || 0) >= 40
+            ? 'var(--color-warning)'
+            : 'var(--color-danger)',
+      bg:
+        (daily.accuracy || 0) >= 70
+          ? 'var(--color-success-light)'
+          : (daily.accuracy || 0) >= 40
+            ? 'var(--color-warning-light)'
+            : 'var(--color-danger-light)',
+    },
   ]
 
   return (
     <section className="card" style={{ padding: 'var(--space-4)' }}>
-      <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>QUICK STATS</div>
+      <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+        QUICK STATS
+      </div>
+
       {loading ? (
-        <div className="flex-center" style={{ padding: 'var(--space-4)' }}><div className="spinner spinner-sm"></div></div>
+        <div className="flex-center" style={{ padding: 'var(--space-4)' }}>
+          <div className="spinner spinner-sm"></div>
+        </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
           {statsConfig.map((s) => {
             const Icon = s.icon
             return (
-              <div key={s.key} className="flex-between" style={{ alignItems: 'flex-start', gap: 'var(--space-2)', padding: 'var(--space-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', background: 'var(--color-surface)' }}>
+              <div
+                key={s.key}
+                className="flex-between"
+                style={{
+                  alignItems: 'flex-start',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-3)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  background: 'var(--color-surface)',
+                }}
+              >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: s.color, lineHeight: 1.1 }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                    {s.label}
+                  </div>
                 </div>
                 <div className="flex-center" style={{ width: 34, height: 34, borderRadius: 'var(--radius-lg)', background: s.bg, color: s.color, flexShrink: 0 }}>
                   <Icon size={16} />

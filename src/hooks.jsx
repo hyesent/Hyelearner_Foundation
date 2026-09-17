@@ -2,6 +2,7 @@
 // HYELEARNER: FOUNDATION — CUSTOM HOOKS
 // Built by Hyesent.dev
 // ============================================================
+export { useHydration } from './context'
 
 import { useState, useEffect, useContext, useRef, useCallback } from 'react'
 import { AuthContext, ThemeContext, NotificationContext, SubscriptionContext } from './context'

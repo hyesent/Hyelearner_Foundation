@@ -338,7 +338,21 @@ export function HydrationProvider({ children }) {
       localStorage.setItem('dictionary_favorites', JSON.stringify(merged))
     }
 
+    // ─── Weakness snapshot (authoritative, replaces local) ───
+    if (res.weakness_today) {
+      localStorage.setItem('hyelearner_weakness_today', JSON.stringify({
+        weakTopics: res.weakness_today.weakTopics || [],
+        summary: res.weakness_today.summary || '',
+        generatedAt: res.weakness_today.generatedAt || null,
+      }))
+    } else {
+      localStorage.removeItem('hyelearner_weakness_today')
+    }
+
     setHydration(res)
+
+    // Notify the rest of the app that localStorage has fresh data
+    window.dispatchEvent(new Event('hydration:done'))
   }, [user?.id])
 
   const hydrate = useCallback(async () => {
@@ -382,7 +396,7 @@ export function HydrationProvider({ children }) {
     gamification: hydration?.gamification || null,
     mistakesCount: hydration?.mistakes_count || 0,
     favorites: hydration?.favorites || [],
-    subscription: hydration?.subscription || null,
+    weaknessToday: hydration?.weakness_today || null,
   }
 
   return (

@@ -4,56 +4,61 @@
 // Built by Hyesent.dev
 // ============================================================
 
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   GraduationCap,
   Users,
   ArrowRight,
+  HelpCircle,
+  BookOpen,
+  Calendar,
+  Search,
+  Calculator,
+  MessageSquare,
+  BarChart3,
   ClipboardCheck,
   Brain,
   Swords,
+  Sparkles,
+  Clock,
+  Target,
+  Flame,
+  Award,
   CheckCircle2,
-  Clock3,
-  ChevronLeft,
-  ChevronRight as ChevronRightIcon,
+  TrendingUp,
+  AlertTriangle,
+  Eye,
+  Send,
+  UserPlus,
+  Globe,
+  Trophy,
 } from 'lucide-react'
+import Footer from '../Footer'
 
 // ============================================================
-// INLINE LOGO — bare book + spark (no circle background)
+// LOGO — full circle + book + spark (from LoadingScreen)
 // ============================================================
-function BrandMark({ size = 28 }) {
+function HyelearnerLogo({ size = 200 }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="22 12 56 66"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Hyelearner"
+      aria-label="Hyelearner Logo"
       role="img"
     >
-      {/* Left page */}
-      <path
-        d="M22 31C30 27 40 28 50 35V76C40 69 30 68 22 72V31Z"
-        fill="currentColor"
-      />
-      {/* Right page */}
-      <path
-        d="M78 31C70 27 60 28 50 35V76C60 69 70 68 78 72V31Z"
-        fill="currentColor"
-      />
-      {/* Center fold */}
-      <path
-        d="M50 35V76"
-        stroke="var(--color-background)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      {/* Spark above */}
-      <path
-        d="M50 15L52.5 21.5L59 24L52.5 26.5L50 33L47.5 26.5L41 24L47.5 21.5L50 15Z"
-        fill="currentColor"
-      />
+      <circle cx="50" cy="50" r="46" fill="var(--color-primary-light)" />
+      <path d="M22 31C30 27 40 28 50 35V76C40 69 30 68 22 72V31Z" fill="var(--color-primary)" />
+      <path d="M78 31C70 27 60 28 50 35V76C60 69 70 68 78 72V31Z" fill="var(--color-primary)" />
+      <path d="M50 35V76" stroke="white" strokeWidth="3" strokeLinecap="round" />
+      <path d="M29 40C35 38 41 40 46 43" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
+      <path d="M29 49C35 47 41 49 46 52" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
+      <path d="M71 40C65 38 59 40 54 43" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
+      <path d="M71 49C65 47 59 49 54 52" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" />
+      <path d="M50 15L52.5 21.5L59 24L52.5 26.5L50 33L47.5 26.5L41 24L47.5 21.5L50 15Z" fill="var(--color-primary)" />
     </svg>
   )
 }
@@ -84,310 +89,292 @@ export default function Landing() {
 
   return (
     <div style={styles.page}>
-      {/* Ambient glow behind hero — one, not many */}
-      <div style={styles.glow} aria-hidden="true" />
-
       {/* ============================================== */}
-      {/* NAV */}
+      {/* HELP LINK (top-left) */}
       {/* ============================================== */}
-      <nav style={styles.nav}>
-        <div style={styles.navInner}>
-          <div style={styles.brand}>
-            <span style={styles.brandMarkWrap}>
-              <BrandMark size={26} />
-            </span>
-            <span style={styles.brandText}>Hyelearner</span>
-          </div>
-
-          <button
-            onClick={() => navigate('/login')}
-            style={styles.navLogin}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-text)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-muted)'
-            }}
-          >
-            Login
-          </button>
-        </div>
-      </nav>
+      <button
+        onClick={() => navigate('/help')}
+        style={styles.helpLink}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = 'var(--color-primary)'
+          e.currentTarget.style.background = 'var(--color-primary-light)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = 'var(--color-text-muted)'
+          e.currentTarget.style.background = 'transparent'
+        }}
+      >
+        <HelpCircle size={16} />
+        <span>Help</span>
+      </button>
 
       {/* ============================================== */}
       {/* HERO */}
       {/* ============================================== */}
       <section style={styles.hero}>
-        <div style={styles.heroInner}>
-          <h1 style={styles.headline}>
-            Built for the exam
-            <br />
-            you actually sit.
-          </h1>
-
-          <p style={styles.subhead}>
-            30,000+ questions, structured lessons, and AI coaching —
-            for secondary school, pre-university, and college entrance exams.
-          </p>
-
-          {/* ============================================ */}
-          {/* TWO CARDS — the entire CTA */}
-          {/* ============================================ */}
-          <div style={styles.cardsWrap}>
-            {/* STUDENT CARD */}
-            <button
-              onClick={handleStudent}
-              style={styles.cardStudent}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 20px 60px rgba(79, 70, 229, 0.18)'
-                e.currentTarget.style.borderColor = 'var(--color-primary)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)'
-                e.currentTarget.style.borderColor = 'var(--color-border)'
-              }}
-            >
-              <div style={{ ...styles.cardIcon, color: 'var(--color-primary)', background: 'var(--color-primary-light)' }}>
-                <GraduationCap size={32} strokeWidth={1.75} />
-              </div>
-
-              <div style={styles.cardLabel}>I'm a Student</div>
-
-              <div style={styles.cardDesc}>
-                Practice for your exam, learn with lessons, and track your progress.
-              </div>
-
-              <div style={{ ...styles.cardCta, color: 'var(--color-primary)' }}>
-                <span>Start</span>
-                <ArrowRight size={16} />
-              </div>
-            </button>
-
-            {/* PARENT CARD */}
-            <button
-              onClick={handleParent}
-              style={styles.cardParent}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 20px 60px rgba(16, 185, 129, 0.18)'
-                e.currentTarget.style.borderColor = 'var(--color-success)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)'
-                e.currentTarget.style.borderColor = 'var(--color-border)'
-              }}
-            >
-              <div style={{ ...styles.cardIcon, color: 'var(--color-success)', background: 'var(--color-success-light)' }}>
-                <Users size={32} strokeWidth={1.75} />
-              </div>
-
-              <div style={styles.cardLabel}>I'm a Parent</div>
-
-              <div style={styles.cardDesc}>
-                See your child's progress, study activity, and where they need help.
-              </div>
-
-              <div style={{ ...styles.cardCta, color: 'var(--color-success)' }}>
-                <span>Enter code</span>
-                <ArrowRight size={16} />
-              </div>
-            </button>
-          </div>
+        {/* Pulsing glow behind the logo */}
+        <div style={styles.glowOuter} aria-hidden="true">
+          <div style={styles.glowInner} />
         </div>
-      </section>
 
-      {/* ============================================== */}
-      {/* FEATURE 1 — CBT PRACTICE */}
-      {/* ============================================== */}
-      <section style={styles.feature}>
-        <div style={styles.featureInner}>
-          <div style={styles.featureText}>
-            <div style={styles.featureEyebrow}>
-              <ClipboardCheck size={14} />
-              <span>CBT Practice</span>
+        {/* Solid pulsing logo */}
+        <div style={styles.logoWrap}>
+          <HyelearnerLogo size={180} />
+        </div>
+
+        {/* Wordmark */}
+        <div style={styles.wordmark}>
+          Hyelearner:Foundation
+        </div>
+
+        {/* Headline */}
+        <h1 style={styles.headline}>
+          Built for the exam
+          <br />
+          you actually sit.
+        </h1>
+
+        {/* Subtitle */}
+        <p style={styles.subhead}>
+          30,000+ questions, structured lessons, and AI coaching — for
+          secondary school, pre-university, and college entrance exams.
+        </p>
+
+        {/* Two vertical cards */}
+        <div style={styles.cardsWrap}>
+          {/* STUDENT */}
+          <button
+            onClick={handleStudent}
+            style={styles.card}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)'
+              e.currentTarget.style.boxShadow = '0 20px 60px rgba(79, 70, 229, 0.20)'
+              e.currentTarget.style.borderColor = 'var(--color-primary)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)'
+              e.currentTarget.style.borderColor = 'var(--color-border)'
+            }}
+          >
+            <div style={{ ...styles.cardIcon, background: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
+              <GraduationCap size={32} strokeWidth={1.75} />
             </div>
-            <h2 style={styles.featureTitle}>
-              The real exam, minus the nerves.
-            </h2>
-            <p style={styles.featureBody}>
-              Practice with 30,000+ questions in a CBT interface that mirrors
-              the real thing. Timed sessions, subject-based practice, and
-              instant feedback — so exam day isn't the first time you've seen it.
-            </p>
-          </div>
-
-          <div style={styles.featureMock}>
-            <MockCBT />
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================== */}
-      {/* FEATURE 2 — LESSONS + AI */}
-      {/* ============================================== */}
-      <section style={{ ...styles.feature, ...styles.featureAlt }}>
-        <div style={styles.featureInner}>
-          <div style={{ ...styles.featureMock, order: 1 }}>
-            <MockAnalytics />
-          </div>
-
-          <div style={{ ...styles.featureText, order: 2 }}>
-            <div style={styles.featureEyebrow}>
-              <Brain size={14} />
-              <span>Lessons + AI Coaching</span>
+            <div style={styles.cardLabel}>I'm a Student</div>
+            <div style={styles.cardDesc}>
+              Practice, learn with lessons, and track your exam preparation.
             </div>
-            <h2 style={styles.featureTitle}>
-              Know where you're losing marks.
-            </h2>
-            <p style={styles.featureBody}>
-              Every wrong answer feeds a live picture of your strengths and
-              weaknesses. Readiness by subject, weak-topic drill-down, and a
-              study plan that adjusts as you improve.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================== */}
-      {/* FEATURE 3 — DUELS */}
-      {/* ============================================== */}
-      <section style={styles.feature}>
-        <div style={styles.featureInner}>
-          <div style={styles.featureText}>
-            <div style={styles.featureEyebrow}>
-              <Swords size={14} />
-              <span>Duels</span>
+            <div style={{ ...styles.cardCta, color: 'var(--color-primary)' }}>
+              <span>Start</span>
+              <ArrowRight size={16} />
             </div>
-            <h2 style={styles.featureTitle}>
-              Progress you can feel.
-            </h2>
-            <p style={styles.featureBody}>
-              Challenge friends to duels, keep a daily streak, and unlock
-              badges as you hit milestones. Learning that keeps you coming back.
-            </p>
-          </div>
+          </button>
 
-          <div style={styles.featureMock}>
-            <MockDuel />
-          </div>
+          {/* PARENT */}
+          <button
+            onClick={handleParent}
+            style={styles.card}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)'
+              e.currentTarget.style.boxShadow = '0 20px 60px rgba(34, 197, 94, 0.20)'
+              e.currentTarget.style.borderColor = 'var(--color-success)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)'
+              e.currentTarget.style.borderColor = 'var(--color-border)'
+            }}
+          >
+            <div style={{ ...styles.cardIcon, background: 'var(--color-success-light)', color: 'var(--color-success)' }}>
+              <Users size={32} strokeWidth={1.75} />
+            </div>
+            <div style={styles.cardLabel}>I'm a Parent</div>
+            <div style={styles.cardDesc}>
+              See your child's progress, study activity, and where they need help.
+            </div>
+            <div style={{ ...styles.cardCta, color: 'var(--color-success)' }}>
+              <span>Enter code</span>
+              <ArrowRight size={16} />
+            </div>
+          </button>
         </div>
       </section>
+
+      {/* ============================================== */}
+      {/* FEATURE — STUDY PLAN */}
+      {/* ============================================== */}
+      <FeatureSection
+        icon={Calendar}
+        eyebrow="Study Plan"
+        title="A plan that knows your exam date."
+        body="Enter your exam date, subjects, and weekly hours — Hyelearner generates a week-by-week schedule that adapts as you improve. Countdown, milestones, and recommendations in one place."
+      >
+        <MockStudyPlan />
+      </FeatureSection>
+
+      {/* ============================================== */}
+      {/* FEATURE — COURSE FINDER */}
+      {/* ============================================== */}
+      <FeatureSection
+        icon={Search}
+        eyebrow="Course Finder"
+        title="Know your real chances."
+        body="Enter your score, subjects, and target course. Hyelearner compares against real cutoff data and tells you whether you're on track, borderline, or need to adjust your choices."
+        alt
+      >
+        <MockCourseFinder />
+      </FeatureSection>
+
+      {/* ============================================== */}
+      {/* FEATURE — FORMULA SOLVER */}
+      {/* ============================================== */}
+      <FeatureSection
+        icon={Calculator}
+        eyebrow="Formula Solver"
+        title="Every formula, solved for any variable."
+        body="Browse 100+ formulas across all subjects. Enter the values you know, leave one blank, and Hyelearner solves for the unknown — then verifies the answer by plugging it back in."
+      >
+        <MockFormulaSolver />
+      </FeatureSection>
+
+      {/* ============================================== */}
+      {/* FEATURE — SOCIAL */}
+      {/* ============================================== */}
+      <FeatureSection
+        icon={MessageSquare}
+        eyebrow="Social"
+        title="Study together, not alone."
+        body="Add friends, message them, join study groups, and see who's online. Learning is easier when someone's in it with you."
+        alt
+      >
+        <MockSocial />
+      </FeatureSection>
+
+      {/* ============================================== */}
+      {/* FEATURE — PARENT VIEW */}
+      {/* ============================================== */}
+      <FeatureSection
+        icon={Eye}
+        eyebrow="Parent View"
+        title="For the parents paying attention."
+        body="One code gives a parent a read-only view of their child's progress — subject readiness, recent activity, study time, and where they need help. No spying, no personal data."
+      >
+        <MockParentView />
+      </FeatureSection>
 
       {/* ============================================== */}
       {/* FOOTER */}
       {/* ============================================== */}
-      <footer style={styles.footer}>
-        <div style={styles.footerInner}>
-          <div style={styles.footerBrand}>
-            <span style={{ color: 'var(--color-primary)', display: 'inline-flex' }}>
-              <BrandMark size={20} />
-            </span>
-            <span style={styles.footerBrandText}>Hyelearner</span>
-          </div>
-
-          <div style={styles.footerLinks}>
-            <button
-              onClick={() => navigate('/login')}
-              style={styles.footerLink}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-muted)')}
-            >
-              Student login
-            </button>
-            <button
-              onClick={() => navigate('/parent/login')}
-              style={styles.footerLink}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-text)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-text-muted)')}
-            >
-              Parent access
-            </button>
-          </div>
-
-          <div style={styles.footerCopy}>
-            © {new Date().getFullYear()} Hyelearner
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
 
 // ============================================================
-// MOCK — CBT QUESTION
+// FEATURE SECTION — text up, mock down
 // ============================================================
-function MockCBT() {
-  const options = ['x = 2', 'x = 4', 'x = 6', 'x = 8']
-  const selectedIndex = 1
+function FeatureSection({ icon: Icon, eyebrow, title, body, children, alt = false }) {
+  return (
+    <section style={{ ...styles.feature, ...(alt ? styles.featureAlt : {}) }}>
+      <div style={styles.featureInner}>
+        {/* TEXT UP */}
+        <div style={styles.featureText}>
+          <div style={styles.featureEyebrow}>
+            <Icon size={14} />
+            <span>{eyebrow}</span>
+          </div>
+          <h2 style={styles.featureTitle}>{title}</h2>
+          <p style={styles.featureBody}>{body}</p>
+        </div>
+
+        {/* MOCK DOWN */}
+        <div style={styles.featureMock}>
+          {children}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ============================================================
+// MOCK — STUDY PLAN
+// ============================================================
+function MockStudyPlan() {
+  const days = [
+    { day: 'Monday', hours: 2.5, topic: 'Algebra — Linear Equations' },
+    { day: 'Tuesday', hours: 1.5, topic: 'Cell Structure — Organelles' },
+    { day: 'Wednesday', hours: 2.0, topic: 'Mechanics — Newton\'s Laws' },
+    { day: 'Thursday', hours: 2.5, topic: 'Essay Writing — Argumentative' },
+  ]
 
   return (
-    <div style={mockStyles.frame}>
-      <div style={mockStyles.header}>
-        <div style={mockStyles.headerLeft}>
-          <ClipboardCheck size={16} color="var(--color-primary)" />
-          <span style={mockStyles.headerTitle}>Mathematics</span>
+    <div style={mock.frame}>
+      <div style={mock.header}>
+        <div style={mock.headerLeft}>
+          <Clock size={16} color="var(--color-primary)" />
+          <span style={mock.headerTitle}>Exam in</span>
         </div>
-        <div style={mockStyles.headerRight}>
-          <Clock3 size={14} color="var(--color-text-muted)" />
-          <span style={mockStyles.headerTimer}>12:45</span>
-        </div>
+        <div style={mock.timer}>45d 12h 30m</div>
       </div>
 
-      <div style={mockStyles.progressLabel}>
-        <span>Question 24 of 50</span>
-        <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>48%</span>
-      </div>
-      <div className="progress" style={{ height: 6, marginBottom: 'var(--space-4)' }}>
-        <div className="progress-fill progress-fill-primary" style={{ width: '48%' }} />
-      </div>
-
-      <div style={mockStyles.questionBox}>
-        <p style={mockStyles.questionText}>
-          If f(x) = 2x² + 3x - 5, what is f(2)?
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {options.map((opt, i) => {
-          const isSelected = i === selectedIndex
-          const isCorrect = isSelected && i === 1
-          return (
-            <div
-              key={i}
-              style={{
-                ...mockStyles.option,
-                borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
-                background: isCorrect ? 'var(--color-success-light)' : 'var(--color-surface)',
-              }}
-            >
-              <span
-                style={{
-                  ...mockStyles.optionLetter,
-                  background: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
-                  color: isSelected ? 'white' : 'var(--color-text-muted)',
-                }}
-              >
-                {String.fromCharCode(65 + i)}
-              </span>
-              <span style={mockStyles.optionText}>{opt}</span>
-              {isCorrect && <CheckCircle2 size={16} color="var(--color-success)" />}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+        {days.map((d) => (
+          <div key={d.day} style={mock.row}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={mock.rowTitle}>{d.day}</div>
+              <div style={mock.rowSub}>{d.topic}</div>
             </div>
-          )
-        })}
+            <div style={mock.rowHours}>{d.hours}h</div>
+          </div>
+        ))}
       </div>
 
-      <div style={mockStyles.navRow}>
-        <div style={mockStyles.navBtn}>
-          <ChevronLeft size={14} />
-          <span>Previous</span>
+      <div style={mock.footerRow}>
+        <div style={mock.footerBadge}>
+          <TrendingUp size={12} />
+          <span>On track</span>
         </div>
-        <span style={mockStyles.navCounter}>24 / 50</span>
-        <div style={{ ...mockStyles.navBtn, background: 'var(--color-primary)', color: 'white' }}>
-          <span>Next</span>
-          <ChevronRightIcon size={14} />
+        <span style={mock.footerNote}>6.2 / 10 hrs this week</span>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// MOCK — COURSE FINDER
+// ============================================================
+function MockCourseFinder() {
+  return (
+    <div style={mock.frame}>
+      <div style={mock.header}>
+        <div style={mock.headerLeft}>
+          <Search size={16} color="var(--color-primary)" />
+          <span style={mock.headerTitle}>University of Lagos</span>
+        </div>
+      </div>
+
+      <div style={mock.fieldRow}>
+        <div style={mock.fieldLabel}>Course</div>
+        <div style={mock.fieldValue}>Computer Science</div>
+      </div>
+      <div style={mock.fieldRow}>
+        <div style={mock.fieldLabel}>Your score</div>
+        <div style={mock.fieldValue}>278 / 400</div>
+      </div>
+      <div style={mock.fieldRow}>
+        <div style={mock.fieldLabel}>Last cutoff</div>
+        <div style={mock.fieldValue}>265</div>
+      </div>
+
+      <div style={mock.resultGood}>
+        <CheckCircle2 size={16} />
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>
+            Strong chance
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', opacity: 0.85, marginTop: 2 }}>
+            13 points above last year&rsquo;s cutoff
+          </div>
         </div>
       </div>
     </div>
@@ -395,106 +382,146 @@ function MockCBT() {
 }
 
 // ============================================================
-// MOCK — ANALYTICS
+// MOCK — FORMULA SOLVER
 // ============================================================
-function MockAnalytics() {
+function MockFormulaSolver() {
+  return (
+    <div style={mock.frame}>
+      <div style={mock.header}>
+        <div style={mock.headerLeft}>
+          <Calculator size={16} color="var(--color-primary)" />
+          <span style={mock.headerTitle}>Quadratic Formula</span>
+        </div>
+      </div>
+
+      <div style={mock.formulaBig}>
+        x = (-b ± √(b² - 4ac)) / 2a
+      </div>
+
+      <div style={mock.inputRow}>
+        <span style={mock.inputKey}>a</span>
+        <span style={mock.inputVal}>1</span>
+      </div>
+      <div style={mock.inputRow}>
+        <span style={mock.inputKey}>b</span>
+        <span style={mock.inputVal}>-5</span>
+      </div>
+      <div style={mock.inputRow}>
+        <span style={mock.inputKey}>c</span>
+        <span style={{ ...mock.inputVal, opacity: 0.4 }}>?</span>
+      </div>
+
+      <div style={mock.solveRow}>
+        <Sparkles size={14} color="var(--color-warning)" />
+        <span style={mock.solveText}>Solved for c</span>
+        <span style={mock.solveValue}>c = 6</span>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// MOCK — SOCIAL
+// ============================================================
+function MockSocial() {
+  return (
+    <div style={mock.frame}>
+      <div style={mock.header}>
+        <div style={mock.headerLeft}>
+          <MessageSquare size={16} color="var(--color-primary)" />
+          <span style={mock.headerTitle}>Friends</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)' }}>
+          <Globe size={12} />
+          <span>3 online</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+        {[
+          { name: 'Ada', streak: 12, online: true },
+          { name: 'Tunde', streak: 8, online: true },
+          { name: 'Zainab', streak: 5, online: false },
+        ].map((f) => (
+          <div key={f.name} style={mock.friendRow}>
+            <div style={mock.avatar}>
+              {f.name[0]}
+              {f.online && <span style={mock.onlineDot} />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={mock.friendName}>{f.name}</div>
+              <div style={mock.friendMeta}>
+                <Flame size={10} /> {f.streak} day streak
+              </div>
+            </div>
+            <Swords size={14} color="var(--color-warning)" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// MOCK — PARENT VIEW
+// ============================================================
+function MockParentView() {
   const subjects = [
     { name: 'English', value: 85, color: 'var(--color-success)' },
-    { name: 'Mathematics', value: 78, color: 'var(--color-primary)' },
-    { name: 'Chemistry', value: 62, color: 'var(--color-warning)' },
+    { name: 'Math', value: 78, color: 'var(--color-primary)' },
     { name: 'Physics', value: 45, color: 'var(--color-danger)' },
   ]
 
   return (
-    <div style={mockStyles.frame}>
-      <div style={mockStyles.header}>
-        <div style={mockStyles.headerLeft}>
-          <Brain size={16} color="var(--color-primary)" />
-          <span style={mockStyles.headerTitle}>Weakness Analysis</span>
+    <div style={mock.frame}>
+      <div style={mock.header}>
+        <div style={mock.headerLeft}>
+          <Eye size={16} color="var(--color-success)" />
+          <span style={mock.headerTitle}>Ada Obi</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={mock.onlineDot} />
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+            Online now
+          </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 4 }}>
+        <div style={mock.statMini}>
+          <Flame size={14} color="var(--color-warning)" />
+          <div style={mock.statVal}>12</div>
+          <div style={mock.statLbl}>Streak</div>
+        </div>
+        <div style={mock.statMini}>
+          <Target size={14} color="var(--color-primary)" />
+          <div style={mock.statVal}>78%</div>
+          <div style={mock.statLbl}>Accuracy</div>
+        </div>
+        <div style={mock.statMini}>
+          <Award size={14} color="var(--color-success)" />
+          <div style={mock.statVal}>8</div>
+          <div style={mock.statLbl}>Level</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {subjects.map((s) => (
           <div key={s.name}>
-            <div style={mockStyles.barLabel}>
+            <div style={mock.subjLabel}>
               <span>{s.name}</span>
               <span style={{ color: s.color, fontWeight: 600 }}>{s.value}%</span>
             </div>
-            <div style={mockStyles.barTrack}>
-              <div
-                style={{
-                  width: `${s.value}%`,
-                  height: '100%',
-                  background: s.color,
-                  borderRadius: 4,
-                }}
-              />
+            <div style={mock.barTrack}>
+              <div style={{ width: `${s.value}%`, height: '100%', background: s.color, borderRadius: 4 }} />
             </div>
           </div>
         ))}
       </div>
 
-      <div style={mockStyles.weakBox}>
-        <div style={mockStyles.weakTitle}>Focus next</div>
-        <div style={mockStyles.weakList}>
-          <span style={mockStyles.weakPill}>Algebra</span>
-          <span style={mockStyles.weakPill}>Organic Chemistry</span>
-          <span style={mockStyles.weakPill}>Trigonometry</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================================
-// MOCK — DUEL
-// ============================================================
-function MockDuel() {
-  return (
-    <div style={mockStyles.frame}>
-      <div style={mockStyles.header}>
-        <div style={mockStyles.headerLeft}>
-          <Swords size={16} color="var(--color-warning)" />
-          <span style={mockStyles.headerTitle}>Duo Battle</span>
-        </div>
-      </div>
-
-      <div style={mockStyles.duelGrid}>
-        <div style={mockStyles.duelPlayer}>
-          <div style={{ ...mockStyles.duelAvatar, background: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
-            A
-          </div>
-          <div style={mockStyles.duelName}>Player A</div>
-          <div style={mockStyles.duelXp}>1,850 XP</div>
-        </div>
-
-        <div style={mockStyles.duelVs}>VS</div>
-
-        <div style={mockStyles.duelPlayer}>
-          <div style={{ ...mockStyles.duelAvatar, background: 'var(--color-secondary-light)', color: 'var(--color-secondary)' }}>
-            B
-          </div>
-          <div style={mockStyles.duelName}>Player B</div>
-          <div style={mockStyles.duelXp}>1,420 XP</div>
-        </div>
-      </div>
-
-      <div style={mockStyles.duelStats}>
-        <div style={mockStyles.duelStat}>
-          <div style={mockStyles.duelStatValue}>7</div>
-          <div style={mockStyles.duelStatLabel}>day streak</div>
-        </div>
-        <div style={mockStyles.duelStatDivider} />
-        <div style={mockStyles.duelStat}>
-          <div style={mockStyles.duelStatValue}>2,450</div>
-          <div style={mockStyles.duelStatLabel}>total XP</div>
-        </div>
-        <div style={mockStyles.duelStatDivider} />
-        <div style={mockStyles.duelStat}>
-          <div style={mockStyles.duelStatValue}>8</div>
-          <div style={mockStyles.duelStatLabel}>duels won</div>
-        </div>
+      <div style={mock.alertRow}>
+        <AlertTriangle size={14} color="var(--color-warning)" />
+        <span style={mock.alertText}>Physics below passing</span>
       </div>
     </div>
   )
@@ -510,79 +537,69 @@ const styles = {
     minHeight: '100vh',
     position: 'relative',
     overflow: 'hidden',
-    fontFamily:
-      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   },
 
-  glow: {
+  helpLink: {
     position: 'absolute',
-    top: '-10%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '800px',
-    height: '800px',
-    background:
-      'radial-gradient(circle, rgba(79, 70, 229, 0.10) 0%, rgba(79, 70, 229, 0) 60%)',
-    pointerEvents: 'none',
-    zIndex: 0,
-  },
-
-  // NAV
-  nav: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    background: 'rgba(10, 10, 15, 0.72)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    borderBottom: '1px solid var(--color-border)',
-  },
-  navInner: {
-    maxWidth: '1080px',
-    margin: '0 auto',
-    padding: '14px var(--space-5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  brand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  brandMarkWrap: {
+    top: 'var(--space-5)',
+    left: 'var(--space-5)',
     display: 'inline-flex',
-    color: 'var(--color-primary)',
-  },
-  brandText: {
-    fontSize: 'var(--font-size-base)',
-    fontWeight: 800,
-    letterSpacing: '-0.02em',
-    color: 'var(--color-text)',
-  },
-  navLogin: {
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
     background: 'transparent',
+    color: 'var(--color-text-muted)',
     border: 'none',
-    cursor: 'pointer',
+    borderRadius: 'var(--radius-full)',
     fontFamily: 'inherit',
     fontSize: 'var(--font-size-sm)',
     fontWeight: 500,
-    color: 'var(--color-text-muted)',
-    padding: '6px 10px',
-    transition: 'color 150ms ease',
+    cursor: 'pointer',
+    zIndex: 5,
+    transition: 'all var(--transition)',
   },
 
-  // HERO
   hero: {
     position: 'relative',
-    zIndex: 1,
-    padding: '80px var(--space-5) 40px',
-  },
-  heroInner: {
-    maxWidth: '760px',
-    margin: '0 auto',
+    padding: 'var(--space-16) var(--space-5) var(--space-12)',
     textAlign: 'center',
+    zIndex: 1,
   },
+
+  glowOuter: {
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 'min(640px, 90vw)',
+    height: 'min(640px, 90vw)',
+    pointerEvents: 'none',
+    zIndex: -1,
+  },
+  glowInner: {
+    width: '100%',
+    height: '100%',
+    background: 'radial-gradient(circle, rgba(79, 70, 229, 0.12) 0%, rgba(79, 70, 229, 0.04) 40%, transparent 70%)',
+    borderRadius: '50%',
+    animation: 'landingGlowPulse 3s ease-in-out infinite',
+  },
+
+  logoWrap: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    animation: 'landingLogoPulse 3s ease-in-out infinite',
+    marginBottom: 'var(--space-5)',
+  },
+
+  wordmark: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 800,
+    letterSpacing: '-0.02em',
+    color: 'var(--color-primary)',
+    marginBottom: 'var(--space-5)',
+  },
+
   headline: {
     fontSize: 'clamp(2rem, 5vw, 3.5rem)',
     fontWeight: 800,
@@ -591,18 +608,18 @@ const styles = {
     color: 'var(--color-text)',
     margin: 0,
   },
+
   subhead: {
     fontSize: 'var(--font-size-base)',
     lineHeight: 1.65,
     color: 'var(--color-text-secondary)',
-    marginTop: 20,
-    marginBottom: 56,
+    marginTop: 'var(--space-5)',
+    marginBottom: 'var(--space-12)',
     maxWidth: 560,
     marginLeft: 'auto',
     marginRight: 'auto',
   },
 
-  // CARDS
   cardsWrap: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -610,7 +627,8 @@ const styles = {
     maxWidth: 640,
     margin: '0 auto',
   },
-  cardStudent: {
+
+  card: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
@@ -621,27 +639,12 @@ const styles = {
     borderRadius: 'var(--radius-2xl)',
     cursor: 'pointer',
     fontFamily: 'inherit',
-    transition: 'all 220ms cubic-bezier(0.34, 1.3, 0.64, 1)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-    minHeight: 260,
+    transition: 'all 250ms cubic-bezier(0.34, 1.3, 0.64, 1)',
+    boxShadow: 'var(--shadow-md)',
+    minHeight: 240,
     color: 'var(--color-text)',
   },
-  cardParent: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    textAlign: 'left',
-    padding: 'var(--space-5)',
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-2xl)',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    transition: 'all 220ms cubic-bezier(0.34, 1.3, 0.64, 1)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-    minHeight: 260,
-    color: 'var(--color-text)',
-  },
+
   cardIcon: {
     width: 56,
     height: 56,
@@ -649,54 +652,55 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 'var(--space-4)',
   },
+
   cardLabel: {
     fontSize: 'var(--font-size-lg)',
     fontWeight: 700,
     letterSpacing: '-0.01em',
     color: 'var(--color-text)',
   },
+
   cardDesc: {
     fontSize: 'var(--font-size-sm)',
     lineHeight: 1.55,
     color: 'var(--color-text-muted)',
-    marginTop: 8,
+    marginTop: 'var(--space-2)',
     flex: 1,
   },
+
   cardCta: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
     fontSize: 'var(--font-size-sm)',
     fontWeight: 600,
-    marginTop: 20,
+    marginTop: 'var(--space-4)',
   },
 
-  // FEATURE
   feature: {
     position: 'relative',
-    zIndex: 1,
-    padding: '80px var(--space-5)',
+    padding: 'var(--space-16) var(--space-5)',
     borderTop: '1px solid var(--color-border)',
+    zIndex: 1,
   },
   featureAlt: {
-    background: 'var(--color-background)',
+    background: 'var(--color-surface)',
   },
+
   featureInner: {
-    maxWidth: '1080px',
+    maxWidth: '720px',
     margin: '0 auto',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 'clamp(32px, 5vw, 72px)',
-    alignItems: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-8)',
   },
+
   featureText: {
-    order: 1,
+    textAlign: 'center',
   },
-  featureMock: {
-    order: 2,
-  },
+
   featureEyebrow: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -706,8 +710,9 @@ const styles = {
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
     color: 'var(--color-primary)',
-    marginBottom: 16,
+    marginBottom: 'var(--space-3)',
   },
+
   featureTitle: {
     fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
     fontWeight: 700,
@@ -716,69 +721,34 @@ const styles = {
     color: 'var(--color-text)',
     margin: 0,
   },
+
   featureBody: {
     fontSize: 'var(--font-size-base)',
     lineHeight: 1.7,
     color: 'var(--color-text-secondary)',
-    marginTop: 16,
+    marginTop: 'var(--space-4)',
+    maxWidth: 520,
+    marginLeft: 'auto',
+    marginRight: 'auto',
   },
 
-  // FOOTER
-  footer: {
-    borderTop: '1px solid var(--color-border)',
-    padding: '32px var(--space-5)',
-    position: 'relative',
-    zIndex: 1,
-  },
-  footerInner: {
-    maxWidth: '1080px',
-    margin: '0 auto',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  footerBrand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
-  footerBrandText: {
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 700,
-    color: 'var(--color-text)',
-  },
-  footerLinks: {
-    display: 'flex',
-    gap: 20,
-  },
-  footerLink: {
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-muted)',
-    padding: 0,
-    transition: 'color 150ms ease',
-  },
-  footerCopy: {
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-text-muted)',
+  featureMock: {
+    width: '100%',
   },
 }
 
 // ============================================================
-// MOCK STYLES (shared across the three previews)
+// MOCK STYLES (shared)
 // ============================================================
-const mockStyles = {
+const mock = {
   frame: {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-2xl)',
     padding: 'var(--space-5)',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+    boxShadow: 'var(--shadow-lg)',
+    maxWidth: 480,
+    margin: '0 auto',
   },
   header: {
     display: 'flex',
@@ -791,201 +761,244 @@ const mockStyles = {
     alignItems: 'center',
     gap: 8,
   },
-  headerRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-  },
   headerTitle: {
     fontSize: 'var(--font-size-sm)',
     fontWeight: 600,
     color: 'var(--color-text)',
   },
-  headerTimer: {
+  timer: {
     fontFamily: 'var(--font-mono)',
     fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-muted)',
+    fontWeight: 700,
+    color: 'var(--color-primary)',
   },
-  progressLabel: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-text-muted)',
-    marginBottom: 6,
-  },
-  questionBox: {
-    background: 'var(--color-background)',
-    borderRadius: 'var(--radius-xl)',
-    padding: 'var(--space-4)',
-    marginBottom: 'var(--space-4)',
-  },
-  questionText: {
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 500,
-    color: 'var(--color-text)',
-    margin: 0,
-    lineHeight: 1.55,
-  },
-  option: {
+
+  row: {
     display: 'flex',
     alignItems: 'center',
     gap: 'var(--space-3)',
-    padding: '10px 14px',
-    border: '2px solid var(--color-border)',
-    borderRadius: 'var(--radius)',
-    transition: 'all 150ms ease',
+    padding: '10px 12px',
+    background: 'var(--color-background)',
+    borderRadius: 'var(--radius-lg)',
   },
-  optionLetter: {
-    width: 26,
-    height: 26,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+  rowTitle: {
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+  },
+  rowSub: {
     fontSize: 'var(--font-size-xs)',
-    fontWeight: 700,
+    color: 'var(--color-text-muted)',
+    marginTop: 2,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  rowHours: {
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
     flexShrink: 0,
   },
-  optionText: {
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text)',
-    flex: 1,
-  },
-  navRow: {
+
+  footerRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 'var(--space-4)',
+    paddingTop: 'var(--space-3)',
+    borderTop: '1px solid var(--color-border)',
   },
-  navBtn: {
-    display: 'flex',
+  footerBadge: {
+    display: 'inline-flex',
     alignItems: 'center',
     gap: 4,
-    padding: '6px 10px',
-    borderRadius: 'var(--radius)',
-    background: 'var(--color-background)',
-    color: 'var(--color-text-secondary)',
-    fontSize: 'var(--font-size-xs)',
-    fontWeight: 500,
-  },
-  navCounter: {
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-text-muted)',
-  },
-
-  // analytics
-  barLabel: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-text-secondary)',
-    marginBottom: 6,
-  },
-  barTrack: {
-    height: 8,
-    background: 'var(--color-border)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  weakBox: {
-    marginTop: 20,
-    padding: 'var(--space-3)',
-    background: 'var(--color-background)',
-    borderRadius: 'var(--radius-lg)',
-  },
-  weakTitle: {
+    padding: '4px 10px',
+    background: 'var(--color-success-light)',
+    color: 'var(--color-success)',
+    borderRadius: 'var(--radius-full)',
     fontSize: 'var(--font-size-xs)',
     fontWeight: 600,
-    color: 'var(--color-text-muted)',
-    marginBottom: 8,
   },
-  weakList: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  weakPill: {
-    padding: '4px 10px',
-    background: 'var(--color-danger-light)',
-    color: 'var(--color-danger)',
+  footerNote: {
     fontSize: 'var(--font-size-xs)',
-    fontWeight: 500,
-    borderRadius: 999,
-    border: '1px solid var(--color-danger)',
+    color: 'var(--color-text-muted)',
   },
 
-  // duel
-  duelGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr',
-    gap: 'var(--space-3)',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  duelPlayer: {
-    textAlign: 'center',
-  },
-  duelAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: '50%',
+  fieldRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 8px',
-    fontSize: 'var(--font-size-base)',
-    fontWeight: 700,
+    justifyContent: 'space-between',
+    padding: '10px 0',
+    borderBottom: '1px solid var(--color-border-light)',
   },
-  duelName: {
-    fontSize: 'var(--font-size-xs)',
+  fieldLabel: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-text-muted)',
+  },
+  fieldValue: {
+    fontSize: 'var(--font-size-sm)',
     fontWeight: 600,
     color: 'var(--color-text)',
   },
-  duelXp: {
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-text-muted)',
-    marginTop: 2,
-  },
-  duelVs: {
-    width: 40,
-    height: 40,
-    borderRadius: '50%',
-    background: 'var(--color-warning)',
-    color: 'white',
+
+  resultGood: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 'var(--font-size-xs)',
-    fontWeight: 900,
+    gap: 'var(--space-3)',
+    marginTop: 'var(--space-4)',
+    padding: '12px 14px',
+    background: 'var(--color-success-light)',
+    color: 'var(--color-success)',
+    borderRadius: 'var(--radius-lg)',
   },
-  duelStats: {
+
+  formulaBig: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--font-size-lg)',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+    padding: '12px 14px',
+    background: 'var(--color-primary-light)',
+    borderRadius: 'var(--radius-lg)',
+    textAlign: 'center',
+    marginBottom: 'var(--space-4)',
+  },
+
+  inputRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 20,
-    padding: 'var(--space-3)',
+    padding: '8px 12px',
+    background: 'var(--color-background)',
+    borderRadius: 'var(--radius-lg)',
+    marginBottom: 6,
+  },
+  inputKey: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+  },
+  inputVal: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-text-secondary)',
+  },
+
+  solveRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-2)',
+    marginTop: 'var(--space-4)',
+    padding: '10px 14px',
+    background: 'var(--color-warning-light)',
+    borderRadius: 'var(--radius-lg)',
+  },
+  solveText: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-text-muted)',
+    flex: 1,
+  },
+  solveValue: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 700,
+    color: 'var(--color-warning)',
+  },
+
+  friendRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+    padding: '8px 10px',
     background: 'var(--color-background)',
     borderRadius: 'var(--radius-lg)',
   },
-  duelStat: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  duelStatValue: {
-    fontSize: 'var(--font-size-base)',
-    fontWeight: 700,
+  avatar: {
+    position: 'relative',
+    width: 36,
+    height: 36,
+    borderRadius: '50%',
+    background: 'var(--color-primary-light)',
     color: 'var(--color-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 700,
+    fontSize: 'var(--font-size-sm)',
+    flexShrink: 0,
   },
-  duelStatLabel: {
-    fontSize: '10px',
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase',
+  onlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    background: 'var(--color-success)',
+    border: '2px solid var(--color-background)',
+  },
+  friendName: {
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+  },
+  friendMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 'var(--font-size-xs)',
     color: 'var(--color-text-muted)',
     marginTop: 2,
   },
-  duelStatDivider: {
-    width: 1,
-    height: 24,
+
+  statMini: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    padding: '10px 6px',
+    background: 'var(--color-background)',
+    borderRadius: 'var(--radius-lg)',
+  },
+  statVal: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 700,
+    color: 'var(--color-text)',
+  },
+  statLbl: {
+    fontSize: '10px',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+    color: 'var(--color-text-muted)',
+  },
+
+  subjLabel: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-text-secondary)',
+    marginBottom: 4,
+  },
+  barTrack: {
+    height: 6,
     background: 'var(--color-border)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+
+  alertRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-2)',
+    marginTop: 'var(--space-4)',
+    padding: '10px 12px',
+    background: 'var(--color-warning-light)',
+    borderRadius: 'var(--radius-lg)',
+  },
+  alertText: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-text-secondary)',
   },
 }

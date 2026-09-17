@@ -1,7 +1,8 @@
 // ============================================================
-// HYELEARNER: FOUNDATION — EXTRA PAGES
-// Career (with history tabs) + EditProfilePage added
-// Only these two changed. Everything else same as your file.
+// HYELEARNER: FOUNDATION — EXTRA PAGES (DYNAMIC DROPDOWNS)
+// Parent Dashboard (Connection Only), Course Finder (NEW),
+// Cut-off Tracker, Bookmarks, Settings (with Paystack subscription),
+// Profile, Offline
 // Built by Hyesent.dev
 // ============================================================
 

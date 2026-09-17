@@ -11,7 +11,7 @@ import { useAuth } from './hooks'
 
 import Login from './pages/auth'
 import { Register, ForgotPassword } from './pages/auth'
-import Home from './pages/home/Home'
+import Home from './pages/Home'
 import Dashboard from './pages/dashboard'
 import { HyeTutorPage, HyeTutorChatPage } from './pages/hyetutor'
 import DailyTutorPage from './pages/hyetutor/DailyTutorPage'
@@ -39,22 +39,17 @@ import { Slideshow } from './Slideshow'
 import { ParentSlideshow } from './pages/parent/ParentSlideshow'
 import ParentLogin from './pages/parent/ParentLogin'
 import ParentDashboard from './pages/parent/ParentDashboard'
+import Help from './pages/help/Help'
 
 // ============================================================
 // ROUTE WRAPPERS
 // ============================================================
 
-/**
- * Root route. Renders Landing when logged out.
- * Redirects to Home when logged in (student).
- * Redirects to parent dashboard if a parent code exists.
- */
 function LandingOrRedirect() {
   const { user, loading } = useAuth()
 
   if (loading) return <LoadingScreen />
 
-  // Parent: has a code stored → straight to dashboard
   const parentCode =
     typeof window !== 'undefined'
       ? localStorage.getItem('hyelearner_parent_code')
@@ -63,20 +58,13 @@ function LandingOrRedirect() {
     return <Navigate to="/parent/dashboard" replace />
   }
 
-  // Logged-in student → Home
   if (user) {
     return <Navigate to="/home" replace />
   }
 
-  // Logged out → Landing
   return <Landing />
 }
 
-/**
- * Student slideshow route.
- * On complete → /login
- * If slideshow already seen → skip to /login
- */
 function StudentSlideshowRoute() {
   if (typeof window !== 'undefined') {
     const seen = localStorage.getItem('hyelearner_slideshow_seen') === 'true'
@@ -93,11 +81,6 @@ function StudentSlideshowRoute() {
   )
 }
 
-/**
- * Parent slideshow route.
- * On complete → /parent/login
- * If already seen → skip to /parent/login
- */
 function ParentSlideshowRoute() {
   if (typeof window !== 'undefined') {
     const seen = localStorage.getItem('hyelearner_parent_slideshow_seen') === 'true'
@@ -121,57 +104,46 @@ export default function Router() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        {/* ============================================ */}
-        {/* PUBLIC — always available */}
-        {/* ============================================ */}
+        {/* PUBLIC */}
         <Route path="/" element={<LandingOrRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* ============================================ */}
-        {/* ONBOARDING — outside protected */}
-        {/* ============================================ */}
+        {/* HELP — public */}
+        <Route path="/help" element={<Help />} />
+
+        {/* ONBOARDING */}
         <Route path="/slideshow/student" element={<StudentSlideshowRoute />} />
         <Route path="/slideshow/parent" element={<ParentSlideshowRoute />} />
 
-        {/* ============================================ */}
-        {/* PARENT — outside protected (code is auth) */}
-        {/* ============================================ */}
+        {/* PARENT */}
         <Route path="/parent/login" element={<ParentLogin />} />
         <Route path="/parent/dashboard" element={<ParentDashboard />} />
 
-        {/* ============================================ */}
         {/* PROTECTED — student shell */}
-        {/* ============================================ */}
         <Route element={<ProtectedRoute />}>
-          {/* Home */}
           <Route path="/home" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* HyeTutor */}
           <Route path="/hyetutor" element={<HyeTutorPage />} />
           <Route path="/hyetutor/chat" element={<HyeTutorChatPage />} />
           <Route path="/daily-tutor/history" element={<DailyTutorPage />} />
 
-          {/* Learn */}
           <Route path="/lessons" element={<LessonsPage />} />
           <Route path="/practice" element={<CBTPracticePage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/topic-mode" element={<TopicModePage />} />
 
-          {/* Engage */}
           <Route path="/heatmap" element={<HeatmapPage />} />
           <Route path="/weakness" element={<WeaknessFinderPage />} />
           <Route path="/gamification" element={<GamificationPage />} />
           <Route path="/leaderboards" element={<LeaderboardsPage />} />
 
-          {/* Extend */}
           <Route path="/mistake-book" element={<MistakeBookPage />} />
           <Route path="/revision-planner" element={<RevisionPlannerPage />} />
           <Route path="/duo-battle" element={<DuoBattlePage />} />
 
-          {/* Extra */}
           <Route path="/parent" element={<ParentDashboardPage />} />
           <Route path="/course-finder" element={<CourseFinderPage />} />
           <Route path="/cutoff-tracker" element={<CutoffTrackerPage />} />
@@ -181,10 +153,8 @@ export default function Router() {
           <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/offline" element={<OfflinePage />} />
 
-          {/* Study Plan */}
           <Route path="/study-plan" element={<StudyPlanPage />} />
 
-          {/* Other */}
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/mock-exams" element={<MockExamsPage />} />
           <Route path="/social" element={<SocialPage />} />
@@ -195,9 +165,6 @@ export default function Router() {
           <Route path="/formulas" element={<FormulaExplorerPage />} />
         </Route>
 
-        {/* ============================================ */}
-        {/* 404 → Landing */}
-        {/* ============================================ */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

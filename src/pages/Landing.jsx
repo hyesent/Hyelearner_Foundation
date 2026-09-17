@@ -41,7 +41,7 @@ import {
   ChevronRight,
   RotateCw,
   X,
-  play,
+  Circle,
 } from 'lucide-react'
 import Footer from '../Footer'
 
@@ -124,7 +124,7 @@ export default function Landing() {
     e.currentTarget.style.borderColor = 'var(--color-primary)'
   }}
 >
-  <Play size={14} />
+  <Circle size={14} />
   <span>Preview Hyelearner</span>
   <ArrowRight size={14} />
 </button>

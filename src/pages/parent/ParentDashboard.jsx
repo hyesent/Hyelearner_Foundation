@@ -59,6 +59,16 @@ function readinessColor(level) {
   return 'var(--color-danger)'
 }
 
+function displayName(student) {
+  if (!student) return 'Student'
+  const full = `${student.first_name || ''} ${student.name?.split(' ').slice(1).join(' ') || ''}`.trim()
+  if (student.first_name && student.name) {
+    const parts = student.name.split(' ')
+    if (parts.length > 1) return student.name
+  }
+  return student.name || student.first_name || 'Student'
+}
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -148,42 +158,42 @@ export default function ParentDashboard() {
 
   return (
     <div style={s.page}>
-      {/* ============================================== */}
-      {/* HEADER */}
-      {/* ============================================== */}
-      <header style={s.header}>
-        <div style={s.headerInner}>
-          <div style={s.headerBrand}>
-            <div style={s.headerIconCircle}>
-              <Users size={18} color="var(--color-success)" />
-            </div>
-            <div>
-              <div style={s.headerEyebrow}>PARENT VIEW</div>
-              <div style={s.headerTitle}>{student.name}</div>
-            </div>
-          </div>
-
-          <button onClick={handleLogout} style={s.logout}>
-            <LogOut size={14} />
-            <span>Exit</span>
-          </button>
-        </div>
-      </header>
-
       <main style={s.main}>
         {/* ============================================== */}
-        {/* IDENTITY STRIP */}
+        {/* HEADER — as a card, floating on background */}
         {/* ============================================== */}
-        <section style={s.identityStrip}>
-          <div style={s.identityLeft}>
-            <div style={s.studentName}>{student.name}</div>
-            <div style={s.studentMeta}>
-              {student.school && <span>{student.school}</span>}
-              {student.school && student.exam && <span style={s.dotSep}>·</span>}
-              {student.exam && <span>{student.exam.toUpperCase()}</span>}
+        <section style={s.headerCard}>
+          <div style={s.headerInner}>
+            <div style={s.headerBrand}>
+              <div style={s.headerIconCircle}>
+                <Users size={20} color="var(--color-success)" />
+              </div>
+              <div style={s.headerText}>
+                <div style={s.headerEyebrow}>PARENT VIEW</div>
+                <div style={s.headerTitle} title={student.name}>
+                  {student.name}
+                </div>
+                {(student.school || student.exam) && (
+                  <div style={s.headerMeta}>
+                    {student.school && <span>{student.school}</span>}
+                    {student.school && student.exam && <span style={s.dotSep}>·</span>}
+                    {student.exam && <span>{student.exam.toUpperCase()}</span>}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
+            <button onClick={handleLogout} style={s.logout}>
+              <LogOut size={14} />
+              <span>Exit</span>
+            </button>
+          </div>
+        </section>
+
+        {/* ============================================== */}
+        {/* STATUS STRIP */}
+        {/* ============================================== */}
+        <section style={s.statusStrip}>
           <div style={s.statusPill}>
             <Circle
               size={8}
@@ -193,7 +203,7 @@ export default function ParentDashboard() {
             <span style={s.statusText}>
               {student.is_online
                 ? 'Online now'
-                : timeAgo(student.last_activity)}
+                : `Last active ${timeAgo(student.last_activity)}`}
             </span>
           </div>
         </section>
@@ -553,64 +563,6 @@ const s = {
     cursor: 'pointer',
   },
 
-  // HEADER
-  header: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    background: 'rgba(10, 10, 15, 0.72)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    borderBottom: '1px solid var(--color-border)',
-  },
-  headerInner: {
-    maxWidth: 720,
-    margin: '0 auto',
-    padding: '12px var(--space-5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerBrand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: '50%',
-    background: 'var(--color-success-light)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerEyebrow: {
-    fontSize: '10px',
-    fontWeight: 700,
-    letterSpacing: '0.1em',
-    color: 'var(--color-text-muted)',
-  },
-  headerTitle: {
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 700,
-    color: 'var(--color-text)',
-  },
-  logout: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '8px 14px',
-    background: 'transparent',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    fontFamily: 'inherit',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-secondary)',
-    cursor: 'pointer',
-  },
-
-  // MAIN
   main: {
     maxWidth: 720,
     margin: '0 auto',
@@ -620,33 +572,90 @@ const s = {
     gap: 'var(--space-4)',
   },
 
-  // IDENTITY
-  identityStrip: {
+  // HEADER — now a card
+  headerCard: {
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-2xl)',
+    padding: 'var(--space-4) var(--space-5)',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  headerInner: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 'var(--space-3)',
-    flexWrap: 'wrap',
   },
-  identityLeft: {
+  headerBrand: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
     minWidth: 0,
   },
-  studentName: {
-    fontSize: 'var(--font-size-2xl)',
-    fontWeight: 800,
-    letterSpacing: '-0.02em',
-    color: 'var(--color-text)',
+  headerIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: '50%',
+    background: 'var(--color-success-light)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  studentMeta: {
+  headerText: {
+    minWidth: 0,
+    flex: 1,
+  },
+  headerEyebrow: {
+    fontSize: '10px',
+    fontWeight: 700,
+    letterSpacing: '0.1em',
+    color: 'var(--color-text-muted)',
+    marginBottom: 2,
+  },
+  headerTitle: {
+    fontSize: 'var(--font-size-lg)',
+    fontWeight: 800,
+    letterSpacing: '-0.01em',
+    color: 'var(--color-text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  headerMeta: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    fontSize: 'var(--font-size-sm)',
+    fontSize: 'var(--font-size-xs)',
     color: 'var(--color-text-muted)',
-    marginTop: 4,
+    marginTop: 2,
   },
   dotSep: {
     opacity: 0.5,
+  },
+  logout: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    background: 'transparent',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    fontFamily: 'inherit',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+    cursor: 'pointer',
+    flexShrink: 0,
+    transition: 'all var(--transition)',
+  },
+
+  // STATUS
+  statusStrip: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   statusPill: {
     display: 'inline-flex',

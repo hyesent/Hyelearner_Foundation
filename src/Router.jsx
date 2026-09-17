@@ -3,7 +3,7 @@
 // Built by Hyesent.dev
 // ============================================================
 
-import { Suspense, lazy } from 'react'
+import React, { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -45,6 +45,95 @@ import Help from './pages/help/Help'
 import { PreviewProvider } from './pages/showcase/PreviewContext'
 import { ShowcaseLayout } from './pages/showcase/ShowcaseLayout'
 import { ShowcaseShell } from './pages/showcase/ShowcaseShell'
+
+// ============================================================
+// ERROR BOUNDARY
+// ============================================================
+class ShowcaseErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null, info: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+
+  componentDidCatch(error, info) {
+    this.setState({ info })
+    console.error('SHOWCASE CRASH:', error, info)
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          padding: 24,
+          fontFamily: 'monospace',
+          background: '#fff',
+          color: '#000',
+          minHeight: '100vh',
+          overflow: 'auto',
+        }}>
+          <h1 style={{ color: 'red', marginBottom: 16 }}>
+            ⚠️ Showcase crashed
+          </h1>
+
+          <p style={{ marginBottom: 8 }}>
+            <strong>Error:</strong> {this.state.error.toString()}
+          </p>
+
+          <p style={{ marginTop: 24, marginBottom: 8 }}>
+            <strong>Stack:</strong>
+          </p>
+          <pre style={{
+            whiteSpace: 'pre-wrap',
+            background: '#f5f5f5',
+            padding: 12,
+            borderRadius: 8,
+            fontSize: 12,
+            overflow: 'auto',
+          }}>
+            {this.state.error.stack}
+          </pre>
+
+          <p style={{ marginTop: 24, marginBottom: 8 }}>
+            <strong>Component stack:</strong>
+          </p>
+          <pre style={{
+            whiteSpace: 'pre-wrap',
+            background: '#f5f5f5',
+            padding: 12,
+            borderRadius: 8,
+            fontSize: 12,
+            overflow: 'auto',
+          }}>
+            {this.state.info?.componentStack || 'N/A'}
+          </pre>
+
+          <button
+            onClick={() => { this.setState({ error: null, info: null }); window.location.reload() }}
+            style={{
+              marginTop: 24,
+              padding: '10px 20px',
+              background: '#4F46E5',
+              color: 'white',
+              border: 'none',
+              borderRadius: 8,
+              fontFamily: 'monospace',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ============================================================
 // ROUTE WRAPPERS
@@ -110,7 +199,14 @@ export default function Router() {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* PUBLIC */}
-        <Route path="/" element={<LandingOrRedirect />} />
+        <Route
+          path="/"
+          element={
+            <ShowcaseErrorBoundary>
+              <LandingOrRedirect />
+            </ShowcaseErrorBoundary>
+          }
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -122,11 +218,13 @@ export default function Router() {
         <Route
           path="/showcase"
           element={
-            <PreviewProvider>
-              <ShowcaseLayout pageName="Hyelearner">
-                <ShowcaseShell />
-              </ShowcaseLayout>
-            </PreviewProvider>
+            <ShowcaseErrorBoundary>
+              <PreviewProvider>
+                <ShowcaseLayout pageName="Hyelearner">
+                  <ShowcaseShell />
+                </ShowcaseLayout>
+              </PreviewProvider>
+            </ShowcaseErrorBoundary>
           }
         />
 
@@ -186,4 +284,4 @@ export default function Router() {
       </Routes>
     </Suspense>
   )
-}
+                  }

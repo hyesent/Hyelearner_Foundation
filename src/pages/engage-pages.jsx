@@ -42,6 +42,13 @@ import {
 } from 'lucide-react'
 
 // ============================================================
+// LOGGER — prefixed so you can filter easily in DevTools
+// ============================================================
+const log = (...args) => console.log('%c[WF]', 'color:#4F46E5;font-weight:700', ...args)
+const warn = (...args) => console.warn('%c[WF]', 'color:#F59E0B;font-weight:700', ...args)
+const err = (...args) => console.error('%c[WF]', 'color:#EF4444;font-weight:700', ...args)
+
+// ============================================================
 // FREE USER LOCK SCREEN COMPONENT
 // ============================================================
 function FreeUserLockScreen({ featureName, navigate }) {
@@ -346,14 +353,27 @@ export function WeaknessFinderPage() {
     const load = () => {
       try {
         const raw = localStorage.getItem('hyelearner_weakness_today')
-        setTodaySnapshot(raw ? JSON.parse(raw) : null)
-      } catch {
+        const parsed = raw ? JSON.parse(raw) : null
+        log('🔵 [snapshot-effect] Loaded from localStorage:', parsed)
+        log('🔵 [snapshot-effect] weakTopics count:', parsed?.weakTopics?.length ?? 0)
+        log('🔵 [snapshot-effect] generatedAt:', parsed?.generatedAt ?? null)
+        setTodaySnapshot(parsed)
+      } catch (e) {
+        err('🔴 [snapshot-effect] Failed to parse:', e)
         setTodaySnapshot(null)
       }
     }
     load()
-    window.addEventListener('hydration:done', load)
-    window.addEventListener('storage', load)
+    window.addEventListener('hydration:done', () => {
+      log('🟢 [snapshot-effect] hydration:done fired')
+      load()
+    })
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'hyelearner_weakness_today') {
+        log('🟢 [snapshot-effect] storage event for weakness key')
+        load()
+      }
+    })
     return () => {
       window.removeEventListener('hydration:done', load)
       window.removeEventListener('storage', load)
@@ -361,6 +381,7 @@ export function WeaknessFinderPage() {
   }, [])
 
   const alreadyDoneToday = !!todaySnapshot?.generatedAt
+  log('🟡 [render] alreadyDoneToday:', alreadyDoneToday, '| todaySnapshot:', todaySnapshot)
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -399,6 +420,7 @@ export function WeaknessFinderPage() {
 
   useEffect(() => {
     if (isFreeUser) {
+      log('🟡 [init-effect] Free user — skipping analysis')
       setLoading(false)
       return
     }
@@ -413,7 +435,7 @@ export function WeaknessFinderPage() {
           const expiryMs = CACHE_EXPIRY_HOURS * 60 * 60 * 1000
 
           if (age < expiryMs) {
-            console.log('📦 Using cached weakness analysis')
+            log('📦 [init-effect] Using local cache. logicResults:', data.logicResults?.length, '| has AI:', !!data.aiAnalysis)
             setWeakTopics(data.logicResults || [])
             if (data.aiAnalysis) {
               setAiAnalysis(data.aiAnalysis)
@@ -423,19 +445,21 @@ export function WeaknessFinderPage() {
             setLoading(false)
             return
           } else {
-            console.log('🔄 Cache expired — re-analyzing')
+            log('🔄 [init-effect] Cache expired — re-analyzing')
           }
         } catch (e) {
-          console.warn('Failed to parse cache:', e)
+          warn('⚠️ [init-effect] Failed to parse cache:', e)
         }
       }
 
+      log('🟡 [init-effect] No fresh cache — calling analyzeWeaknesses(false)')
       await analyzeWeaknesses(false)
     }
 
     if (!isFreeUser) {
       checkCacheAndAnalyze()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFreeUser])
 
   const saveToCache = (logicResults, aiData = null) => {
@@ -444,6 +468,7 @@ export function WeaknessFinderPage() {
       logicResults: logicResults,
       aiAnalysis: aiData,
     }
+    log('💾 [saveToCache] Saving:', { logicCount: logicResults.length, hasAI: !!aiData })
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
   }
 
@@ -451,6 +476,8 @@ export function WeaknessFinderPage() {
     const mastery = storage.getMastery()
     const mistakes = storage.getMistakes()
     const sessions = storage.getSessions()
+
+    log('🧮 [analyzeWithLogic] mastery keys:', Object.keys(mastery).length, '| mistakes:', mistakes.length, '| sessions:', sessions.length)
 
     const topicMistakes = {}
     mistakes.forEach(m => {
@@ -494,13 +521,17 @@ export function WeaknessFinderPage() {
       .filter(item => item.accuracy < 60 || item.mistakeCount > 0)
       .sort((a, b) => b.weaknessScore - a.weaknessScore)
 
+    log('🧮 [analyzeWithLogic] Result count:', weak.length)
     return weak
   }
 
   const analyzeWithAI = async (logicResults) => {
+    log('🤖 [analyzeWithAI] Called. alreadyDoneToday:', alreadyDoneToday, '| logicResults:', logicResults.length)
+
     // ─── Already done today — just show cached snapshot ───
     if (alreadyDoneToday) {
       if (todaySnapshot) {
+        log('🤖 [analyzeWithAI] Snapshot exists — using it')
         setAiAnalysis({
           weakTopics: todaySnapshot.weakTopics || [],
           summary: todaySnapshot.summary || '',
@@ -513,6 +544,7 @@ export function WeaknessFinderPage() {
     }
 
     if (aiLimitReached) {
+      warn('⚠️ [analyzeWithAI] AI limit reached')
       setError('AI limit reached. Using logic-based results.')
       return
     }
@@ -521,7 +553,9 @@ export function WeaknessFinderPage() {
     setError(null)
 
     try {
+      log('🤖 [analyzeWithAI] Calling ai.weakness()')
       const result = await ai.weakness({ limit: 5 })
+      log('🤖 [analyzeWithAI] Response:', result)
 
       trackAIUsage()
 
@@ -552,6 +586,7 @@ export function WeaknessFinderPage() {
         generatedAt: result.createdAt || result.created_at || new Date().toISOString(),
       }
 
+      log('🤖 [analyzeWithAI] Final aiData:', aiData)
       setAiAnalysis(aiData)
       setUseAI(true)
       setShowAI(true)
@@ -571,8 +606,8 @@ export function WeaknessFinderPage() {
       }
 
       return aiData
-    } catch (err) {
-      console.error('AI analysis failed:', err)
+    } catch (e) {
+      err('🔴 [analyzeWithAI] Failed:', e)
       setError('AI analysis failed. Showing logic-based results.')
       setUseAI(false)
       return null
@@ -582,6 +617,11 @@ export function WeaknessFinderPage() {
   }
 
   const analyzeWeaknesses = async (forceAI = false) => {
+    log('🔵 [analyzeWeaknesses] START. forceAI:', forceAI)
+    log('🔵 [analyzeWeaknesses] todaySnapshot:', todaySnapshot)
+    log('🔵 [analyzeWeaknesses] snapshot topics:', todaySnapshot?.weakTopics?.length ?? 0)
+    log('🔵 [analyzeWeaknesses] snapshot generatedAt:', todaySnapshot?.generatedAt ?? null)
+
     setLoading(true)
     setError(null)
     setAiAnalysis(null)
@@ -590,7 +630,10 @@ export function WeaknessFinderPage() {
 
     // ─── Backend already generated today's snapshot → MERGE with local logic ───
     if (todaySnapshot?.generatedAt) {
+      log('✅ [analyzeWeaknesses] SNAPSHOT EXISTS — merging with local logic')
+
       const localTopics = analyzeWithLogic()
+      log('✅ [analyzeWeaknesses] Local topics:', localTopics.length)
 
       const snapshotTopics = (todaySnapshot.weakTopics || []).map((t) => ({
         topic: t.topic,
@@ -601,6 +644,7 @@ export function WeaknessFinderPage() {
         recommendations: t.recommendations || null,
         source: 'snapshot',
       }))
+      log('✅ [analyzeWeaknesses] Snapshot topics:', snapshotTopics.length)
 
       // Merge by topic name; snapshot wins on overlap
       const merged = [...snapshotTopics]
@@ -609,6 +653,9 @@ export function WeaknessFinderPage() {
           merged.push({ ...local, source: 'local' })
         }
       })
+
+      log('✅ [analyzeWeaknesses] MERGED count:', merged.length)
+      log('✅ [analyzeWeaknesses] MERGED topics:', merged.map((m) => `${m.topic} (${m.source})`))
 
       setWeakTopics(merged)
       setAiAnalysis({
@@ -621,6 +668,8 @@ export function WeaknessFinderPage() {
       setLoading(false)
       return
     }
+
+    log('🟡 [analyzeWeaknesses] NO SNAPSHOT — falling back to local + AI flow')
 
     const logicResults = analyzeWithLogic()
     setWeakTopics(logicResults)
@@ -676,6 +725,7 @@ export function WeaknessFinderPage() {
   }
 
   const handleRefresh = async () => {
+    log('🔄 [handleRefresh] User tapped refresh')
     setRefreshing(true)
     await analyzeWeaknesses(true)
     setRefreshing(false)
@@ -706,6 +756,8 @@ export function WeaknessFinderPage() {
       </div>
     )
   }
+
+  log('🎨 [render] Rendering WeaknessFinderPage. weakTopics.length:', weakTopics.length)
 
   return (
     <div style={{ background: 'var(--color-background)', padding: 'var(--space-6)' }}>
@@ -928,7 +980,14 @@ export function WeaknessFinderPage() {
                 <div key={item.topic} className="card card-hover" style={{ cursor: 'default' }}>
                   <div className="flex-between" style={{ alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '500', color: 'var(--color-text)' }}>{item.topic}</div>
+                      <div style={{ fontWeight: '500', color: 'var(--color-text)' }}>
+                        {item.topic}
+                        {item.source && (
+                          <span style={{ fontSize: '10px', marginLeft: 8, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {item.source}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex" style={{ gap: 'var(--space-2)', marginTop: '2px', flexWrap: 'wrap' }}>
                         <span className={`badge ${item.priority === 'High' ? 'badge-danger' : 'badge-warning'}`}>
                           {item.priority} Priority

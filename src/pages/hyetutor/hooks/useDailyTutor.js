@@ -1,13 +1,13 @@
 // ============================================================
-// HYELEARNER: DAILY TUTOR HOOK
-// Manages daily lesson + quiz generation, cache, and write-back
+// HYELEARNER: DAILY TUTOR HOOK (BACKEND-BACKED)
+// Reads from hydration, writes via services
 // Built by Hyesent.dev
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../../hooks'
-import { storage } from '../../../storage'
-import { ai } from '../../../services'
+import { useHydration } from '../../../context'
+import { ai as aiService } from '../../../services'
 
 const CACHE_KEY = 'hyelearner_daily_tutor_v1'
 const STUDY_PLAN_KEY = 'hyelearner_study_plan_v2'
@@ -18,7 +18,7 @@ const STUDY_PLAN_KEY = 'hyelearner_study_plan_v2'
 
 const getTodayKey = () => new Date().toISOString().split('T')[0]
 
-const readCache = () => {
+const readLocalCache = () => {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return { sessions: {} }
@@ -30,7 +30,7 @@ const readCache = () => {
   }
 }
 
-const writeCache = (cache) => {
+const writeLocalCache = (cache) => {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
   } catch (e) {
@@ -61,7 +61,8 @@ const getTodayPlanEntry = (plan) => {
 
 const getWeakAreas = () => {
   try {
-    const mastery = storage.getMastery() || {}
+    const raw = localStorage.getItem('hyelearner_mastery')
+    const mastery = raw ? JSON.parse(raw) : {}
     return Object.entries(mastery)
       .map(([topic, data]) => ({
         topic,
@@ -78,7 +79,8 @@ const getWeakAreas = () => {
 
 const getRecentMistakes = (topic, limit = 5) => {
   try {
-    const mistakes = storage.getMistakes() || []
+    const raw = localStorage.getItem('hyelearner_mistakes')
+    const mistakes = raw ? JSON.parse(raw) : []
     return mistakes
       .filter((m) => m.topic === topic)
       .sort(
@@ -98,15 +100,15 @@ const getRecentMistakes = (topic, limit = 5) => {
 }
 
 const getRecentReflections = (subject, limit = 5) => {
-  const cache = readCache()
+  const cache = readLocalCache()
   const sessions = Object.values(cache.sessions || {})
 
   return sessions
     .filter((s) => s.subject === subject && s.reflection)
     .sort(
       (a, b) =>
-        new Date(b.reflection.submittedAt).getTime() -
-        new Date(a.reflection.submittedAt).getTime()
+        new Date(b.reflection.submittedAt || 0).getTime() -
+        new Date(a.reflection.submittedAt || 0).getTime()
     )
     .slice(0, limit)
     .map((s) => ({
@@ -123,44 +125,61 @@ const getRecentReflections = (subject, limit = 5) => {
 
 export function useDailyTutor() {
   const { user } = useAuth()
+  const { dailyTutorToday, refreshHydration } = useHydration()
+
   const [todaySession, setTodaySession] = useState(null)
+  const [readOnlySession, setReadOnlySession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState(null)
 
-  // Load today's cached session on mount
+  // Sync todaySession from hydration + local cache
   useEffect(() => {
-    const cache = readCache()
     const today = getTodayKey()
-    setTodaySession(cache.sessions[today] || null)
+    const cache = readLocalCache()
+    const localSession = cache.sessions[today]
+
+    // Prefer hydrated (backend) version
+    if (dailyTutorToday) {
+      setTodaySession(dailyTutorToday)
+      // Mirror to local cache
+      cache.sessions[today] = dailyTutorToday
+      writeLocalCache(cache)
+    } else if (localSession) {
+      setTodaySession(localSession)
+    } else {
+      setTodaySession(null)
+    }
     setLoading(false)
-  }, [])
+  }, [dailyTutorToday])
 
   // -----------------------------------------------------------
-  // Generate or load today's lesson + quiz
+  // Start / generate today's lesson + quiz
   // -----------------------------------------------------------
   const startToday = useCallback(async () => {
     setError(null)
+    setReadOnlySession(null)
 
-    // ✅ Require a real user id (string)
     if (!user?.id) {
       setError('Please sign in to use Daily Tutor.')
       return null
     }
 
-    const cache = readCache()
+    // If we already have today's session (from hydration or local), use it
     const today = getTodayKey()
-
-    // Already cached today → return it
-    if (cache.sessions[today]) {
-      setTodaySession(cache.sessions[today])
-      return cache.sessions[today]
+    const cache = readLocalCache()
+    const existing = cache.sessions[today]
+    if (existing) {
+      setTodaySession(existing)
+      return existing
+    }
+    if (dailyTutorToday) {
+      setTodaySession(dailyTutorToday)
+      return dailyTutorToday
     }
 
-    // Check plan
     const plan = readStudyPlan()
     const planEntry = getTodayPlanEntry(plan)
-
     if (!plan || !planEntry) {
       setError('No Study Plan for today. Set up your plan first.')
       return null
@@ -171,35 +190,30 @@ export function useDailyTutor() {
     try {
       const subject = planEntry.subject
       const topic = planEntry.topic
-      const examType =
-        plan?.exam_info?.exam_type || plan?.exam_type || 'jamb'
+      const examType = plan?.exam_info?.exam_type || plan?.exam_type || 'jamb'
       const targetScore = plan?.plan?.summary?.target_score || '300+'
-      const gamification = storage.getGamification() || {}
+      const gamification = JSON.parse(localStorage.getItem('hyelearner_gamification') || '{}')
       const userLevel = gamification.level || 1
       const studyStyle = plan?.plan?.study_style || 'balanced'
       const difficultyPreference =
         plan?.plan?.difficulty || plan?.difficulty || 'balanced'
 
-      // ✅ user_id — always a string from AuthContext
       const userId = String(user.id)
 
       const weakAreas = getWeakAreas()
       const recentMistakes = getRecentMistakes(topic)
       const reflections = getRecentReflections(subject)
 
-      // Build plan context
       const schedule = plan?.plan?.weekly_schedule || []
-      const todayName = new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-      })
+      const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
       const todayIndex = schedule.findIndex(
         (d) => d.day?.toLowerCase() === todayName.toLowerCase()
       )
       const day = todayIndex + 1
       const totalDays = plan?.plan?.summary?.days_remaining || 52
 
-      // 1. Generate lesson
-      const lessonRes = await ai.dailyTutor.generateLesson({
+      // 1. Lesson (backend generates or returns cached)
+      const lessonRes = await aiService.dailyTutor.generateLesson({
         user_id: userId,
         date: today,
         topic,
@@ -224,8 +238,8 @@ export function useDailyTutor() {
         throw new Error(lessonRes?.error || 'Failed to generate lesson')
       }
 
-      // 2. Generate quiz from lesson
-      const quizRes = await ai.dailyTutor.generateQuiz({
+      // 2. Quiz
+      const quizRes = await aiService.dailyTutor.generateQuiz({
         user_id: userId,
         date: today,
         topic,
@@ -244,7 +258,6 @@ export function useDailyTutor() {
         throw new Error(quizRes?.error || 'Failed to generate quiz')
       }
 
-      // 3. Cache it
       const session = {
         date: today,
         subject,
@@ -258,9 +271,13 @@ export function useDailyTutor() {
         generatedAt: new Date().toISOString(),
       }
 
+      // Write to local cache for instant UI
       cache.sessions[today] = session
-      writeCache(cache)
+      writeLocalCache(cache)
       setTodaySession(session)
+
+      // Refresh hydration in background (updates ai_usage count etc.)
+      if (refreshHydration) refreshHydration().catch(() => {})
 
       return session
     } catch (err) {
@@ -270,28 +287,30 @@ export function useDailyTutor() {
     } finally {
       setGenerating(false)
     }
-  }, [user?.id])
+  }, [user?.id, dailyTutorToday, refreshHydration])
 
   // -----------------------------------------------------------
-  // Update step
+  // Update step (local + backend sync)
   // -----------------------------------------------------------
   const setStep = useCallback((step) => {
+    if (readOnlySession) return
+
     const today = getTodayKey()
-    const cache = readCache()
+    const cache = readLocalCache()
     const entry = cache.sessions[today]
     if (!entry) return
     entry.currentStep = step
     cache.sessions[today] = entry
-    writeCache(cache)
+    writeLocalCache(cache)
     setTodaySession({ ...entry })
-  }, [])
+  }, [readOnlySession])
 
   // -----------------------------------------------------------
-  // Submit quiz answers
+  // Submit quiz (writes via backend, mirrors locally)
   // -----------------------------------------------------------
-  const submitQuiz = useCallback((answers) => {
+  const submitQuiz = useCallback(async (answers) => {
     const today = getTodayKey()
-    const cache = readCache()
+    const cache = readLocalCache()
     const entry = cache.sessions[today]
     if (!entry || !entry.quiz) return null
 
@@ -302,9 +321,8 @@ export function useDailyTutor() {
 
     questions.forEach((q) => {
       const userAnswer = answers[q.id]
-      if (userAnswer === q.answer) {
-        correct++
-      } else {
+      if (userAnswer === q.answer) correct++
+      else {
         wrong++
         wrongList.push({ q, userAnswer })
       }
@@ -323,8 +341,9 @@ export function useDailyTutor() {
       completedAt: new Date().toISOString(),
     }
 
-    // ---- Write back to storage ----
-    storage.addSession({
+    // ---- Local write (instant stat calcs) ----
+    const sessions = JSON.parse(localStorage.getItem('hyelearner_sessions') || '[]')
+    sessions.push({
       id: `daily_tutor_${today}`,
       subject: entry.subject,
       topic: entry.topic,
@@ -344,24 +363,20 @@ export function useDailyTutor() {
       completedAt: new Date().toISOString(),
       startedAt: entry.generatedAt,
     })
+    localStorage.setItem('hyelearner_sessions', JSON.stringify(sessions))
 
-    storage.addResult({
-      sessionId: `daily_tutor_${today}`,
-      subject: entry.subject,
-      score: correct,
-      total,
-      accuracy,
-      date: new Date().toISOString(),
-      mode: 'daily_tutor',
-      xpEarned,
-    })
+    const gamification = JSON.parse(localStorage.getItem('hyelearner_gamification') || '{"xp":0,"level":1,"streak":0,"badges":[],"totalXP":0}')
+    gamification.xp = (gamification.xp || 0) + xpEarned
+    gamification.totalXP = (gamification.totalXP || 0) + xpEarned
+    gamification.level = gamification.xp < 1000
+      ? Math.floor(gamification.xp / 100) + 1
+      : 10 + Math.floor((gamification.xp - 1000) / 200)
+    localStorage.setItem('hyelearner_gamification', JSON.stringify(gamification))
 
-    storage.addXP(xpEarned)
-    storage.updateMastery(entry.topic, accuracy, entry.subject)
-
-    // Push wrong answers into Mistake Book
+    const mistakes = JSON.parse(localStorage.getItem('hyelearner_mistakes') || '[]')
     wrongList.forEach(({ q, userAnswer }) => {
-      storage.addMistake({
+      mistakes.push({
+        id: `mist_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         questionId: q.id,
         userAnswer,
         correctAnswer: q.answer,
@@ -370,48 +385,55 @@ export function useDailyTutor() {
         topic: entry.topic,
         subject: entry.subject,
         explanation: q.explanation || '',
+        isResolved: false,
         createdAt: new Date().toISOString(),
       })
     })
+    localStorage.setItem('hyelearner_mistakes', JSON.stringify(mistakes))
 
-    // ---- Save to cache ----
     entry.result = result
     entry.answers = answers
     entry.currentStep = 'result'
     cache.sessions[today] = entry
-    writeCache(cache)
+    writeLocalCache(cache)
     setTodaySession({ ...entry })
+
+    // ---- Backend write (fire and forget) ----
+    aiService.dailyTutor
+      .submitQuiz(today, answers)
+      .catch((err) => console.warn('Backend quiz submit failed:', err))
 
     return result
   }, [])
 
   // -----------------------------------------------------------
-  // Submit reflection
+  // Reflection (local + backend)
   // -----------------------------------------------------------
   const submitReflection = useCallback((feeling, note = '') => {
     const today = getTodayKey()
-    const cache = readCache()
+    const cache = readLocalCache()
     const entry = cache.sessions[today]
     if (!entry) return
 
     entry.reflection = {
-      feeling, // 'confusing' | 'okay' | 'clear'
+      feeling,
       note: note.trim() || null,
       submittedAt: new Date().toISOString(),
     }
     entry.status = 'completed'
     entry.currentStep = 'done'
     cache.sessions[today] = entry
-    writeCache(cache)
+    writeLocalCache(cache)
     setTodaySession({ ...entry })
+
+    aiService.dailyTutor
+      .submitReflection(today, feeling, note)
+      .catch((err) => console.warn('Backend reflection submit failed:', err))
   }, [])
 
-  // -----------------------------------------------------------
-  // Skip reflection
-  // -----------------------------------------------------------
   const skipReflection = useCallback(() => {
     const today = getTodayKey()
-    const cache = readCache()
+    const cache = readLocalCache()
     const entry = cache.sessions[today]
     if (!entry) return
     entry.reflection = {
@@ -423,31 +445,55 @@ export function useDailyTutor() {
     entry.status = 'completed'
     entry.currentStep = 'done'
     cache.sessions[today] = entry
-    writeCache(cache)
+    writeLocalCache(cache)
     setTodaySession({ ...entry })
   }, [])
 
   // -----------------------------------------------------------
   // History
   // -----------------------------------------------------------
-  const getHistory = useCallback((limit = 20) => {
-    const cache = readCache()
+  const getHistory = useCallback((limit = 60) => {
+    const cache = readLocalCache()
     return Object.values(cache.sessions || {})
       .filter((s) => s.status === 'completed' && s.result)
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, limit)
   }, [])
 
+  // -----------------------------------------------------------
+  // Read-only past session
+  // -----------------------------------------------------------
+  const openPastSession = useCallback((dateKey) => {
+    const cache = readLocalCache()
+    const entry = cache.sessions?.[dateKey]
+    if (!entry) {
+      setError('Session not found')
+      return null
+    }
+    setReadOnlySession(entry)
+    return entry
+  }, [])
+
+  const closePastSession = useCallback(() => {
+    setReadOnlySession(null)
+  }, [])
+
   return {
     todaySession,
+    readOnlySession,
+    isReadOnly: !!readOnlySession,
     loading,
     generating,
     error,
+
     startToday,
     setStep,
     submitQuiz,
     submitReflection,
     skipReflection,
+
     getHistory,
+    openPastSession,
+    closePastSession,
   }
 }

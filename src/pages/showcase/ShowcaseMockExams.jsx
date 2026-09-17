@@ -489,4 +489,59 @@ function ResultsView({ onRetry, onReview, onNavigate }) {
                 <div className="flex-between" style={{ fontSize: 'var(--font-size-sm)' }}>
                   <span style={{ color: 'var(--color-text)' }}>{subject}</span>
                   <span style={{ color: subAcc >= 70 ? 'var(--color-success)' : subAcc >= 50 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
-                    {subAcc}% ({data.c
+                    {subAcc}% ({data.correct}/{data.total})
+                  </span>
+                </div>
+                <div className="progress">
+                  <div className={`progress-fill ${subAcc >= 70 ? 'progress-fill-success' : subAcc >= 50 ? 'progress-fill-warning' : 'progress-fill-danger'}`} style={{ width: `${subAcc}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+        <ViewOnly tooltip="Sign up to review your questions">
+          <button className="btn btn-primary flex-1 flex-center" onClick={onReview}>
+            <Eye size={16} /> Review Questions
+          </button>
+        </ViewOnly>
+        <ViewOnly tooltip="Sign up to retry the exam">
+          <button onClick={onRetry} className="btn btn-primary flex-1 flex-center">
+            <RotateCw size={16} /> Retry Exam
+          </button>
+        </ViewOnly>
+        <ViewOnly tooltip="Sign up to practice weak areas">
+          <button onClick={() => onNavigate?.('practice')} className="btn btn-outline flex-1 flex-center">
+            <Target size={16} /> Practice Weak Areas
+          </button>
+        </ViewOnly>
+      </div>
+    </>
+  )
+}
+
+// ============================================================
+// HEADER
+// ============================================================
+function Header({ onNavigate, title, subtitle }) {
+  return (
+    <div className="card flex-between" style={{ marginBottom: 'var(--space-6)' }}>
+      <div className="flex" style={{ gap: 'var(--space-3)' }}>
+        <div className="flex-center" style={{ width: 48, height: 48, borderRadius: 'var(--radius-xl)', background: 'var(--color-primary-light)' }}>
+          <Calendar size={24} style={{ color: 'var(--color-primary)' }} />
+        </div>
+        <div>
+          <h1 className="h2">{title}</h1>
+          <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>{subtitle}</p>
+        </div>
+      </div>
+      <ViewOnly tooltip="Sign up to go back">
+        <button className="btn btn-ghost" onClick={() => onNavigate?.('dashboard')}>
+          <ArrowLeft size={16} /> Back
+        </button>
+      </ViewOnly>
+    </div>
+  )
+}

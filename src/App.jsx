@@ -9,6 +9,7 @@ import { Providers } from './Providers'
 import Router from './Router'
 import { StudyReminder } from './components/studyReminder'
 import { LoadingScreen } from './components/LoadingScreen'
+import { AIUsageOrb } from './components/AIUsageOrb'
 
 // ============================================================
 // LAZY LOAD SLIDESHOW (for onboarding/welcome)
@@ -91,13 +92,12 @@ export default function App() {
 
   // Main app
   return (
-    <BrowserRouter>
-      <Providers>
-        <Suspense fallback={<LoadingScreen />}>
-          <Router />
-        </Suspense>
-        <StudyReminder />
-      </Providers>
-    </BrowserRouter>
-  )
-}
+ <BrowserRouter>
+   <Providers>
+      <Suspense fallback={<LoadingScreen />}>
+         <Router />
+      </Suspense>
+    <StudyReminder />
+   <AIUsageOrb />
+  </Providers>
+</BrowserRouter>

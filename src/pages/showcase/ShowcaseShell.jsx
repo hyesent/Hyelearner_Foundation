@@ -6,18 +6,22 @@
 
 import { useState } from 'react'
 
+// ── Defaults ───────────────────────────────────────────
 import ShowcaseHome              from './ShowcaseHome'
 import ShowcaseDashboard         from './ShowcaseDashboard'
 import ShowcaseHyeTutor          from './ShowcaseHyeTutor'
 import ShowcaseSocial            from './ShowcaseSocial'
-import { ShowcaseStudyPlan }     from './ShowcaseStudyPlan'
-import { ShowcaseMockExams }     from './ShowcaseMockExams'
-import { ShowcaseLessons }       from './ShowcaseLessons'
+import ShowcaseStudyPlan         from './ShowcaseStudyPlan'
+import ShowcaseMockExams         from './ShowcaseMockExams'
+import ShowcaseLessons           from './ShowcaseLessons'
+import ShowcaseFormulaExplorer   from './ShowcaseFormulaExplorer'
+
+// ── Named ──────────────────────────────────────────────
+import { ShowcaseFeedback }      from './ShowcaseFeedback'
 import { ShowcaseCBTPractice, ShowcaseResults, ShowcaseTopicMode } from './ShowcaseLearn'
-import { ShowcaseFormulaExplorer } from './ShowcaseFormulaExplorer'
 import { ShowcaseDictionary }    from './ShowcaseDictionary'
 import { ShowcaseAnalytics }     from './ShowcaseAnalytics'
-import { ShowcaseFeedback }      from './ShowcaseFeedback'
+
 import {
   ShowcaseParentDashboard,
   ShowcaseCourseFinder,
@@ -28,11 +32,13 @@ import {
   ShowcaseEditProfile,
   ShowcaseOffline,
 } from './ShowcaseExtra'
+
 import {
   ShowcaseMistakeBook,
   ShowcaseRevisionPlanner,
   ShowcaseDuoBattle,
 } from './ShowcaseExtend'
+
 import {
   ShowcaseHeatmap,
   ShowcaseWeaknessFinder,
@@ -44,7 +50,7 @@ export function ShowcaseShell({ initialPage = 'home' }) {
   const [page, setPage] = useState(initialPage)
 
   switch (page) {
-    // ── Shell tabs (Home / Study / Duel inside Home) ───────
+    // ── Shell tabs ─────────────────────────────────────────
     case 'home':
       return <ShowcaseHome onNavigate={setPage} initialTab="home" />
     case 'study':
@@ -102,3 +108,5 @@ export function ShowcaseShell({ initialPage = 'home' }) {
       return <ShowcaseHome onNavigate={setPage} initialTab="home" />
   }
 }
+
+export default ShowcaseShell

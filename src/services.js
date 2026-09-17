@@ -1499,6 +1499,95 @@ export const subscriptions = {
 // ============================================================
 
 export const parent = {
+  /**
+   * ⭐ NEW — Parent dashboard view.
+   * The code IS the auth. No login required.
+   * Returns the linked child's full dashboard snapshot.
+   */
+  view: async (code) => {
+    if (USE_MOCK) {
+      await delay(MOCK_DELAYS.normal)
+      return {
+        success: true,
+        student: {
+          id: 42,
+          name: 'Ada Obi',
+          first_name: 'Ada',
+          school: 'UNILAG',
+          exam: 'jamb',
+          is_online: true,
+          last_login: new Date().toISOString(),
+          last_activity: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+          level: 8,
+          streak: 12,
+          accuracy: 78.5,
+          study_today: 0.8,
+          study_week: 6.2,
+          study_month: 24.0,
+          subjects: [
+            { name: 'English', readiness: 85 },
+            { name: 'Mathematics', readiness: 78 },
+            { name: 'Chemistry', readiness: 62 },
+            { name: 'Physics', readiness: 45 },
+          ],
+          recent_sessions: [
+            {
+              id: 1,
+              subject: 'Mathematics',
+              topic: 'Algebra',
+              score: 17,
+              total: 20,
+              accuracy: 85,
+              completed_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+            },
+            {
+              id: 2,
+              subject: 'Biology',
+              topic: 'Cell Structure',
+              score: 8,
+              total: 10,
+              accuracy: 80,
+              completed_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+            },
+            {
+              id: 3,
+              subject: 'Physics',
+              topic: 'Mechanics',
+              score: 13,
+              total: 18,
+              accuracy: 72,
+              completed_at: new Date(Date.now() - 26 * 3600 * 1000).toISOString(),
+            },
+          ],
+          badges: ['scholar', 'streak_7', 'first_hundred'],
+          duel_wins: 5,
+          duel_losses: 2,
+          unresolved_mistakes: 8,
+          has_studied_today: true,
+          weak_subjects: ['Physics', 'Chemistry'],
+          study_plan: {
+            exam_type: 'jamb',
+            exam_date: new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0],
+            days_remaining: 45,
+            on_track: true,
+            weekly_hours_target: 10,
+            weekly_hours_done: 6.2,
+          },
+          subscription: {
+            plan: 'foundation',
+            is_active: true,
+            expires_at: new Date(Date.now() + 24 * 86400000).toISOString(),
+          },
+        },
+      }
+    }
+
+    return apiCall('/parent/view', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+  },
+
   generateCode: async () => {
     const response = await apiCall('/parent/generate-code', {
       method: 'POST',
@@ -1674,7 +1763,8 @@ export const duels = {
     }
     return apiCall(`/duel/join-public/${duelId}`, { method: 'POST' })
   },
-    getStats: async () => {
+
+  getStats: async () => {
     if (USE_MOCK) {
       await delay(MOCK_DELAYS.fast)
       return {

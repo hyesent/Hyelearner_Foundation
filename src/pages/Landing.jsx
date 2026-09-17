@@ -41,6 +41,7 @@ import {
   ChevronRight,
   RotateCw,
   X,
+  play,
 } from 'lucide-react'
 import Footer from '../Footer'
 
@@ -107,6 +108,26 @@ export default function Landing() {
         <HelpCircle size={16} />
         <span>Help</span>
       </button>
+
+      {/* PREVIEW SHOWCASE */}
+<button
+  onClick={() => navigate('/showcase')}
+  style={styles.previewLink}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background = 'var(--color-primary)'
+    e.currentTarget.style.color = 'white'
+    e.currentTarget.style.borderColor = 'var(--color-primary)'
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = 'transparent'
+    e.currentTarget.style.color = 'var(--color-primary)'
+    e.currentTarget.style.borderColor = 'var(--color-primary)'
+  }}
+>
+  <Play size={14} />
+  <span>Preview Hyelearner</span>
+  <ArrowRight size={14} />
+</button>
 
       {/* HERO */}
       <section style={styles.hero}>
@@ -679,6 +700,26 @@ const styles = {
     zIndex: 5,
     transition: 'all var(--transition)',
   },
+
+  previewLink: {
+  position: 'absolute',
+  top: 'var(--space-5)',
+  right: 'var(--space-5)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '8px 14px',
+  background: 'transparent',
+  color: 'var(--color-primary)',
+  border: '1px solid var(--color-primary)',
+  borderRadius: 'var(--radius-full)',
+  fontFamily: 'inherit',
+  fontSize: 'var(--font-size-sm)',
+  fontWeight: 600,
+  cursor: 'pointer',
+  zIndex: 5,
+  transition: 'all var(--transition)',
+},
 
   hero: {
     position: 'relative',

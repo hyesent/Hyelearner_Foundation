@@ -108,4 +108,4 @@ export function ShowcaseBottomNav({ activeTab, onTabChange, onNavigate }) {
       </div>
     </nav>
   )
-}s
+}

@@ -25,6 +25,12 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react'
+import { voice } from '../../services'
+import {
+  getVoicePreference,
+  resolveVoiceName,
+  toAbsoluteVoiceUrl,
+} from '../../utils/voice-pref'
 
 const LETTERS = ['A', 'B', 'C', 'D']
 
@@ -138,25 +144,73 @@ function LessonStep({ lesson, subject, topic, onContinue, onClose }) {
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current.src = ''
+        audioRef.current = null
       }
     }
   }, [])
 
-  const handleSpeak = () => {
-    if (!('speechSynthesis' in window)) return
+  // If the user changes voice preference while this step is open,
+  // stop any audio that's currently playing so the next play uses
+  // the new voice.
+  useEffect(() => {
+    const onPrefChange = () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        audioRef.current = null
+      }
+      setIsSpeaking(false)
+    }
+    window.addEventListener('voice-preference-changed', onPrefChange)
+    return () => window.removeEventListener('voice-preference-changed', onPrefChange)
+  }, [])
+
+  const handleSpeak = async () => {
+    // Stop if already speaking
     if (isSpeaking) {
-      window.speechSynthesis.cancel()
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
       setIsSpeaking(false)
       return
     }
-    const text = sections.map((s) => `${s.heading}. ${s.body}`).join(' ')
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.rate = 0.95
-    utter.onstart = () => setIsSpeaking(true)
-    utter.onend = () => setIsSpeaking(false)
-    utter.onerror = () => setIsSpeaking(false)
-    window.speechSynthesis.speak(utter)
-    setLoadingVoice(false)
+
+    if (sections.length === 0) return
+
+    setLoadingVoice(true)
+
+    try {
+      const text = sections
+        .map((s) => `${s.heading}. ${s.body}`)
+        .join('\n\n')
+
+      const preferredVoice = resolveVoiceName(getVoicePreference())
+
+      const result = await voice.synthesize({
+        text,
+        voice: preferredVoice,
+        type: 'fair',
+        speed: 1,
+        mode: 'education',
+      })
+
+      if (result?.success && result?.url) {
+        const url = toAbsoluteVoiceUrl(result.url)
+        const audio = new Audio(url)
+        audio.onended = () => setIsSpeaking(false)
+        audio.onerror = () => setIsSpeaking(false)
+        audioRef.current = audio
+        await audio.play()
+        setIsSpeaking(true)
+      } else {
+        console.warn('[daily-tutor] voice.synthesize returned no url')
+      }
+    } catch (err) {
+      console.error('[daily-tutor] TTS error:', err)
+    } finally {
+      setLoadingVoice(false)
+    }
   }
 
   const allRead = openIndex >= sections.length - 1
@@ -230,6 +284,7 @@ function LessonStep({ lesson, subject, topic, onContinue, onClose }) {
         </span>
         <button
           onClick={handleSpeak}
+          disabled={loadingVoice || sections.length === 0}
           className="btn btn-ghost"
           style={{ padding: 'var(--space-1) var(--space-2)' }}
           title={isSpeaking ? 'Stop reading' : 'Read aloud'}

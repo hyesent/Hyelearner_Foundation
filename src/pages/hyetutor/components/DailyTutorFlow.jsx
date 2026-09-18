@@ -30,7 +30,7 @@ import {
   getVoicePreference,
   resolveVoiceName,
   toAbsoluteVoiceUrl,
-} from '../../utils/voice-pref'
+} from '../../../utils/voice-pref'
 
 const LETTERS = ['A', 'B', 'C', 'D']
 

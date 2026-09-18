@@ -11,6 +11,11 @@ import { calculateScore, calculateXP, formatTime } from '../utils'
 import { BookmarkButton } from './BookmarkButton'
 import { voice } from '../services'
 import {
+  getVoicePreference,
+  resolveVoiceName,
+  toAbsoluteVoiceUrl,
+} from '../utils/voice-pref'
+import {
   BookOpen,
   CheckCircle2,
   XCircle,
@@ -54,11 +59,11 @@ const formatTextForTTS = (text) => {
   // Step 2: Add punctuation where missing
   let formatted = paragraphs.map(p => {
     let para = p.trim()
-    
+
     if (para.length > 0 && !/[.!?…]$/.test(para)) {
       para += '.'
     }
-    
+
     const sentences = para.split(/(?<=[.!?])\s+/).map(s => {
       let sentence = s.trim()
       if (sentence.length > 0 && !/[.!?…]$/.test(sentence)) {
@@ -66,7 +71,7 @@ const formatTextForTTS = (text) => {
       }
       return sentence
     })
-    
+
     return sentences.join(' ')
   })
 
@@ -121,7 +126,7 @@ const formatTextForTTS = (text) => {
   // DATES
   // ============================================================
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
-  
+
   result = result.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match, year, month, day) => {
     return `${MONTHS[parseInt(month) - 1]} ${parseInt(day)}, ${year}`
   })
@@ -267,8 +272,7 @@ const formatTextForTTS = (text) => {
   // ============================================================
   // MATH & SCIENCE
   // ============================================================
-  
-  // Superscripts
+
   result = result.replace(/(\d+)\s*²/g, '$1 squared')
   result = result.replace(/(\d+)\s*³/g, '$1 cubed')
   result = result.replace(/(\d+)\s*⁴/g, '$1 to the fourth')
@@ -280,13 +284,11 @@ const formatTextForTTS = (text) => {
   result = result.replace(/([a-zA-Z])²/g, '$1 squared')
   result = result.replace(/([a-zA-Z])³/g, '$1 cubed')
 
-  // Roots
   result = result.replace(/√(\d+)/g, 'square root of $1')
   result = result.replace(/∛(\d+)/g, 'cube root of $1')
   result = result.replace(/∜(\d+)/g, 'fourth root of $1')
   result = result.replace(/√\(([^)]+)\)/g, 'square root of $1')
 
-  // Fractions
   result = result.replace(/(\d+)\/(\d+)/g, '$1 over $2')
   result = result.replace(/½/g, 'one half')
   result = result.replace(/¼/g, 'one quarter')
@@ -294,7 +296,6 @@ const formatTextForTTS = (text) => {
   result = result.replace(/⅓/g, 'one third')
   result = result.replace(/⅔/g, 'two thirds')
 
-  // Greek letters
   const greek = {
     'α': 'alpha', 'β': 'beta', 'γ': 'gamma', 'δ': 'delta',
     'ε': 'epsilon', 'θ': 'theta', 'λ': 'lambda', 'μ': 'mu',
@@ -306,13 +307,11 @@ const formatTextForTTS = (text) => {
     result = result.replace(new RegExp(symbol, 'g'), word)
   })
 
-  // Math constants
   result = result.replace(/\be\b(?![\w])/g, "Euler's number")
   result = result.replace(/\bi\b(?![\w])/g, 'imaginary unit')
   result = result.replace(/π/g, 'pi')
   result = result.replace(/φ/g, 'phi')
 
-  // Handle x as variable vs multiplication
   result = result.replace(/\b(x)\b/gi, 'X_VARIABLE')
   result = result.replace(/(\d+)\s*[×*]\s*x/gi, '$1 times x')
   result = result.replace(/\+x/gi, 'plus x')
@@ -321,7 +320,6 @@ const formatTextForTTS = (text) => {
   result = result.replace(/\b(y)\b/gi, 'y')
   result = result.replace(/\b(z)\b/gi, 'z')
 
-  // Math symbols
   result = result.replace(/\b-(\d+)\b/g, 'negative $1')
   result = result.replace(/\s+-\s+/g, ' minus ')
   result = result.replace(/\+/g, ' plus ')
@@ -330,7 +328,6 @@ const formatTextForTTS = (text) => {
   result = result.replace(/[×*](?!\s*x)/g, ' times ')
   result = result.replace(/÷/g, ' divided by ')
 
-  // Comparison
   result = result.replace(/≈/g, 'approximately equal to')
   result = result.replace(/≠/g, 'not equal to')
   result = result.replace(/≤/g, 'less than or equal to')
@@ -338,7 +335,6 @@ const formatTextForTTS = (text) => {
   result = result.replace(/</g, 'less than')
   result = result.replace(/>/g, 'greater than')
 
-  // Calculus
   result = result.replace(/∫/g, 'integral of')
   result = result.replace(/∂/g, 'partial derivative')
   result = result.replace(/∇/g, 'gradient')
@@ -346,7 +342,6 @@ const formatTextForTTS = (text) => {
   result = result.replace(/∑/g, 'sum of')
   result = result.replace(/∏/g, 'product of')
 
-  // Chemical formulas
   result = result.replace(/H₂O/g, 'H two O')
   result = result.replace(/CO₂/g, 'C O two')
   result = result.replace(/O₂/g, 'O two')
@@ -356,7 +351,6 @@ const formatTextForTTS = (text) => {
   result = result.replace(/NaOH/g, 'N a O H')
   result = result.replace(/HCl/g, 'H C l')
 
-  // Function notation
   result = result.replace(/f\(x\)/g, 'f of x')
   result = result.replace(/g\(x\)/g, 'g of x')
   result = result.replace(/sin\(/g, 'sine of')
@@ -408,18 +402,18 @@ const formatTextForTTS = (text) => {
     return 'octal ' + digits.split('').join(' ')
   })
 
- // ============================================================
-// ABBREVIATIONS
-// ============================================================
-result = result.replace(/\be\.g\.?\b/gi, 'for example')
-result = result.replace(/\bi\.e\.?\b/gi, 'that is')
-result = result.replace(/\betc\.?\b/gi, 'et cetera')
-result = result.replace(/\bvs\.?\b/gi, 'versus')
-result = result.replace(/\bex\.?\b/gi, 'example')
-result = result.replace(/&/g, ' and ')
-result = result.replace(/%/g, ' percent')
-result = result.replace(/\+/g, ' plus ')
-result = result.replace(/=/g, ' equals ')
+  // ============================================================
+  // ABBREVIATIONS
+  // ============================================================
+  result = result.replace(/\be\.g\.?\b/gi, 'for example')
+  result = result.replace(/\bi\.e\.?\b/gi, 'that is')
+  result = result.replace(/\betc\.?\b/gi, 'et cetera')
+  result = result.replace(/\bvs\.?\b/gi, 'versus')
+  result = result.replace(/\bex\.?\b/gi, 'example')
+  result = result.replace(/&/g, ' and ')
+  result = result.replace(/%/g, ' percent')
+  result = result.replace(/\+/g, ' plus ')
+  result = result.replace(/=/g, ' equals ')
 
   // ============================================================
   // PARENTHESES AND BRACKETS
@@ -432,36 +426,27 @@ result = result.replace(/=/g, ' equals ')
   result = result.replace(/\}/g, 'close brace')
 
   // ============================================================
-// LISTS
-// ============================================================
-// Handle HTML list tags
-result = result.replace(/<li>/g, '. Point ')
-result = result.replace(/<\/li>/g, ' ')
-result = result.replace(/<ul>/g, '. ')
-result = result.replace(/<\/ul>/g, ' . ')
-result = result.replace(/<ol>/g, '. ')
-result = result.replace(/<\/ol>/g, ' . ')
+  // LISTS
+  // ============================================================
+  result = result.replace(/<li>/g, '. Point ')
+  result = result.replace(/<\/li>/g, ' ')
+  result = result.replace(/<ul>/g, '. ')
+  result = result.replace(/<\/ul>/g, ' . ')
+  result = result.replace(/<ol>/g, '. ')
+  result = result.replace(/<\/ol>/g, ' . ')
 
-// Numbered lists (1., 2., etc.)
-result = result.replace(/(\d+)\.\s*/g, '. $1. ')
-// Lettered lists (a., b., etc.)
-result = result.replace(/([a-z])\)\s*/g, '. $1) ')
-// Bullet points
-result = result.replace(/[•·●]\s*/g, '. Point ')
-// Check marks
-result = result.replace(/[✓✔✅]\s*/g, '. Check ')
-// Arrow bullets
-result = result.replace(/[→➜➝➞]\s*/g, '. Arrow ')
+  result = result.replace(/(\d+)\.\s*/g, '. $1. ')
+  result = result.replace(/([a-z])\)\s*/g, '. $1) ')
+  result = result.replace(/[•·●]\s*/g, '. Point ')
+  result = result.replace(/[✓✔✅]\s*/g, '. Check ')
+  result = result.replace(/[→➜➝➞]\s*/g, '. Arrow ')
 
-// ============================================================
-// KEY TAKEAWAYS / SUMMARY LISTS
-// ============================================================
-// Add pause before each list item
-result = result.replace(/\.\s*(?=Point\s)/g, '. . ')
-// Add pause between takeaways
-result = result.replace(/(Point\s[^.]*?)(?=Point)/g, '$1 . ')
-// Add pause after each takeaway item
-result = result.replace(/Point\s/g, ' . Point ')
+  // ============================================================
+  // KEY TAKEAWAYS / SUMMARY LISTS
+  // ============================================================
+  result = result.replace(/\.\s*(?=Point\s)/g, '. . ')
+  result = result.replace(/(Point\s[^.]*?)(?=Point)/g, '$1 . ')
+  result = result.replace(/Point\s/g, ' . Point ')
 
   // ============================================================
   // EMOJIS
@@ -483,7 +468,6 @@ result = result.replace(/Point\s/g, ' . Point ')
     result = result.replace(new RegExp(emoji, 'g'), replacement)
   })
 
-
   // ============================================================
   // COLON AND SEMICOLON
   // ============================================================
@@ -498,239 +482,197 @@ result = result.replace(/Point\s/g, ' . Point ')
   result = result.replace(/ - /g, ' ... ')
 
   // ============================================================
-// ENGLISH LANGUAGE SUPPORT (Intonation, Stress, Phonetics)
-// ============================================================
+  // ENGLISH LANGUAGE SUPPORT (Intonation, Stress, Phonetics)
+  // ============================================================
 
-// ===== INTONATION & STRESS MARKS =====
-result = result.replace(/↗/g, 'rising intonation')
-result = result.replace(/↘/g, 'falling intonation')
-result = result.replace(/↗︎/g, 'rising intonation')
-result = result.replace(/↘︎/g, 'falling intonation')
-result = result.replace(/↑/g, 'rise')
-result = result.replace(/↓/g, 'fall')
-result = result.replace(/ˈ/g, '')
-result = result.replace(/ˌ/g, '')
-result = result.replace(/ˈ([a-zA-Z])/g, '$1')
-result = result.replace(/ˌ([a-zA-Z])/g, '$1')
-result = result.replace(/\bSTRESS\b/g, 'stress')
-result = result.replace(/\bstressed\b/g, 'stressed')
-result = result.replace(/\bunstressed\b/g, 'unstressed')
-result = result.replace(/\bemphasized\b/g, 'emphasized')
-result = result.replace(/●/g, 'syllable')
-result = result.replace(/○/g, 'syllable')
-result = result.replace(/•/g, 'syllable')
+  result = result.replace(/↗/g, 'rising intonation')
+  result = result.replace(/↘/g, 'falling intonation')
+  result = result.replace(/↗︎/g, 'rising intonation')
+  result = result.replace(/↘︎/g, 'falling intonation')
+  result = result.replace(/↑/g, 'rise')
+  result = result.replace(/↓/g, 'fall')
+  result = result.replace(/ˈ/g, '')
+  result = result.replace(/ˌ/g, '')
+  result = result.replace(/ˈ([a-zA-Z])/g, '$1')
+  result = result.replace(/ˌ([a-zA-Z])/g, '$1')
+  result = result.replace(/\bSTRESS\b/g, 'stress')
+  result = result.replace(/\bstressed\b/g, 'stressed')
+  result = result.replace(/\bunstressed\b/g, 'unstressed')
+  result = result.replace(/\bemphasized\b/g, 'emphasized')
+  result = result.replace(/●/g, 'syllable')
+  result = result.replace(/○/g, 'syllable')
+  result = result.replace(/•/g, 'syllable')
 
-// ===== SAFETY NET: IPA symbols without slashes =====
-const ipaRawReplacements = {
-  // Vowels
-  'ɪ': 'ih',
-  'iː': 'ee',
-  'e': 'eh',
-  'æ': 'a',
-  'ɑː': 'ah',
-  'ɒ': 'o',
-  'ɔː': 'aw',
-  'ʊ': 'uh',
-  'uː': 'oo',
-  'ʌ': 'uh',
-  'ɜː': 'er',
-  'ə': 'uh',
-  'eɪ': 'ay',
-  'aɪ': 'eye',
-  'ɔɪ': 'oy',
-  'aʊ': 'ow',
-  'əʊ': 'oh',
-  'ɪə': 'ear',
-  'eə': 'air',
-  'ʊə': 'ure',
-  // Consonants
-  'p': 'p',
-  'b': 'b',
-  't': 't',
-  'd': 'd',
-  'k': 'k',
-  'g': 'g',
-  'f': 'f',
-  'v': 'v',
-  'θ': 'th',
-  'ð': 'th',
-  's': 's',
-  'z': 'z',
-  'ʃ': 'sh',
-  'ʒ': 'zh',
-  'h': 'h',
-  'tʃ': 'ch',
-  'dʒ': 'j',
-  'm': 'm',
-  'n': 'n',
-  'ŋ': 'ng',
-  'l': 'l',
-  'r': 'r',
-  'w': 'w',
-  'j': 'y',
-}
-Object.entries(ipaRawReplacements).forEach(([symbol, word]) => {
-  // Only replace if it's a standalone symbol (not part of a larger word)
-  result = result.replace(new RegExp(`\\b${symbol}\\b`, 'g'), word)
-})
-
-// ===== IPA VOWELS — COMPLETE SET =====
-const ipaVowels = {
-  // ===== MONOPHTHONGS (Pure Vowels) =====
-  // Front vowels
-  '/iː/': 'ee',      // "see", "tea", "green" (close front unrounded)
-  '/ɪ/': 'ih',       // "bit", "sit", "ship" (near-close near-front unrounded)
-  '/e/': 'eh',       // "bed", "set", "ten" (close-mid front unrounded)
-  '/æ/': 'a',        // "cat", "hat", "man" (near-open front unrounded)
-  
-  // Central vowels
-  '/ɜː/': 'er',      // "bird", "turn", "learn" (open-mid central unrounded)
-  '/ə/': 'uh',       // "about", "banana", "sofa" (schwa - mid central unrounded)
-  '/ʌ/': 'uh',       // "cup", "sun", "up" (open-mid back unrounded)
-  
-  // Back vowels
-  '/ɑː/': 'ah',      // "car", "far", "father" (open back unrounded)
-  '/ɒ/': 'o',        // "hot", "dog", "pot" (open back rounded)
-  '/ɔː/': 'aw',      // "saw", "door", "four" (open-mid back rounded)
-  '/ʊ/': 'uh',       // "book", "foot", "good" (near-close near-back rounded)
-  '/uː/': 'oo',      // "too", "food", "blue" (close back rounded)
-  
-  // ===== DIPHTHONGS (Gliding Vowels) =====
-  // Closing diphthongs (ending with /ɪ/ or /ʊ/)
-  '/eɪ/': 'ay',      // "face", "day", "say" (ɛɪ̯)
-  '/aɪ/': 'eye',     // "price", "my", "high" (aɪ̯)
-  '/ɔɪ/': 'oy',      // "choice", "boy", "toy" (ɔɪ̯)
-  '/əʊ/': 'oh',      // "goat", "home", "show" (əʊ̯) - British
-  '/oʊ/': 'oh',      // "goat", "home", "show" (oʊ̯) - American
-  '/aʊ/': 'ow',      // "mouth", "now", "how" (aʊ̯)
-  
-  // Centering diphthongs (ending with /ə/)
-  '/ɪə/': 'ear',     // "near", "here", "idea" (ɪə̯)
-  '/eə/': 'air',     // "square", "there", "where" (eə̯)
-  '/ʊə/': 'ure',     // "cure", "tour", "poor" (ʊə̯)
-  
-  // ===== TRIPHTHONGS (Rare) =====
-  '/aɪə/': 'eye-uh', // "fire", "hire" (aɪə̯)
-  '/aʊə/': 'ow-uh',  // "power", "hour" (aʊə̯)
-  '/eɪə/': 'ay-uh',  // "layer", "player" (eɪə̯)
-}
-Object.entries(ipaVowels).forEach(([symbol, word]) => {
-  const escaped = symbol.replace('/', '\\/')
-  result = result.replace(new RegExp(escaped, 'g'), word)
-  result = result.replace(new RegExp(`\\s${escaped}\\s`, 'g'), ` ${word} `)
-  result = result.replace(new RegExp(`${escaped}\\s`, 'g'), `${word} `)
-  result = result.replace(new RegExp(`\\s${escaped}`, 'g'), ` ${word}`)
-})
-
-// ===== IPA CONSONANTS — COMPLETE SET =====
-const ipaConsonants = {
-  // ===== PLOSIVES (Stops) =====
-  // Voiceless plosives
-  '/p/': 'p',        // "pen", "pet", "top"
-  '/t/': 't',        // "ten", "tea", "hot"
-  '/k/': 'k',        // "cat", "can", "back"
-  // Voiced plosives
-  '/b/': 'b',        // "bed", "big", "rub"
-  '/d/': 'd',        // "dog", "did", "red"
-  '/g/': 'g',        // "go", "get", "big"
-  
-  // ===== NASALS =====
-  '/m/': 'm',        // "man", "me", "come"
-  '/n/': 'n',        // "no", "ten", "run"
-  '/ŋ/': 'ng',       // "sing", "long", "thing"
-  
-  // ===== FRICATIVES =====
-  // Voiceless fricatives
-  '/f/': 'f',        // "fan", "fine", "off"
-  '/θ/': 'th',       // "think", "thank", "bath"
-  '/s/': 's',        // "sun", "see", "bus"
-  '/ʃ/': 'sh',       // "she", "shop", "fish"
-  '/h/': 'h',        // "hat", "how", "high"
-  // Voiced fricatives
-  '/v/': 'v',        // "van", "very", "love"
-  '/ð/': 'th',       // "this", "that", "them"
-  '/z/': 'z',        // "zoo", "zero", "has"
-  '/ʒ/': 'zh',       // "measure", "vision", "pleasure"
-  
-  // ===== AFFRICATES =====
-  '/tʃ/': 'ch',      // "chat", "check", "catch"
-  '/dʒ/': 'j',       // "jump", "job", "edge"
-  
-  // ===== APPROXIMANTS =====
-  '/l/': 'l',        // "look", "late", "call" (lateral approximant)
-  '/r/': 'r',        // "run", "red", "car" (rhotic approximant)
-  '/w/': 'w',        // "we", "will", "what" (labio-velar approximant)
-  '/j/': 'y',        // "yes", "you", "yellow" (palatal approximant)
-  
-  // ===== OTHER CONSONANT VARIANTS =====
-  // These are sometimes used in English
-  '/x/': 'kh',       // Scottish "loch" (voiceless velar fricative)
-  '/hw/': 'wh',      // "what", "when" (voiceless labio-velar approximant)
-  '/ɫ/': 'l',        // "call", "milk" (dark l)
-  '/ɹ/': 'r',        // "red", "car" (alveolar approximant)
-}
-Object.entries(ipaConsonants).forEach(([symbol, word]) => {
-  const escaped = symbol.replace('/', '\\/')
-  result = result.replace(new RegExp(escaped, 'g'), word)
-  result = result.replace(new RegExp(`\\s${escaped}\\s`, 'g'), ` ${word} `)
-  result = result.replace(new RegExp(`${escaped}\\s`, 'g'), `${word} `)
-  result = result.replace(new RegExp(`\\s${escaped}`, 'g'), ` ${word}`)
-})
-
-// ===== SQUARE-BRACKET PHONETICS =====
-result = result.replace(/\[([^\]]+)\]/g, (match, content) => {
-  let cleaned = content.replace(/[ˈˌ]/g, '')
-  const replacements = {
-    // Vowels
-    'iː': 'ee', 'ɪ': 'ih', 'e': 'eh', 'æ': 'a',
-    'ɑː': 'ah', 'ɒ': 'o', 'ɔː': 'aw', 'ʊ': 'uh',
-    'uː': 'oo', 'ʌ': 'uh', 'ɜː': 'er', 'ə': 'uh',
-    'eɪ': 'ay', 'aɪ': 'eye', 'ɔɪ': 'oy',
-    'aʊ': 'ow', 'əʊ': 'oh', 'oʊ': 'oh',
-    'ɪə': 'ear', 'eə': 'air', 'ʊə': 'ure',
-    'aɪə': 'eye-uh', 'aʊə': 'ow-uh', 'eɪə': 'ay-uh',
-    // Consonants
-    'p': 'p', 'b': 'b', 't': 't', 'd': 'd',
-    'k': 'k', 'g': 'g', 'f': 'f', 'v': 'v',
-    'θ': 'th', 'ð': 'th', 's': 's', 'z': 'z',
-    'ʃ': 'sh', 'ʒ': 'zh', 'h': 'h', 'tʃ': 'ch',
-    'dʒ': 'j', 'm': 'm', 'n': 'n', 'ŋ': 'ng',
-    'l': 'l', 'r': 'r', 'w': 'w', 'j': 'y',
-    'x': 'kh', 'hw': 'wh', 'ɫ': 'l', 'ɹ': 'r',
+  const ipaRawReplacements = {
+    'ɪ': 'ih',
+    'iː': 'ee',
+    'e': 'eh',
+    'æ': 'a',
+    'ɑː': 'ah',
+    'ɒ': 'o',
+    'ɔː': 'aw',
+    'ʊ': 'uh',
+    'uː': 'oo',
+    'ʌ': 'uh',
+    'ɜː': 'er',
+    'ə': 'uh',
+    'eɪ': 'ay',
+    'aɪ': 'eye',
+    'ɔɪ': 'oy',
+    'aʊ': 'ow',
+    'əʊ': 'oh',
+    'ɪə': 'ear',
+    'eə': 'air',
+    'ʊə': 'ure',
+    'p': 'p',
+    'b': 'b',
+    't': 't',
+    'd': 'd',
+    'k': 'k',
+    'g': 'g',
+    'f': 'f',
+    'v': 'v',
+    'θ': 'th',
+    'ð': 'th',
+    's': 's',
+    'z': 'z',
+    'ʃ': 'sh',
+    'ʒ': 'zh',
+    'h': 'h',
+    'tʃ': 'ch',
+    'dʒ': 'j',
+    'm': 'm',
+    'n': 'n',
+    'ŋ': 'ng',
+    'l': 'l',
+    'r': 'r',
+    'w': 'w',
+    'j': 'y',
   }
-  Object.entries(replacements).forEach(([symbol, word]) => {
-    cleaned = cleaned.replace(new RegExp(symbol, 'g'), word)
+  Object.entries(ipaRawReplacements).forEach(([symbol, word]) => {
+    result = result.replace(new RegExp(`\\b${symbol}\\b`, 'g'), word)
   })
-  return ` ${cleaned} `
-})
 
-// ===== SLASH PHONETICS =====
-result = result.replace(/\/([^\/]+)\//g, (match, content) => {
-  let cleaned = content.replace(/[ˈˌ]/g, '')
-  const replacements = {
-    // Vowels
-    'iː': 'ee', 'ɪ': 'ih', 'e': 'eh', 'æ': 'a',
-    'ɑː': 'ah', 'ɒ': 'o', 'ɔː': 'aw', 'ʊ': 'uh',
-    'uː': 'oo', 'ʌ': 'uh', 'ɜː': 'er', 'ə': 'uh',
-    'eɪ': 'ay', 'aɪ': 'eye', 'ɔɪ': 'oy',
-    'aʊ': 'ow', 'əʊ': 'oh', 'oʊ': 'oh',
-    'ɪə': 'ear', 'eə': 'air', 'ʊə': 'ure',
-    'aɪə': 'eye-uh', 'aʊə': 'ow-uh', 'eɪə': 'ay-uh',
-    // Consonants
-    'p': 'p', 'b': 'b', 't': 't', 'd': 'd',
-    'k': 'k', 'g': 'g', 'f': 'f', 'v': 'v',
-    'θ': 'th', 'ð': 'th', 's': 's', 'z': 'z',
-    'ʃ': 'sh', 'ʒ': 'zh', 'h': 'h', 'tʃ': 'ch',
-    'dʒ': 'j', 'm': 'm', 'n': 'n', 'ŋ': 'ng',
-    'l': 'l', 'r': 'r', 'w': 'w', 'j': 'y',
-    'x': 'kh', 'hw': 'wh', 'ɫ': 'l', 'ɹ': 'r',
+  const ipaVowels = {
+    '/iː/': 'ee',
+    '/ɪ/': 'ih',
+    '/e/': 'eh',
+    '/æ/': 'a',
+    '/ɜː/': 'er',
+    '/ə/': 'uh',
+    '/ʌ/': 'uh',
+    '/ɑː/': 'ah',
+    '/ɒ/': 'o',
+    '/ɔː/': 'aw',
+    '/ʊ/': 'uh',
+    '/uː/': 'oo',
+    '/eɪ/': 'ay',
+    '/aɪ/': 'eye',
+    '/ɔɪ/': 'oy',
+    '/əʊ/': 'oh',
+    '/oʊ/': 'oh',
+    '/aʊ/': 'ow',
+    '/ɪə/': 'ear',
+    '/eə/': 'air',
+    '/ʊə/': 'ure',
+    '/aɪə/': 'eye-uh',
+    '/aʊə/': 'ow-uh',
+    '/eɪə/': 'ay-uh',
   }
-  Object.entries(replacements).forEach(([symbol, word]) => {
-    cleaned = cleaned.replace(new RegExp(symbol, 'g'), word)
+  Object.entries(ipaVowels).forEach(([symbol, word]) => {
+    const escaped = symbol.replace('/', '\\/')
+    result = result.replace(new RegExp(escaped, 'g'), word)
+    result = result.replace(new RegExp(`\\s${escaped}\\s`, 'g'), ` ${word} `)
+    result = result.replace(new RegExp(`${escaped}\\s`, 'g'), `${word} `)
+    result = result.replace(new RegExp(`\\s${escaped}`, 'g'), ` ${word}`)
   })
-  return ` ${cleaned} `
-})
-  
+
+  const ipaConsonants = {
+    '/p/': 'p',
+    '/t/': 't',
+    '/k/': 'k',
+    '/b/': 'b',
+    '/d/': 'd',
+    '/g/': 'g',
+    '/m/': 'm',
+    '/n/': 'n',
+    '/ŋ/': 'ng',
+    '/f/': 'f',
+    '/θ/': 'th',
+    '/s/': 's',
+    '/ʃ/': 'sh',
+    '/h/': 'h',
+    '/v/': 'v',
+    '/ð/': 'th',
+    '/z/': 'z',
+    '/ʒ/': 'zh',
+    '/tʃ/': 'ch',
+    '/dʒ/': 'j',
+    '/l/': 'l',
+    '/r/': 'r',
+    '/w/': 'w',
+    '/j/': 'y',
+    '/x/': 'kh',
+    '/hw/': 'wh',
+    '/ɫ/': 'l',
+    '/ɹ/': 'r',
+  }
+  Object.entries(ipaConsonants).forEach(([symbol, word]) => {
+    const escaped = symbol.replace('/', '\\/')
+    result = result.replace(new RegExp(escaped, 'g'), word)
+    result = result.replace(new RegExp(`\\s${escaped}\\s`, 'g'), ` ${word} `)
+    result = result.replace(new RegExp(`${escaped}\\s`, 'g'), `${word} `)
+    result = result.replace(new RegExp(`\\s${escaped}`, 'g'), ` ${word}`)
+  })
+
+  result = result.replace(/\[([^\]]+)\]/g, (match, content) => {
+    let cleaned = content.replace(/[ˈˌ]/g, '')
+    const replacements = {
+      'iː': 'ee', 'ɪ': 'ih', 'e': 'eh', 'æ': 'a',
+      'ɑː': 'ah', 'ɒ': 'o', 'ɔː': 'aw', 'ʊ': 'uh',
+      'uː': 'oo', 'ʌ': 'uh', 'ɜː': 'er', 'ə': 'uh',
+      'eɪ': 'ay', 'aɪ': 'eye', 'ɔɪ': 'oy',
+      'aʊ': 'ow', 'əʊ': 'oh', 'oʊ': 'oh',
+      'ɪə': 'ear', 'eə': 'air', 'ʊə': 'ure',
+      'aɪə': 'eye-uh', 'aʊə': 'ow-uh', 'eɪə': 'ay-uh',
+      'p': 'p', 'b': 'b', 't': 't', 'd': 'd',
+      'k': 'k', 'g': 'g', 'f': 'f', 'v': 'v',
+      'θ': 'th', 'ð': 'th', 's': 's', 'z': 'z',
+      'ʃ': 'sh', 'ʒ': 'zh', 'h': 'h', 'tʃ': 'ch',
+      'dʒ': 'j', 'm': 'm', 'n': 'n', 'ŋ': 'ng',
+      'l': 'l', 'r': 'r', 'w': 'w', 'j': 'y',
+      'x': 'kh', 'hw': 'wh', 'ɫ': 'l', 'ɹ': 'r',
+    }
+    Object.entries(replacements).forEach(([symbol, word]) => {
+      cleaned = cleaned.replace(new RegExp(symbol, 'g'), word)
+    })
+    return ` ${cleaned} `
+  })
+
+  result = result.replace(/\/([^\/]+)\//g, (match, content) => {
+    let cleaned = content.replace(/[ˈˌ]/g, '')
+    const replacements = {
+      'iː': 'ee', 'ɪ': 'ih', 'e': 'eh', 'æ': 'a',
+      'ɑː': 'ah', 'ɒ': 'o', 'ɔː': 'aw', 'ʊ': 'uh',
+      'uː': 'oo', 'ʌ': 'uh', 'ɜː': 'er', 'ə': 'uh',
+      'eɪ': 'ay', 'aɪ': 'eye', 'ɔɪ': 'oy',
+      'aʊ': 'ow', 'əʊ': 'oh', 'oʊ': 'oh',
+      'ɪə': 'ear', 'eə': 'air', 'ʊə': 'ure',
+      'aɪə': 'eye-uh', 'aʊə': 'ow-uh', 'eɪə': 'ay-uh',
+      'p': 'p', 'b': 'b', 't': 't', 'd': 'd',
+      'k': 'k', 'g': 'g', 'f': 'f', 'v': 'v',
+      'θ': 'th', 'ð': 'th', 's': 's', 'z': 'z',
+      'ʃ': 'sh', 'ʒ': 'zh', 'h': 'h', 'tʃ': 'ch',
+      'dʒ': 'j', 'm': 'm', 'n': 'n', 'ŋ': 'ng',
+      'l': 'l', 'r': 'r', 'w': 'w', 'j': 'y',
+      'x': 'kh', 'hw': 'wh', 'ɫ': 'l', 'ɹ': 'r',
+    }
+    Object.entries(replacements).forEach(([symbol, word]) => {
+      cleaned = cleaned.replace(new RegExp(symbol, 'g'), word)
+    })
+    return ` ${cleaned} `
+  })
+
   // ============================================================
   // CLEANUP
   // ============================================================
@@ -738,20 +680,18 @@ result = result.replace(/\/([^\/]+)\//g, (match, content) => {
   result = result.replace(/\s{2,}/g, ' ')
   result = result.trim()
 
-  // Inverse trig functions
-result = result.replace(/tan⁻¹/g, 'inverse tangent')
-result = result.replace(/sin⁻¹/g, 'inverse sine')
-result = result.replace(/cos⁻¹/g, 'inverse cosine')
+  result = result.replace(/tan⁻¹/g, 'inverse tangent')
+  result = result.replace(/sin⁻¹/g, 'inverse sine')
+  result = result.replace(/cos⁻¹/g, 'inverse cosine')
 
-// Directional abbreviations
-result = result.replace(/\(W\)/g, 'West')
-result = result.replace(/\(E\)/g, 'East')
-result = result.replace(/\(S\)/g, 'South')
-result = result.replace(/\(N\)/g, 'North')
-result = result.replace(/\(NE\)/g, 'Northeast')
-result = result.replace(/\(NW\)/g, 'Northwest')
-result = result.replace(/\(SE\)/g, 'Southeast')
-result = result.replace(/\(SW\)/g, 'Southwest')
+  result = result.replace(/\(W\)/g, 'West')
+  result = result.replace(/\(E\)/g, 'East')
+  result = result.replace(/\(S\)/g, 'South')
+  result = result.replace(/\(N\)/g, 'North')
+  result = result.replace(/\(NE\)/g, 'Northeast')
+  result = result.replace(/\(NW\)/g, 'Northwest')
+  result = result.replace(/\(SE\)/g, 'Southeast')
+  result = result.replace(/\(SW\)/g, 'Southwest')
 
   return result
 }
@@ -760,9 +700,9 @@ result = result.replace(/\(SW\)/g, 'Southwest')
 // HELPER: Get plain text from lesson content
 // ============================================================
 
-  const getLessonText = (lesson) => {
+const getLessonText = (lesson) => {
   if (!lesson?.content) return ''
-  
+
   let text = ''
   if (typeof lesson.content === 'string') {
     text = lesson.content
@@ -777,8 +717,7 @@ result = result.replace(/\(SW\)/g, 'Southwest')
       text += '\n\n' + lesson.content.summary
     }
   }
-  
-  
+
   text = text.replace(/<li>/g, '• ')
   text = text.replace(/<\/li>/g, '')
   text = text.replace(/<ul>/g, '')
@@ -789,7 +728,7 @@ result = result.replace(/\(SW\)/g, 'Southwest')
   text = text.replace(/<\/strong>/g, '')
   text = text.replace(/<em>/g, '')
   text = text.replace(/<\/em>/g, '')
-  
+
   const cleanText = text.replace(/<[^>]*>/g, '').trim()
   return formatTextForTTS(cleanText)
 }
@@ -847,10 +786,10 @@ export function Calculator({ onClose }) {
           </button>
         </div>
 
-        <div style={{ 
-          background: 'var(--color-background)', 
-          padding: 'var(--space-4)', 
-          borderRadius: 'var(--radius-xl)', 
+        <div style={{
+          background: 'var(--color-background)',
+          padding: 'var(--space-4)',
+          borderRadius: 'var(--radius-xl)',
           marginBottom: 'var(--space-4)',
           textAlign: 'right'
         }}>
@@ -945,38 +884,10 @@ export function Calculator({ onClose }) {
 }
 
 // ============================================================
-// VOICE BUTTON — For lesson list (dropdown with voice settings)
+// VOICE BUTTON — reads global preference, no dropdown
 // ============================================================
 export function VoiceButton({ lesson, isPlaying, onPlay, onStop }) {
   const [loading, setLoading] = useState(false)
-  const [voices, setVoices] = useState([])
-  const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural')
-  const [showDropdown, setShowDropdown] = useState(false)
-  const dropdownRef = useRef(null)
-
-  useEffect(() => {
-    const loadVoices = async () => {
-      try {
-        const result = await voice.getVoices('fair')
-        setVoices(result || [])
-        const defaultVoice = result.find(v => v.locale === 'en-NG') || result[0]
-        if (defaultVoice) setSelectedVoice(defaultVoice.name)
-      } catch (err) {
-        console.error('Failed to load voices:', err)
-      }
-    }
-    loadVoices()
-  }, [])
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   const handlePlay = async () => {
     if (isPlaying) {
@@ -991,18 +902,18 @@ export function VoiceButton({ lesson, isPlaying, onPlay, onStop }) {
       const text = getLessonText(lesson)
       if (!text) return
 
+      const preferredVoice = resolveVoiceName(getVoicePreference())
+
       const result = await voice.synthesize({
         text,
-        voice: selectedVoice,
+        voice: preferredVoice,
         type: 'fair',
         speed: 1,
         mode: 'education'
       })
 
-      if (result.success && result.url) {
-        const url = result.url.startsWith('http')
-          ? result.url
-          : `https://hyezen.onrender.com${result.url}`
+      if (result?.success && result?.url) {
+        const url = toAbsoluteVoiceUrl(result.url)
         onPlay?.(url)
       }
     } catch (err) {
@@ -1013,92 +924,38 @@ export function VoiceButton({ lesson, isPlaying, onPlay, onStop }) {
   }
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      <button
-        onClick={handlePlay}
-        className="btn btn-ghost"
-        style={{ padding: 'var(--space-1) var(--space-2)' }}
-        disabled={loading}
-      >
-        {loading ? (
-          <Loader2 className="spinner" style={{ width: '18px', height: '18px' }} />
-        ) : isPlaying ? (
-          <Square style={{ width: '18px', height: '18px' }} />
-        ) : (
-          <Volume2 style={{ width: '18px', height: '18px' }} />
-        )}
-      </button>
-
-      <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        className="btn btn-ghost"
-        style={{ padding: 'var(--space-1)' }}
-      >
-        <ChevronDown style={{ width: '14px', height: '14px' }} />
-      </button>
-
-      {showDropdown && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: 'var(--space-1)',
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius)',
-            padding: 'var(--space-2)',
-            minWidth: '200px',
-            maxHeight: '250px',
-            overflowY: 'auto',
-            boxShadow: 'var(--shadow-lg)',
-            zIndex: 100
-          }}
-        >
-          {voices.map((v) => (
-            <button
-              key={v.name}
-              onClick={() => {
-                setSelectedVoice(v.name)
-                setShowDropdown(false)
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: 'var(--space-1) var(--space-2)',
-                background: selectedVoice === v.name ? 'var(--color-primary-light)' : 'transparent',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-text)'
-              }}
-            >
-              {v.label || v.name}
-            </button>
-          ))}
-        </div>
+    <button
+      onClick={handlePlay}
+      className="btn btn-ghost"
+      style={{ padding: 'var(--space-1) var(--space-2)' }}
+      disabled={loading}
+      title={isPlaying ? 'Stop reading' : 'Read aloud'}
+    >
+      {loading ? (
+        <Loader2 className="spinner" style={{ width: '18px', height: '18px' }} />
+      ) : isPlaying ? (
+        <Square style={{ width: '18px', height: '18px' }} />
+      ) : (
+        <Volume2 style={{ width: '18px', height: '18px' }} />
       )}
-    </div>
+    </button>
   )
 }
 
 // ============================================================
-// LESSON CARD — Shows on the lessons list with Voice Button + Bookmark
+// LESSON CARD
 // ============================================================
-export function LessonCard({ 
-  lesson, 
-  mastery, 
+export function LessonCard({
+  lesson,
+  mastery,
   onClick,
   index,
-  isLocked = false 
+  isLocked = false
 }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioRef, setAudioRef] = useState(null)
   const [isBookmarked, setIsBookmarked] = useState(false)
 
-  // Check if bookmarked on mount
   useEffect(() => {
     const bookmarks = storage.getBookmarks()
     const exists = bookmarks.some(b => b.targetId === lesson.id && b.targetType === 'lesson')
@@ -1128,7 +985,7 @@ export function LessonCard({
 
   const handleBookmark = (e) => {
     e.stopPropagation()
-    
+
     if (isBookmarked) {
       const bookmarks = storage.getBookmarks()
       const filtered = bookmarks.filter(b => b.targetId !== lesson.id || b.targetType !== 'lesson')
@@ -1154,10 +1011,10 @@ export function LessonCard({
   const statusColor = isCompleted ? 'var(--color-success)' : mastery >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'
 
   return (
-    <div 
+    <div
       onClick={() => !isLocked && onClick()}
       className="card card-hover"
-      style={{ 
+      style={{
         cursor: isLocked ? 'default' : 'pointer',
         padding: 'var(--space-4)',
         borderLeft: `4px solid ${isLocked ? 'var(--color-border)' : statusColor}`,
@@ -1167,7 +1024,7 @@ export function LessonCard({
       }}
     >
       {isLocked && (
-        <div style={{ 
+        <div style={{
           position: 'absolute',
           top: 'var(--space-2)',
           right: 'var(--space-2)',
@@ -1184,7 +1041,7 @@ export function LessonCard({
           Locked
         </div>
       )}
-      
+
       <div className="flex-between" style={{ alignItems: 'center' }}>
         <div style={{ flex: 1 }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1215,13 +1072,13 @@ export function LessonCard({
               style={{ padding: 'var(--space-1) var(--space-2)' }}
               title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
             >
-              <Star 
-                style={{ 
-                  width: '18px', 
-                  height: '18px', 
+              <Star
+                style={{
+                  width: '18px',
+                  height: '18px',
                   color: isBookmarked ? 'var(--color-warning)' : 'var(--color-text-muted)',
                   fill: isBookmarked ? 'var(--color-warning)' : 'none'
-                }} 
+                }}
               />
             </button>
           )}
@@ -1238,13 +1095,13 @@ export function LessonCard({
               {mastery}%
             </div>
             <div className="progress" style={{ width: '80px', height: '4px', marginTop: '4px' }}>
-              <div 
-                className="progress-fill" 
-                style={{ 
-                  width: `${mastery}%`, 
+              <div
+                className="progress-fill"
+                style={{
+                  width: `${mastery}%`,
                   background: statusColor,
                   height: '4px'
-                }} 
+                }}
               />
             </div>
           </div>
@@ -1255,11 +1112,11 @@ export function LessonCard({
 }
 
 // ============================================================
-// LESSON VIEWER — Read the lesson content with Voice icon + Bookmark
+// LESSON VIEWER
 // ============================================================
-export function LessonViewer({ 
-  lesson, 
-  onMarkRead, 
+export function LessonViewer({
+  lesson,
+  onMarkRead,
   onTakeTest,
   onBack,
   isRead = false,
@@ -1268,13 +1125,11 @@ export function LessonViewer({
   const [activeSection, setActiveSection] = useState(null)
   const [expandedSections, setExpandedSections] = useState({})
   const [isBookmarked, setIsBookmarked] = useState(false)
-  
-  // Voice state
+
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isLoadingVoice, setIsLoadingVoice] = useState(false)
   const audioRef = useRef(null)
 
-  // Check if bookmarked on mount
   useEffect(() => {
     if (lesson?.id) {
       const bookmarks = storage.getBookmarks()
@@ -1283,7 +1138,6 @@ export function LessonViewer({
     }
   }, [lesson?.id])
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -1291,6 +1145,19 @@ export function LessonViewer({
         audioRef.current.src = ''
       }
     }
+  }, [])
+
+  // Stop audio if preference changes while playing
+  useEffect(() => {
+    const onPrefChange = () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+      setIsSpeaking(false)
+    }
+    window.addEventListener('voice-preference-changed', onPrefChange)
+    return () => window.removeEventListener('voice-preference-changed', onPrefChange)
   }, [])
 
   const handleBookmark = () => {
@@ -1336,19 +1203,19 @@ export function LessonViewer({
     setIsLoadingVoice(true)
 
     try {
+      const preferredVoice = resolveVoiceName(getVoicePreference())
+
       const result = await voice.synthesize({
         text,
-        voice: 'en-US-JennyNeural',
+        voice: preferredVoice,
         type: 'fair',
         speed: 1,
         mode: 'education'
       })
 
       if (result.success && result.url) {
-        const url = result.url.startsWith('http')
-          ? result.url
-          : `https://hyezen.onrender.com${result.url}`
-        
+        const url = toAbsoluteVoiceUrl(result.url)
+
         if (audioRef.current) {
           audioRef.current.src = url
           audioRef.current.play()
@@ -1369,8 +1236,8 @@ export function LessonViewer({
   if (!lesson) {
     return (
       <div className="card text-center" style={{ padding: 'var(--space-12)' }}>
-        <div className="flex-center" style={{ 
-          width: '64px', height: '64px', borderRadius: '50%', 
+        <div className="flex-center" style={{
+          width: '64px', height: '64px', borderRadius: '50%',
           background: 'var(--color-border)',
           margin: '0 auto var(--space-4)'
         }}>
@@ -1385,7 +1252,6 @@ export function LessonViewer({
     )
   }
 
-  // Get content - handle both string and object formats
   const getContentText = () => {
     if (typeof lesson.content === 'string') return lesson.content
     if (lesson.content?.introduction) {
@@ -1420,7 +1286,7 @@ export function LessonViewer({
           {lesson.content.sections && lesson.content.sections.map((section, idx) => {
             const isExpanded = expandedSections[section.id] !== false
             return (
-              <div key={section.id || idx} className="section-block" style={{ 
+              <div key={section.id || idx} className="section-block" style={{
                 marginBottom: 'var(--space-3)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-xl)',
@@ -1463,7 +1329,7 @@ export function LessonViewer({
           })}
 
           {lesson.content.summary && (
-            <div style={{ 
+            <div style={{
               padding: 'var(--space-4)',
               background: 'var(--color-primary-light)',
               borderRadius: 'var(--radius-xl)',
@@ -1479,13 +1345,12 @@ export function LessonViewer({
     return <div dangerouslySetInnerHTML={{ __html: getContentText().replace(/\n/g, '<br/>') }} />
   }
 
-  // Render videos
   const renderVideos = () => {
     const videos = lesson.videos || []
     if (videos.length === 0) return null
 
     return (
-      <div style={{ 
+      <div style={{
         padding: 'var(--space-4)',
         background: 'var(--color-background)',
         borderRadius: 'var(--radius-xl)',
@@ -1533,13 +1398,12 @@ export function LessonViewer({
     )
   }
 
-  // Render key terms
   const renderKeyTerms = () => {
     const terms = lesson.keyTerms || []
     if (terms.length === 0) return null
 
     return (
-      <div style={{ 
+      <div style={{
         padding: 'var(--space-4)',
         background: 'var(--color-primary-light)',
         borderRadius: 'var(--radius-xl)',
@@ -1576,7 +1440,6 @@ export function LessonViewer({
     )
   }
 
-  // Render objectives
   const renderObjectives = () => {
     const objectives = lesson.objectives || []
     if (objectives.length === 0) return null
@@ -1589,7 +1452,7 @@ export function LessonViewer({
     }
 
     return (
-      <div style={{ 
+      <div style={{
         padding: 'var(--space-4)',
         background: 'var(--color-background)',
         borderRadius: 'var(--radius-xl)',
@@ -1639,7 +1502,6 @@ export function LessonViewer({
 
   return (
     <div className="card" style={{ padding: 'var(--space-6)' }}>
-      {/* Audio element */}
       <audio
         ref={audioRef}
         onEnded={handleAudioEnd}
@@ -1647,10 +1509,9 @@ export function LessonViewer({
         style={{ display: 'none' }}
       />
 
-      {/* Header */}
       <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
         <div>
-          <button 
+          <button
             onClick={onBack}
             className="btn btn-ghost"
             style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--font-size-sm)' }}
@@ -1681,24 +1542,22 @@ export function LessonViewer({
           </div>
         </div>
         <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
-          {/* Bookmark Button */}
           <button
             onClick={handleBookmark}
             className="btn btn-ghost"
             style={{ padding: 'var(--space-1) var(--space-2)' }}
             title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
           >
-            <Star 
-              style={{ 
-                width: '20px', 
-                height: '20px', 
+            <Star
+              style={{
+                width: '20px',
+                height: '20px',
                 color: isBookmarked ? 'var(--color-warning)' : 'var(--color-text-muted)',
                 fill: isBookmarked ? 'var(--color-warning)' : 'none'
-              }} 
+              }}
             />
           </button>
 
-          {/* Voice icon - small, just the icon */}
           <button
             onClick={handleSpeak}
             disabled={isLoadingVoice}
@@ -1725,18 +1584,12 @@ export function LessonViewer({
         </div>
       </div>
 
-      {/* Objectives */}
       {renderObjectives()}
-
-      {/* Videos */}
       {renderVideos()}
-
-      {/* Key Terms */}
       {renderKeyTerms()}
 
-      {/* Content */}
-      <div style={{ 
-        padding: 'var(--space-4)', 
+      <div style={{
+        padding: 'var(--space-4)',
         background: 'var(--color-background)',
         borderRadius: 'var(--radius-xl)',
         maxHeight: '500px',
@@ -1746,7 +1599,6 @@ export function LessonViewer({
         {renderContent()}
       </div>
 
-      {/* Actions */}
       <div className="flex" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
         <button
           onClick={onMarkRead}
@@ -1777,7 +1629,7 @@ export function LessonViewer({
 // ============================================================
 // LESSON TEST — Practice questions with calculator
 // ============================================================
-export function LessonTest({ 
+export function LessonTest({
   lesson,
   questions,
   onComplete,
@@ -1856,7 +1708,6 @@ export function LessonTest({
     setShowReview(false)
   }
 
-  // Show results
   if (submitted && results && showReview) {
     const isPassed = results.accuracy >= 70
 
@@ -1867,7 +1718,7 @@ export function LessonTest({
         </button>
 
         <div className="text-center" style={{ margin: 'var(--space-6) 0' }}>
-          <div style={{ 
+          <div style={{
             width: '80px', height: '80px', borderRadius: '50%',
             background: isPassed ? 'var(--color-success-light)' : 'var(--color-danger-light)',
             margin: '0 auto var(--space-4)',
@@ -1925,7 +1776,6 @@ export function LessonTest({
     )
   }
 
-  // Review mode (showing correct answers)
   if (submitted && results && !showReview) {
     return (
       <div className="card" style={{ padding: 'var(--space-6)' }}>
@@ -1961,7 +1811,7 @@ export function LessonTest({
                   </span>
                 </div>
                 <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text)', margin: 'var(--space-2) 0' }}>{q.question}</p>
-                
+
                 {q.options && q.options.length > 0 && (
                   <div className="stack" style={{ gap: 'var(--space-1)' }}>
                     {q.options.map((opt, optIdx) => {
@@ -1983,7 +1833,7 @@ export function LessonTest({
                       }
 
                       return (
-                        <div key={optIdx} style={{ 
+                        <div key={optIdx} style={{
                           padding: 'var(--space-2) var(--space-3)',
                           borderRadius: 'var(--radius)',
                           background: bg,
@@ -2005,7 +1855,7 @@ export function LessonTest({
                 )}
 
                 {q.explanation && (
-                  <div style={{ 
+                  <div style={{
                     marginTop: 'var(--space-2)',
                     padding: 'var(--space-2) var(--space-3)',
                     background: 'var(--color-primary-light)',
@@ -2031,11 +1881,9 @@ export function LessonTest({
     )
   }
 
-  // Active test view
   if (currentQuestion) {
     return (
       <div className="card" style={{ padding: 'var(--space-6)' }}>
-        {/* Header */}
         <div className="flex-between" style={{ marginBottom: 'var(--space-4)' }}>
           <div>
             <button onClick={onBack} className="btn btn-ghost" style={{ padding: 'var(--space-1) var(--space-2)', fontSize: 'var(--font-size-sm)' }}>
@@ -2044,7 +1892,7 @@ export function LessonTest({
             <h2 className="h2" style={{ marginTop: 'var(--space-2)' }}>Test: {lesson.name}</h2>
             <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>{subject} • {topic}</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowCalculator(true)}
             className="btn btn-outline"
             style={{ padding: 'var(--space-2) var(--space-3)', fontSize: 'var(--font-size-sm)' }}
@@ -2054,7 +1902,6 @@ export function LessonTest({
           {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
         </div>
 
-        {/* Progress */}
         <div className="flex-between" style={{ marginBottom: 'var(--space-3)' }}>
           <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', color: 'var(--color-text)' }}>
             Question {currentIndex + 1} of {total}
@@ -2072,9 +1919,8 @@ export function LessonTest({
           <div className="progress-fill progress-fill-primary" style={{ width: `${((currentIndex + 1) / total) * 100}%` }} />
         </div>
 
-        {/* Question */}
         <div style={{ marginBottom: 'var(--space-6)' }}>
-          <div style={{ 
+          <div style={{
             padding: 'var(--space-3) var(--space-4)',
             background: 'var(--color-background)',
             borderRadius: 'var(--radius-xl)',
@@ -2095,7 +1941,7 @@ export function LessonTest({
                     key={idx}
                     onClick={() => handleAnswer(currentQuestion.id, option)}
                     className={`card card-hover flex-between ${isSelected ? 'success-card' : ''}`}
-                    style={{ 
+                    style={{
                       cursor: 'pointer',
                       border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                       background: isSelected ? 'var(--color-primary-light)' : 'var(--color-surface)',
@@ -2103,7 +1949,7 @@ export function LessonTest({
                     }}
                   >
                     <div className="flex" style={{ gap: 'var(--space-4)' }}>
-                      <span className="flex-center" style={{ 
+                      <span className="flex-center" style={{
                         width: '36px', height: '36px', borderRadius: '50%',
                         background: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
                         color: isSelected ? 'white' : 'var(--color-text-secondary)',
@@ -2119,7 +1965,7 @@ export function LessonTest({
               })}
             </div>
           ) : (
-            <div style={{ 
+            <div style={{
               padding: 'var(--space-3) var(--space-4)',
               background: 'var(--color-warning-light)',
               borderRadius: 'var(--radius-xl)',
@@ -2132,10 +1978,9 @@ export function LessonTest({
           )}
         </div>
 
-        {/* Navigation */}
         <div className="flex-between">
-          <button 
-            className="btn btn-outline" 
+          <button
+            className="btn btn-outline"
             onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
             disabled={currentIndex === 0}
             style={{ opacity: currentIndex === 0 ? '0.4' : '1' }}
@@ -2157,7 +2002,6 @@ export function LessonTest({
           )}
         </div>
 
-        {/* Palette */}
         <div className="card" style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3)' }}>
           <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', marginBottom: 'var(--space-2)' }}>Question Palette</div>
           <div className="flex" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>

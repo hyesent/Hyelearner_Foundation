@@ -25,7 +25,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react'
-import { voice } from '../../services'
+import { voice } from '../../../services'
 import {
   getVoicePreference,
   resolveVoiceName,

@@ -5,7 +5,7 @@
 // Built by Hyesent.dev
 // ============================================================
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -21,6 +21,12 @@ import {
 } from 'lucide-react'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { WORD_OF_THE_DAY_DATA } from '../data/words'
+import { voice } from '../services'
+import {
+  getVoicePreference,
+  resolveVoiceName,
+  toAbsoluteVoiceUrl,
+} from '../utils/voice-pref'
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'https://hyelearner-api.onrender.com'
@@ -85,6 +91,8 @@ export function DictionaryPage() {
   const [recentSearches, setRecentSearches] = useState([])
   const [favorites, setFavorites] = useState([])
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [loadingVoice, setLoadingVoice] = useState(false)
+  const audioRef = useRef(null)
 
   useEffect(() => {
     setWordOfTheDay(getWordOfTheDay())
@@ -104,6 +112,31 @@ export function DictionaryPage() {
     }
   }, [])
 
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.src = ''
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  // Stop audio if the user changes voice preference mid-play
+  useEffect(() => {
+    const onPrefChange = () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        audioRef.current = null
+      }
+      setIsSpeaking(false)
+    }
+    window.addEventListener('voice-preference-changed', onPrefChange)
+    return () => window.removeEventListener('voice-preference-changed', onPrefChange)
+  }, [])
+
   const handleSearch = async (e) => {
     e.preventDefault()
     if (!searchQuery.trim()) return
@@ -118,7 +151,6 @@ export function DictionaryPage() {
     try {
       const data = await fetchWordDefinition(word)
 
-      // Backend returns a normalized OBJECT with a meanings array
       if (
         !data ||
         !Array.isArray(data.meanings) ||
@@ -171,23 +203,46 @@ export function DictionaryPage() {
     setSearchQuery(wordOfTheDay.word)
   }
 
-  const handleSpeak = (text) => {
-    if (!('speechSynthesis' in window)) return
+  const handleSpeak = async (text) => {
+    if (!text) return
 
+    // Toggle: stop if already speaking
     if (isSpeaking) {
-      window.speechSynthesis.cancel()
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
       setIsSpeaking(false)
       return
     }
 
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.rate = 0.9
-    utterance.pitch = 1
-    utterance.lang = 'en-US'
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-    window.speechSynthesis.speak(utterance)
+    setLoadingVoice(true)
+
+    try {
+      const preferredVoice = resolveVoiceName(getVoicePreference())
+
+      const result = await voice.synthesize({
+        text,
+        voice: preferredVoice,
+        type: 'fair',
+        speed: 1,
+        mode: 'education',
+      })
+
+      if (result?.success && result?.url) {
+        const url = toAbsoluteVoiceUrl(result.url)
+        const audio = new Audio(url)
+        audio.onended = () => setIsSpeaking(false)
+        audio.onerror = () => setIsSpeaking(false)
+        audioRef.current = audio
+        await audio.play()
+        setIsSpeaking(true)
+      }
+    } catch (err) {
+      console.error('[dictionary] TTS error:', err)
+    } finally {
+      setLoadingVoice(false)
+    }
   }
 
   const toggleFavorite = (word) => {
@@ -240,9 +295,16 @@ export function DictionaryPage() {
               onClick={() => handleSpeak(data.word)}
               className="btn btn-ghost"
               style={{ padding: 'var(--space-1) var(--space-2)' }}
+              disabled={loadingVoice}
               title="Pronounce"
             >
-              {isSpeaking ? <Pause size={20} /> : <Volume2 size={20} />}
+              {loadingVoice ? (
+                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : isSpeaking ? (
+                <Pause size={20} />
+              ) : (
+                <Volume2 size={20} />
+              )}
             </button>
             <button
               onClick={() => toggleFavorite(data.word)}

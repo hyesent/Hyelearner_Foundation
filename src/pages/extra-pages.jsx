@@ -12,10 +12,18 @@ import { useAuth, useHydration } from '../hooks'
 import { storage } from '../storage'
 import { formatDate } from '../utils'
 import { SUBJECTS, COUNTRIES, EXAM_TYPES, AI_LIMITS } from '../constants'
-import { career, parent, subscriptions, auth as authService } from '../services'
+import { career, parent, subscriptions, voice, auth as authService } from '../services'
 import { searchUniversities as localSearchUniversities } from '../data/universities/index.js'
 import { COMMON_CUTOFFS, hasData, getCutoffData } from '../data/cutoffs/common'
 import { LoadingScreen } from '../components/LoadingScreen'
+import {
+  getVoicePreference,
+  setVoicePreference,
+  loadVoices,
+  resolveVoiceName,
+  VOICE_PREVIEW_TEXT,
+  toAbsoluteVoiceUrl,
+} from '../utils/voice-pref'
 
 import {
   ArrowLeft, Users, User, Clock, Calendar, BarChart3, BookOpen,
@@ -27,12 +35,12 @@ import {
   UserCircle, UserCog, ExternalLink, Shield, Building2, MapPin,
   GraduationCap as GraduationCapIcon, ChevronRight, Lightbulb, Plus,
   Unlink, History, FileText, RotateCw, Save, X, Camera, Eye, EyeOff,
+  Volume2, Play, Pause,
 } from 'lucide-react'
 
 
 // ============================================================
 // PARENT DASHBOARD PAGE
-// (unchanged — same as your file, kept here for the barrel)
 // ============================================================
 
 export function ParentDashboardPage() {
@@ -242,7 +250,6 @@ export function CourseFinderPage() {
 
   const [tab, setTab] = useState('check') // 'check' | 'history'
 
-  // Form
   const [universityQuery, setUniversityQuery] = useState('')
   const [universityResults, setUniversityResults] = useState([])
   const [selectedUniversity, setSelectedUniversity] = useState(null)
@@ -256,7 +263,6 @@ export function CourseFinderPage() {
   const [result, setResult] = useState(null)
   const [hasSearched, setHasSearched] = useState(false)
 
-  // History
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [activeHistoryItem, setActiveHistoryItem] = useState(null)
@@ -328,7 +334,6 @@ export function CourseFinderPage() {
     } finally { setLoading(false) }
   }
 
-  // Load history
   const loadHistory = async () => {
     setHistoryLoading(true); setError(null)
     try {
@@ -344,7 +349,6 @@ export function CourseFinderPage() {
     if (tab === 'history') loadHistory()
   }, [tab])
 
-  // Recheck with new data — prefills form, jumps to check tab
   const handleRecheck = (item) => {
     setCourse(item.course || '')
     setUniversityQuery(item.university || '')
@@ -383,7 +387,6 @@ export function CourseFinderPage() {
           <button onClick={() => navigate('/dashboard')} className="btn btn-ghost"><ArrowLeft size={16} /> Back</button>
         </div>
 
-        {/* Tabs */}
         <div className="flex" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
           <button onClick={() => setTab('check')} className={`btn ${tab === 'check' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: 1 }}>
             <Search size={16} /> New Check
@@ -395,7 +398,6 @@ export function CourseFinderPage() {
 
         {error && <div className="danger-card" style={{ marginBottom: 'var(--space-4)' }}><div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'flex-start' }}><AlertCircle size={16} style={{ marginTop: 2, flexShrink: 0 }} /><span>{error}</span></div></div>}
 
-        {/* ================= HISTORY TAB ================= */}
         {tab === 'history' && (
           <>
             {historyLoading ? (
@@ -451,13 +453,11 @@ export function CourseFinderPage() {
           </>
         )}
 
-        {/* ================= CHECK TAB ================= */}
         {tab === 'check' && (
           <>
             <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
               <div className="stack" style={{ gap: 'var(--space-5)' }}>
 
-                {/* University */}
                 <div>
                   <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
                     <Building2 size={16} style={{ color: 'var(--color-primary)' }} /> University
@@ -497,13 +497,11 @@ export function CourseFinderPage() {
                   )}
                 </div>
 
-                {/* Course */}
                 <div>
                   <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}><BookOpen size={16} style={{ color: 'var(--color-primary)' }} /> Course / Program</label>
                   <input type="text" className="input" placeholder="e.g., Computer Science, Medicine" value={course} onChange={(e) => setCourse(e.target.value)} />
                 </div>
 
-                {/* Score */}
                 <div className="grid-2" style={{ gap: 'var(--space-4)' }}>
                   <div>
                     <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}><Target size={16} style={{ color: 'var(--color-primary)' }} /> Your Score</label>
@@ -517,7 +515,6 @@ export function CourseFinderPage() {
                   </div>
                 </div>
 
-                {/* Subjects */}
                 <div>
                   <label className="label flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}><BookOpen size={16} style={{ color: 'var(--color-primary)' }} /> Subjects Taken (4)</label>
                   <div className="grid-2" style={{ gap: 'var(--space-3)' }}>
@@ -536,7 +533,6 @@ export function CourseFinderPage() {
               </div>
             </div>
 
-            {/* Result */}
             {hasSearched && result && (
               <div className="stack" style={{ gap: 'var(--space-6)' }}>
                 <div className="card" style={{ border: `2px solid ${getStatusColor(result.status)}` }}>
@@ -611,7 +607,6 @@ export function CourseFinderPage() {
           </>
         )}
 
-        {/* History detail modal */}
         {activeHistoryItem && (
           <div className="modal-overlay" onClick={() => setActiveHistoryItem(null)} style={{ zIndex: 200 }}>
             <div onClick={(e) => e.stopPropagation()} className="modal" style={{ maxWidth: 520, padding: 'var(--space-5)' }}>
@@ -654,7 +649,7 @@ export function CourseFinderPage() {
 
 
 // ============================================================
-// CUT-OFF TRACKER — unchanged
+// CUT-OFF TRACKER
 // ============================================================
 
 export function CutoffTrackerPage() {
@@ -707,7 +702,6 @@ export function CutoffTrackerPage() {
   const handleNewSearch = () => { setHistory(null); setUniversity(''); setCourse(''); setError(null) }
 
   if (history) {
-    const isRising = history.data?.length > 1 && history.data[history.data.length - 1].value > history.data[0].value
     return (
       <div style={{ background: 'var(--color-background)', padding: 'var(--space-4) var(--space-6)', minHeight: '100vh' }}>
         <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
@@ -805,7 +799,7 @@ export function CutoffTrackerPage() {
 
 
 // ============================================================
-// BOOKMARKS PAGE — unchanged
+// BOOKMARKS PAGE
 // ============================================================
 
 export function BookmarksPage() {
@@ -890,7 +884,7 @@ export function BookmarksPage() {
 
 
 // ============================================================
-// SETTINGS PAGE — unchanged
+// SETTINGS PAGE — with Voice section
 // ============================================================
 
 export function SettingsPage() {
@@ -907,6 +901,13 @@ export function SettingsPage() {
   const [subscribing, setSubscribing] = useState(false)
   const [hyeSpaceId, setHyeSpaceId] = useState(() => localStorage.getItem('hyespace-store-id') || '')
   const [savingHyeSpaceId, setSavingHyeSpaceId] = useState(false)
+
+  // ⭐ VOICE PREFERENCE
+  const [voices, setVoices] = useState([])
+  const [voicesLoading, setVoicesLoading] = useState(true)
+  const [selectedVoice, setSelectedVoice] = useState(() => getVoicePreference())
+  const [previewingVoice, setPreviewingVoice] = useState(null)
+  const previewAudioRef = useRef(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('hyelearner_settings')
@@ -926,6 +927,36 @@ export function SettingsPage() {
       finally { setSubLoading(false) }
     }
     load()
+  }, [])
+
+  // Load voices + sync preference
+  useEffect(() => {
+    let cancelled = false
+    loadVoices().then((list) => {
+      if (cancelled) return
+      setVoices(list)
+      setVoicesLoading(false)
+      if (list.length > 0) {
+        const resolved = resolveVoiceName(selectedVoice)
+        if (resolved !== selectedVoice) {
+          setSelectedVoice(resolved)
+          setVoicePreference(resolved)
+        }
+      }
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Cleanup preview audio
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause()
+        previewAudioRef.current.src = ''
+        previewAudioRef.current = null
+      }
+    }
   }, [])
 
   const handleToggle = (key, value) => {
@@ -962,6 +993,53 @@ export function SettingsPage() {
       else throw new Error('No HyeSpace store URL received')
     } catch (err) { setSubError(err.message || 'Failed to open HyeSpace') }
     finally { setSubscribing(false) }
+  }
+
+  // ⭐ Voice handlers
+  const handleSelectVoice = (name) => {
+    setSelectedVoice(name)
+    setVoicePreference(name)
+  }
+
+  const handlePreviewVoice = async (name) => {
+    if (!name) return
+
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause()
+      previewAudioRef.current.currentTime = 0
+      previewAudioRef.current = null
+    }
+
+    if (previewingVoice === name) {
+      setPreviewingVoice(null)
+      return
+    }
+
+    setPreviewingVoice(name)
+
+    try {
+      const result = await voice.synthesize({
+        text: VOICE_PREVIEW_TEXT,
+        voice: name,
+        type: 'fair',
+        speed: 1,
+        mode: 'education',
+      })
+
+      if (result?.success && result?.url) {
+        const url = toAbsoluteVoiceUrl(result.url)
+        const audio = new Audio(url)
+        audio.onended = () => setPreviewingVoice(null)
+        audio.onerror = () => setPreviewingVoice(null)
+        previewAudioRef.current = audio
+        await audio.play()
+      } else {
+        setPreviewingVoice(null)
+      }
+    } catch (err) {
+      console.error('[voice-preview]', err)
+      setPreviewingVoice(null)
+    }
   }
 
   const formatDate2 = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'
@@ -1027,6 +1105,112 @@ export function SettingsPage() {
             </div>
           </div>
 
+          {/* ⭐ Voice */}
+          <div>
+            <h3 className="h4" style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Volume2 size={16} style={{ color: 'var(--color-primary)' }} /> Voice
+            </h3>
+
+            <div className="card" style={{ padding: 'var(--space-4)' }}>
+              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                Choose how lessons, the daily tutor, and pronunciations sound. Preview any voice before selecting.
+              </div>
+
+              {voicesLoading ? (
+                <div className="flex-center" style={{ padding: 'var(--space-4)' }}>
+                  <Loader2 size={20} className="animate-spin" color="var(--color-primary)" />
+                  <span style={{ marginLeft: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+                    Loading voices…
+                  </span>
+                </div>
+              ) : voices.length === 0 ? (
+                <div className="danger-card" style={{ padding: 'var(--space-3)' }}>
+                  <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}>
+                    <AlertCircle size={16} />
+                    <span style={{ fontSize: 'var(--font-size-sm)' }}>Could not load voices. Check your connection.</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="stack" style={{ gap: 'var(--space-2)' }}>
+                  {voices.map((v) => {
+                    const isSelected = selectedVoice === v.name
+                    const isPreviewing = previewingVoice === v.name
+                    return (
+                      <div
+                        key={v.name}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-3)',
+                          padding: 'var(--space-3)',
+                          border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-lg)',
+                          background: isSelected ? 'var(--color-primary-light)' : 'var(--color-surface)',
+                          transition: 'all var(--transition)',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSelectVoice(v.name)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--space-3)',
+                            flex: 1,
+                            minWidth: 0,
+                            background: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <span
+                            className="flex-center"
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              border: isSelected ? '6px solid var(--color-primary)' : '2px solid var(--color-border)',
+                              background: 'var(--color-surface)',
+                              flexShrink: 0,
+                              transition: 'all var(--transition)',
+                            }}
+                          />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text)' }}>
+                              {v.label || v.name}
+                            </div>
+                            {v.locale && (
+                              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                                {v.locale}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handlePreviewVoice(v.name)}
+                          className="btn btn-ghost"
+                          style={{ padding: 'var(--space-1) var(--space-2)', flexShrink: 0 }}
+                          title={isPreviewing ? 'Stop preview' : 'Preview voice'}
+                        >
+                          {isPreviewing ? (
+                            <Pause size={18} color="var(--color-primary)" />
+                          ) : (
+                            <Play size={18} color="var(--color-text-muted)" />
+                          )}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* AI Usage */}
           <div>
             <h3 className="h4" style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}><Brain size={16} style={{ color: 'var(--color-primary)' }} /> AI Usage</h3>
@@ -1041,7 +1225,7 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* Subscription — same as original */}
+          {/* Subscription */}
           <div>
             <h3 className="h4" style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}><CreditCard size={16} style={{ color: 'var(--color-primary)' }} /> Subscription</h3>
 
@@ -1090,7 +1274,7 @@ export function SettingsPage() {
 
 
 // ============================================================
-// PROFILE PAGE — unchanged
+// PROFILE PAGE
 // ============================================================
 
 export function ProfilePage() {
@@ -1137,7 +1321,7 @@ export function ProfilePage() {
 
 
 // ============================================================
-// ⭐ NEW — EDIT PROFILE PAGE
+// EDIT PROFILE PAGE
 // ============================================================
 
 export function EditProfilePage() {
@@ -1230,7 +1414,6 @@ export function EditProfilePage() {
   return (
     <div style={{ background: 'var(--color-background)', padding: 'var(--space-4) var(--space-6)', minHeight: '100vh' }}>
       <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
-        {/* Header */}
         <div className="card flex-between" style={{ marginBottom: 'var(--space-6)' }}>
           <div className="flex" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
             <div className="flex-center" style={{ width: 48, height: 48, borderRadius: 'var(--radius-xl)', background: 'var(--color-primary-light)' }}>
@@ -1247,7 +1430,6 @@ export function EditProfilePage() {
         {error && <div className="danger-card" style={{ marginBottom: 'var(--space-4)' }}><div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}><AlertCircle size={16} /><span>{error}</span></div></div>}
         {success && <div className="success-card" style={{ marginBottom: 'var(--space-4)' }}><div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center' }}><CheckCircle2 size={16} /><span>{success}</span></div></div>}
 
-        {/* Avatar + Profile form */}
         <div className="card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-6)' }}>
           <div className="flex" style={{ gap: 'var(--space-5)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-6)' }}>
             <div className="flex-center" style={{ position: 'relative', width: 88, height: 88, borderRadius: '50%', background: 'var(--color-primary-light)', color: 'var(--color-primary)', fontSize: 'var(--font-size-3xl)', fontWeight: 700 }}>
@@ -1321,7 +1503,6 @@ export function EditProfilePage() {
           </form>
         </div>
 
-        {/* Password */}
         <div className="card" style={{ padding: 'var(--space-6)' }}>
           <div className="flex" style={{ gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
             <Lock size={18} style={{ color: 'var(--color-primary)' }} />
@@ -1361,7 +1542,7 @@ export function EditProfilePage() {
 
 
 // ============================================================
-// OFFLINE PAGE — unchanged
+// OFFLINE PAGE
 // ============================================================
 
 export function OfflinePage() {
